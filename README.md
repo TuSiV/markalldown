@@ -1,6 +1,6 @@
 # MarkItDown Open
 
-一个跨平台的桌面应用程序，用于将各种文件格式转换为 Markdown。
+基于 [Microsoft MarkItDown](https://github.com/microsoft/markitdown) 的跨平台桌面应用程序，用于将各种文件格式转换为 Markdown。
 
 ## 功能特点
 
