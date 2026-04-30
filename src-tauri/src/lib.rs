@@ -13,7 +13,7 @@ fn get_port(state: tauri::State<AppState>) -> u16 {
     *state.sidecar_port.lock().unwrap()
 }
 
-fn find_sidecar(app: &AppHandle) -> Result<PathBuf, String> {
+fn find_sidecar(_app: &AppHandle) -> Result<PathBuf, String> {
     let exe_path = std::env::current_exe().unwrap_or_default();
     let exe_dir = exe_path.parent().unwrap_or(std::path::Path::new("."));
     let project_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
