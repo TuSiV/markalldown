@@ -43,12 +43,22 @@ backend/dist/
 backend/*.egg
 backend/venv/
 backend/.venv/
+backend/markitdown_server.build/
+backend/markitdown_server.dist/
+
+# Temporary/local scripts
+scripts/_*
 
 # Tauri
 src-tauri/gen/
 src-tauri/target/
 src-tauri/Cargo.lock
 src-tauri/binaries/
+
+# Installers / bundles
+*.msi
+*.nsis
+*-setup.exe
 
 # Environment
 .env
@@ -57,3 +67,6 @@ src-tauri/binaries/
 
 # OS
 Thumbs.db
+
+# Local app cache (runtime)
+.cache/

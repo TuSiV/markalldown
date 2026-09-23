@@ -1,80 +1,95 @@
 import { useState } from "react";
 import { X, FolderOpen, FileDown, Archive, Loader2, Check } from "lucide-react";
 import { useAppStore } from "../stores/appStore";
-import { api } from "../lib/api";
+import { api, localizeError } from "../lib/api";
 import { toast } from "sonner";
+import { useT, useI18n } from "../i18n";
 
 interface ExportPanelProps {
   onClose: () => void;
 }
 
 export function ExportPanel({ onClose }: ExportPanelProps) {
-  const { files, port, exportOptions, setExportOptions } = useAppStore();
+  const { files, port, token, exportOptions, setExportOptions } = useAppStore();
+  const t = useT();
+  const locale = useI18n((s) => s.locale);
   const [exporting, setExporting] = useState(false);
   const [exportPath, setExportPath] = useState<string>("");
 
-  const completedFiles = files.filter(f => f.status === "done");
+  const completedFiles = files.filter(f => f.status === "done" && f.cachePath);
 
   const handleSelectFolder = async () => {
     try {
-      const { open } = await import('@tauri-apps/plugin-dialog');
+      const { open } = await import("@tauri-apps/plugin-dialog");
       const selected = await open({
         directory: true,
         multiple: false,
-        title: "选择导出文件夹",
+        title: t("pickExportTitle"),
       });
-      
-      if (selected && typeof selected === 'string') {
+
+      if (selected && typeof selected === "string") {
         setExportPath(selected);
-        toast.success(`已选择导出路径: ${selected}`);
+        toast.success(t("savedTo", { path: selected }));
       }
-    } catch (error) {
-      console.error("Failed to select folder:", error);
-      toast.error("选择文件夹失败");
+    } catch {
+      toast.error(t("pickFailed"));
     }
   };
 
   const handleExport = async () => {
     if (!port) {
-      toast.error("服务未就绪");
+      toast.error(t("serviceNotReady"));
       return;
     }
 
+    const conn = { port, token: token || "" };
+
     if (!exportPath) {
-      toast.warning("请先选择导出文件夹");
+      toast.warning(t("pickFolderFirst"));
       return;
     }
-    
+
     setExporting(true);
     try {
       const completedData = completedFiles.map(f => ({
         name: f.name,
-        content: f.result || "",
+        cachePath: f.cachePath,
         relativePath: f.relativePath || f.name,
       }));
 
-      await api.exportFiles(port, completedData, {
+      await api.exportFiles(conn, completedData, {
         ...exportOptions,
         exportPath: exportPath,
       });
-      
-      toast.success(`已导出 ${completedFiles.length} 个文件到: ${exportPath}`);
+
+      toast.success(t("exportSuccess", { n: completedFiles.length, path: exportPath }));
       onClose();
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      toast.error("导出失败: " + errorMsg);
+      toast.error(t("exportFailed", { msg: localizeError(errorMsg, locale) }));
     } finally {
       setExporting(false);
     }
   };
 
+  const formatItems = [
+    { value: "individual", label: t("fmtIndividual"), icon: FileDown },
+    { value: "combined", label: t("fmtCombined"), icon: FileDown },
+    { value: "zip", label: t("fmtZip"), icon: Archive },
+  ] as const;
+
+  const structureItems = [
+    { value: "flat", label: t("structureFlat") },
+    { value: "preserve", label: t("structurePreserve") },
+  ] as const;
+
   return (
     <div className="w-80 border-l border-[rgba(55,53,47,0.09)] bg-white flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(55,53,47,0.09)]">
-        <h2 className="text-sm font-semibold">导出设置</h2>
+        <h2 className="text-sm font-semibold">{t("exportSettings")}</h2>
         <button
           onClick={onClose}
-          className="p-1 text-[#9b9a97] hover:text-[#37352f] hover:bg-[#f7f6f3] 
+          className="p-1 text-[#9b9a97] hover:text-[#37352f] hover:bg-[#f7f6f3]
                      rounded-md transition-colors"
         >
           <X className="w-4 h-4" />
@@ -82,41 +97,35 @@ export function ExportPanel({ onClose }: ExportPanelProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {/* 导出路径 */}
         <div>
           <label className="text-xs font-medium text-[#787774] uppercase tracking-wider">
-            导出位置
+            {t("exportLocation")}
           </label>
           <div className="mt-2">
             <button
               onClick={handleSelectFolder}
-              className="w-full flex items-center gap-2 p-3 text-left text-sm border border-[rgba(55,53,47,0.09)] 
+              className="w-full flex items-center gap-2 p-3 text-left text-sm border border-[rgba(55,53,47,0.09)]
                          rounded-lg hover:bg-[#f7f6f3] transition-colors"
             >
               <FolderOpen className="w-4 h-4 text-[#2eaadc]" />
               <span className={exportPath ? "text-[#37352f]" : "text-[#9b9a97]"}>
-                {exportPath || "点击选择导出文件夹..."}
+                {exportPath || t("pickExportDir")}
               </span>
             </button>
           </div>
         </div>
 
-        {/* 输出格式 */}
         <div>
           <label className="text-xs font-medium text-[#787774] uppercase tracking-wider">
-            输出格式
+            {t("exportOutputFormat")}
           </label>
           <div className="mt-2 space-y-2">
-            {[
-              { value: "individual", label: "单独 .md 文件", icon: FileDown },
-              { value: "combined", label: "合并为单个文件", icon: FileDown },
-              { value: "zip", label: "ZIP 压缩包", icon: Archive },
-            ].map(({ value, label, icon: Icon }) => (
+            {formatItems.map(({ value, label, icon: Icon }) => (
               <label
                 key={value}
                 className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors
-                  ${exportOptions.format === value 
-                    ? "border-[#2eaadc] bg-[rgba(46,170,220,0.1)]" 
+                  ${exportOptions.format === value
+                    ? "border-[#2eaadc] bg-[rgba(46,170,220,0.1)]"
                     : "border-[rgba(55,53,47,0.09)] hover:bg-[#f7f6f3]"
                   }`}
               >
@@ -138,10 +147,9 @@ export function ExportPanel({ onClose }: ExportPanelProps) {
           </div>
         </div>
 
-        {/* 文件命名 */}
         <div>
           <label className="text-xs font-medium text-[#787774] uppercase tracking-wider">
-            文件命名
+            {t("fileNaming")}
           </label>
           <div className="mt-2">
             <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-[#f7f6f3] transition-colors">
@@ -152,30 +160,26 @@ export function ExportPanel({ onClose }: ExportPanelProps) {
                 className="w-4 h-4 rounded border-[rgba(55,53,47,0.09)]"
               />
               <div>
-                <span className="text-sm">保留原始文件名</span>
+                <span className="text-sm">{t("preserveNames")}</span>
                 <p className="text-xs text-[#9b9a97] mt-0.5">
-                  report.pdf → report.md
+                  {t("preserveNamesHint")}
                 </p>
               </div>
             </label>
           </div>
         </div>
 
-        {/* 文件夹结构 */}
         <div>
           <label className="text-xs font-medium text-[#787774] uppercase tracking-wider">
-            文件夹结构
+            {t("folderStructure")}
           </label>
           <div className="mt-2 space-y-2">
-            {[
-              { value: "flat", label: "平铺（所有文件在同一目录）" },
-              { value: "preserve", label: "保留原始目录结构" },
-            ].map(({ value, label }) => (
+            {structureItems.map(({ value, label }) => (
               <label
                 key={value}
                 className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors
-                  ${exportOptions.structure === value 
-                    ? "border-[#2eaadc] bg-[rgba(46,170,220,0.1)]" 
+                  ${exportOptions.structure === value
+                    ? "border-[#2eaadc] bg-[rgba(46,170,220,0.1)]"
                     : "border-[rgba(55,53,47,0.09)] hover:bg-[#f7f6f3]"
                   }`}
               >
@@ -202,19 +206,19 @@ export function ExportPanel({ onClose }: ExportPanelProps) {
         <button
           onClick={handleExport}
           disabled={exporting || completedFiles.length === 0 || !exportPath}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium 
-                     rounded-lg bg-[#2eaadc] text-white hover:bg-[#2eaadc]/90 disabled:opacity-50 
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium
+                     rounded-lg bg-[#2eaadc] text-white hover:bg-[#2eaadc]/90 disabled:opacity-50
                      disabled:cursor-not-allowed transition-colors"
         >
           {exporting ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              导出中...
+              {t("exporting")}
             </>
           ) : (
             <>
               <FileDown className="w-4 h-4" />
-              导出 {completedFiles.length} 个文件
+              {t("exportCount", { n: completedFiles.length })}
             </>
           )}
         </button>

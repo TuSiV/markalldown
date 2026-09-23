@@ -1,8 +1,8 @@
 [package]
-name = "markitdown-open"
-version = "1.0.0"
-description = "MarkItDown Desktop - Convert files to Markdown"
-authors = ["MarkItDown"]
+name = "markalldown"
+version = "1.1.0"
+description = "MarkAllDown Desktop - Convert files to Markdown"
+authors = ["MarkAllDown"]
 license = "MIT"
 repository = ""
 edition = "2021"
@@ -17,7 +17,7 @@ tauri-build = { version = "2.5.6", features = [] }
 
 [package.metadata.tauri-winres]
 LegalCopyright = "Copyright (c) YONGZHE CHEN. All rights reserved."
-FileVersion = "1.0.0.0"
+FileVersion = "1.1.0.0"
 CompanyName = "YONGZHE CHEN"
 
 [dependencies]

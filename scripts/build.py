@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build script for MarkItDown Desktop App"""
+"""Build script for MarkAllDown Desktop App"""
 
 import os
 import sys
@@ -50,11 +50,11 @@ def prepare_sidecar():
     BINARIES_DIR.mkdir(parents=True, exist_ok=True)
     
     if platform.system() == "Windows":
-        src_name = "markitdown-server.exe"
-        dst_name = f"markitdown-server-{target_triple}.exe"
+        src_name = "markalldown-server.exe"
+        dst_name = f"markalldown-server-{target_triple}.exe"
     else:
-        src_name = "markitdown-server"
-        dst_name = f"markitdown-server-{target_triple}"
+        src_name = "markalldown-server"
+        dst_name = f"markalldown-server-{target_triple}"
     
     src_path = BACKEND_DIR / "dist" / src_name
     dst_path = BINARIES_DIR / dst_name
@@ -73,7 +73,7 @@ def build_tauri_app():
 
 def main():
     print("=" * 50)
-    print("Building MarkItDown Desktop App")
+    print("Building MarkAllDown Desktop App")
     print("=" * 50)
     
     build_python_sidecar()

@@ -10,6 +10,10 @@ export interface FileEntry {
   result?: string;
   file?: File;
   relativePath?: string;
+  sourcePath?: string;
+  cachePath?: string;
+  preview?: string;
+  charCount?: number;
 }
 
 export interface ExportOptions {
@@ -20,23 +24,26 @@ export interface ExportOptions {
 
 interface AppState {
   port: number | null;
+  token: string | null;
   isReady: boolean;
   isConverting: boolean;
   files: FileEntry[];
   exportOptions: ExportOptions;
 
-  setPort: (port: number) => void;
+  setConnection: (port: number, token: string) => void;
   setReady: (ready: boolean) => void;
   setConverting: (converting: boolean) => void;
   addFiles: (files: FileEntry[]) => void;
   removeFile: (id: string) => void;
   clearFiles: () => void;
   updateFileStatus: (id: string, status: FileEntry["status"], progress: number, result?: string) => void;
+  patchFile: (id: string, fields: Partial<FileEntry>) => void;
   setExportOptions: (options: Partial<ExportOptions>) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
   port: null,
+  token: null,
   isReady: false,
   isConverting: false,
   files: [],
@@ -46,25 +53,30 @@ export const useAppStore = create<AppState>((set) => ({
     structure: "flat",
   },
 
-  setPort: (port) => set({ port }),
+  setConnection: (port, token) => set({ port, token }),
   setReady: (ready) => set({ isReady: ready }),
   setConverting: (converting) => set({ isConverting: converting }),
-  
+
   addFiles: (newFiles) =>
     set((state) => ({ files: [...state.files, ...newFiles] })),
-  
+
   removeFile: (id) =>
     set((state) => ({ files: state.files.filter((f) => f.id !== id) })),
-  
+
   clearFiles: () => set({ files: [] }),
-  
+
   updateFileStatus: (id, status, progress, result) =>
     set((state) => ({
       files: state.files.map((f) =>
         f.id === id ? { ...f, status, progress, result } : f
       ),
     })),
-  
+
+  patchFile: (id, fields) =>
+    set((state) => ({
+      files: state.files.map((f) => (f.id === id ? { ...f, ...fields } : f)),
+    })),
+
   setExportOptions: (options) =>
     set((state) => ({
       exportOptions: { ...state.exportOptions, ...options },

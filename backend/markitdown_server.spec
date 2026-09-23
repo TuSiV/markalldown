@@ -31,10 +31,19 @@ hidden_imports += collect_submodules('py7zr')
 hidden_imports += collect_submodules('uvicorn')
 hidden_imports += collect_submodules('fastapi')
 hidden_imports += collect_submodules('multipart')
+hidden_imports += collect_submodules('rapidocr_onnxruntime')
+# cache.py is a local module
+hidden_imports += collect_submodules('pypdfium2')
+hidden_imports += collect_submodules('cv2')
+hidden_imports += collect_submodules('pyclipper')
+hidden_imports += collect_submodules('PIL')
+hidden_imports += ['cv2', 'pyclipper', 'PIL', 'PIL.Image', 'PIL.ImageDraw', 'PIL.ImageFont']
 
 # Collect magika data files (models)
 datas = []
 datas += collect_data_files('magika')
+datas += collect_data_files('rapidocr_onnxruntime')
+datas += collect_data_files('pypdfium2')
 
 a = Analysis(
     ['server.py'],
@@ -50,8 +59,6 @@ a = Analysis(
         'matplotlib',
         'scipy',
         'numpy.testing',
-        'PIL',
-        'cv2',
         'torch',
         'tensorflow',
     ],
@@ -70,7 +77,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='markitdown-server',
+    name='markalldown-server',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
