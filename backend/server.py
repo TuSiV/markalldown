@@ -52,10 +52,10 @@ app = FastAPI(title="MarkAllDown Server")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://tauri.localhost", "http://localhost:1420", "tauri://localhost"],
+    allow_origins=["http://tauri.localhost", "http://localhost:1420", "http://localhost:5173", "tauri://localhost"],
     allow_credentials=False,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "X-API-Token"],
+    allow_headers=["Content-Type", "X-API-Token", "X-Locale"],
 )
 
 temp_dir = tempfile.mkdtemp(prefix="markitdown_")
