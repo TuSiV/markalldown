@@ -86,7 +86,7 @@ export function Preview({ fileId, onClose }: PreviewProps) {
         { port, token: token || "" },
         {
           name: file.name,
-          content: markdown,
+          content: file.cachePath ? undefined : markdown,
           cachePath: file.cachePath,
           sourcePath: file.sourcePath,
         }

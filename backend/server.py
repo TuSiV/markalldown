@@ -211,16 +211,16 @@ async def export_files(request: Request, locale: str = Depends(request_locale), 
         for item in files:
             if not isinstance(item, dict):
                 raise HTTPException(status_code=400, detail=tr("files 条目格式错误", "Invalid file entry", locale))
-            content = item.get("content")
-            if content is None or content == "":
-                cache_path = item.get("cachePath") or ""
-                if cache_path:
-                    try:
-                        content = result_cache.read(cache_path)
-                    except CacheError as e:
-                        raise HTTPException(status_code=400, detail=str(e))
-                else:
-                    content = ""
+            # 优先读磁盘缓存全文；content 仅作无缓存时的回退
+            content = None
+            cache_path = item.get("cachePath") or ""
+            if cache_path:
+                try:
+                    content = result_cache.read(cache_path)
+                except CacheError as e:
+                    raise HTTPException(status_code=400, detail=str(e))
+            if content is None:
+                content = item.get("content") or ""
             resolved.append({
                 "name": item.get("name") or "untitled",
                 "relativePath": item.get("relativePath") or item.get("name") or "untitled",

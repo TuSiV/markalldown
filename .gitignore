@@ -43,8 +43,8 @@ backend/dist/
 backend/*.egg
 backend/venv/
 backend/.venv/
-backend/markitdown_server.build/
-backend/markitdown_server.dist/
+backend/markalldown_server.build/
+backend/markalldown_server.dist/
 
 # Temporary/local scripts
 scripts/_*

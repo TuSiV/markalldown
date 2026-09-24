@@ -35,7 +35,7 @@ def build_python_sidecar():
     
     subprocess.run([
         sys.executable, "-m", "PyInstaller",
-        "markitdown_server.spec",
+        "markalldown_server.spec",
         "--clean",
         "--distpath", str(BACKEND_DIR / "dist"),
     ], check=True)

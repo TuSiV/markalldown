@@ -26,7 +26,7 @@ export function FileList() {
         { port, token: token || "" },
         {
           name: file.name,
-          content: file.result,
+          content: file.cachePath ? undefined : file.result,
           cachePath: file.cachePath,
           sourcePath: file.sourcePath,
         }

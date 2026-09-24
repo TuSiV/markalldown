@@ -63,7 +63,7 @@ python scripts/build.py
 ```bash
 # 1) Python sidecar
 cd backend
-python -m PyInstaller markitdown_server.spec --clean --noconfirm
+python -m PyInstaller markalldown_server.spec --clean --noconfirm
 
 # 2) 拷贝 sidecar 到 Tauri 外部二进制目录
 #    src-tauri/binaries/markalldown-server-<host-triple>.exe
