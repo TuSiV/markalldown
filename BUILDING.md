@@ -2,7 +2,7 @@
 
 Use Node.js 22.12+ (CI: 24), Python 3.12 and stable Rust on the target OS. Windows needs the Visual Studio C++ build tools/WebView2; macOS needs Xcode command line tools. Install backend and developer requirements, then run `python scripts/build.py`.
 
-- `tauri.conf.json` defines NSIS/MSI Windows bundles; `tauri.macos.conf.json` overrides bundles to APP/DMG for macOS.
+- Stable versions use NSIS/MSI Windows bundles; prereleases use NSIS because MSI rejects nonnumeric prerelease identifiers. `tauri.macos.conf.json` overrides bundles to APP/DMG for macOS.
 - PyInstaller creates a native service with OCR, converter and cryptography dependencies; its target-triple name is copied to Tauri `externalBin`.
 - The desktop locates platform-specific service binaries beside the application or in resources. Source checkout paths are only searched in debug builds.
 - CI builds Windows x64, macOS arm64 and macOS x64, runs source tests, exercises the frozen service, installs/copies the actual bundle, then launches the installed app and tests its service. The launched process PATH excludes installed Python, establishing that the packaged service is standalone.

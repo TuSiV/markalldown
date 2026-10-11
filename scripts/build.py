@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Native cross-platform sidecar + Tauri build. Run on the target OS/architecture."""
 import argparse
+import json
 import os
 from pathlib import Path
 import platform
@@ -30,6 +31,12 @@ def main():
     if not args.sidecar_only:
         npm = "npm.cmd" if platform.system() == "Windows" else "npm"
         if not args.skip_install: run([npm,"ci"])
-        run([npm,"run","tauri","--","build"])
+        command = [npm,"run","tauri","--","build"]
+        version = json.loads((ROOT/"package.json").read_text())["version"]
+        if platform.system() == "Windows" and "-" in version:
+            # MSI accepts only numeric prerelease components. Use NSIS for RC;
+            # stable 2.0.0 retains both configured NSIS and MSI bundles.
+            command += ["--bundles", "nsis"]
+        run(command)
     print("Native build completed for " + host_target())
 if __name__ == "__main__": main()
