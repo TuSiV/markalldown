@@ -2,7 +2,7 @@
 
 MarkAllDown 是一款本地桌面应用，可将 PDF / Office / 图片 / 压缩包等多种文件批量转换为 Markdown。转换引擎基于 [Microsoft MarkItDown](https://github.com/microsoft/markitdown)，并内置中文优先 OCR（扫描件与图片）。
 
-> 产品名：**MarkAllDown** · 版本 **2.0.0** · 默认纯本地运行；仅启用可选 AI 且明确同意后，会向所选 AI 服务发送脱敏稿（OCR 始终在本地）
+> 产品名：**MarkAllDown** · 版本 **2.0.1** · 默认纯本地运行；仅启用可选 AI 且明确同意后，会向所选 AI 服务发送脱敏稿（OCR 始终在本地）
 
 ## 功能
 
@@ -129,3 +129,9 @@ AI 默认关闭，需要指定兼容 Chat Completions 的接口、模型及会�
 Node.js 需要 22.12+（本轮使用 24.19）。
 
 测试：`python -m pip install -r backend/requirements.txt -r backend/requirements-dev.txt`；`python -m unittest discover -s tests -v`；`npm ci`；`npm test`；`npm run build`。Windows/macOS 桌面启动、侧车打包和安装包仍需目标系统验证。
+
+### Mac 下载后显示“损坏”
+
+1.1.1 / 2.0.0 缺少完整应用包签名；此前直接启动验收没有覆盖浏览器下载后的 Gatekeeper 检查。请改用 1.1.2 / 2.0.1。新版本对应用包、主程序和内置转换服务验证签名，并记录下载隔离状态下的系统评估。
+
+临时签名不是 Apple Developer ID 签名或公证，首次启动仍可能被拦截。确认下载来源与 SHA256SUMS.txt 一致后，按 macOS 的“系统设置 → 隐私与安全性 → 仍要打开”处理。不要关闭系统整体 Gatekeeper。若仍显示损坏，检查 `codesign --verify --deep --strict --verbose=2 /Applications/MarkAllDown.app`，保留输出以区分签名失效与信任策略拦截。

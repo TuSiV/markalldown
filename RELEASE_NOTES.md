@@ -1,7 +1,7 @@
-# MarkAllDown 2.0.0
+# MarkAllDown 2.0.1
 
-Adds optional local Markdown redaction, per-file full review, encrypted recovery mappings and opt-in OpenAI-compatible AI suggestions. Original export remains available with an explicit confirmation while privacy mode is active.
+Fixes the missing outer macOS application signature shared by 2.0.0. macOS bundles now use Tauri ad-hoc signing, with mandatory deep/strict signature verification for the app and explicit verification of the main executable and conversion sidecar after DMG installation. CI also inspects the previous released DMG and records quarantine/Gatekeeper assessments separately from runtime tests.
 
-Redacted export verifies recovery against the source hash, saves the encrypted vault separately, then publishes the output batch. Filenames are anonymous by default. Windows and both macOS architectures include the Python converter/OCR/cryptography service and are checked after installation with Python removed from the launched app's PATH.
+Includes Windows NSIS/MSI, Apple Silicon DMG and Intel DMG, with SHA256SUMS.txt. Conversion/OCR/export runtime tests remain required; redaction and restoration tests remain required.
 
-macOS apps are unsigned/not notarized. Text masking does not scrub image pixels or guarantee identification of all sensitive information. Keep the recovery vault and password separately; see SECURITY.md for scope and limits.
+Ad-hoc signing verifies bundle integrity but is not an Apple Developer ID signature or notarization. macOS may still require explicit approval in System Settings > Privacy & Security > Open Anyway. Successful direct executable startup does not establish browser/Finder first-launch acceptance. No system-wide Gatekeeper disablement is required or recommended.
