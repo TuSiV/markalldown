@@ -27,6 +27,8 @@ interface AppState {
   token: string | null;
   isReady: boolean;
   isConverting: boolean;
+  privacyEnabled: boolean;
+  setPrivacyEnabled: (enabled: boolean) => void;
   files: FileEntry[];
   exportOptions: ExportOptions;
 
@@ -46,6 +48,8 @@ export const useAppStore = create<AppState>((set) => ({
   token: null,
   isReady: false,
   isConverting: false,
+  privacyEnabled: false,
+  setPrivacyEnabled: (privacyEnabled) => set({ privacyEnabled }),
   files: [],
   exportOptions: {
     format: "individual",

@@ -26,6 +26,7 @@ class ResultCache:
         )
         self.root = base
         self.root.mkdir(parents=True, exist_ok=True)
+        os.chmod(self.root, 0o700)
 
     def _safe_name(self, filename: str) -> str:
         name = Path(filename.replace("\\", "/")).name or "untitled"
@@ -37,9 +38,11 @@ class ResultCache:
         if not safe.endswith(".md"):
             stem = Path(safe).stem or "untitled"
             safe = f"{stem}.md"
-        unique = f"{int(time.time() * 1000)}_{uuid.uuid4().hex[:8]}_{safe}"
+        unique = f"{uuid.uuid4().hex}.md"
         path = self.root / unique
-        path.write_text(content, encoding="utf-8")
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
+            f.write(content)
         return str(path)
 
     def resolve(self, cache_path: str) -> Path:

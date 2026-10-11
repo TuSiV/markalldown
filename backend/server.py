@@ -70,6 +70,10 @@ def require_token(
         raise HTTPException(status_code=401, detail=tr("未授权", "Unauthorized", locale))
 
 
+from redaction_api import router as privacy_router
+app.include_router(privacy_router, dependencies=[Depends(require_token)])
+
+
 @app.on_event("shutdown")
 async def shutdown():
     try:
@@ -227,7 +231,7 @@ async def export_files(request: Request, locale: str = Depends(request_locale), 
                 "content": content,
             })
 
-        logger.info(f"Exporting {len(resolved)} files to {export_path}")
+        logger.info(f"Exporting {len(resolved)} files")
         result_path = exporter.export(resolved, export_path, options)
 
         if options.format == "zip" and os.path.isfile(result_path):

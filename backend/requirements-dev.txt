@@ -1,0 +1,5 @@
+httpx
+python-docx
+openpyxl
+reportlab
+psutil

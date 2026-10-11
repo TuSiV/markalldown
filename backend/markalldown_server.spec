@@ -32,6 +32,7 @@ hidden_imports += collect_submodules('uvicorn')
 hidden_imports += collect_submodules('fastapi')
 hidden_imports += collect_submodules('multipart')
 hidden_imports += collect_submodules('rapidocr_onnxruntime')
+hidden_imports += ['redaction', 'redaction_api', 'cryptography.hazmat.primitives.ciphers.aead']
 # cache.py is a local module
 hidden_imports += collect_submodules('pypdfium2')
 hidden_imports += collect_submodules('cv2')
@@ -68,13 +69,12 @@ a = Analysis(
     noarchive=False,
 )
 
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure)
 
 exe = EXE(
     pyz,
     a.scripts,
     a.binaries,
-    a.zipfiles,
     a.datas,
     [],
     name='markalldown-server',
@@ -84,7 +84,7 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,
+    console=sys.platform != "win32",
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

@@ -1,5 +1,6 @@
 import os
 import zipfile
+import re
 from pathlib import Path
 from typing import List, Dict
 from dataclasses import dataclass
@@ -20,6 +21,12 @@ class Exporter:
         output_dir: str,
         options: ExportOptions
     ) -> str:
+        if options.format not in ("individual", "combined", "zip") or options.structure not in ("flat", "preserve"):
+            raise ValueError("Invalid export options")
+        for item in files:
+            self._safe_rel_parts(self._get_file_path(item))
+            if not isinstance(item.get("content"), str):
+                raise ValueError("Export content must be text")
         os.makedirs(output_dir, exist_ok=True)
 
         if options.format == "zip":
@@ -33,11 +40,21 @@ class Exporter:
         return file_data.get("relativePath") or file_data.get("name") or "untitled"
 
     def _safe_rel_parts(self, file_path: str) -> List[str]:
+        if not isinstance(file_path, str) or not file_path or len(file_path) > 4096:
+            raise ValueError("Invalid export path")
         normalized = file_path.replace("\\", "/")
-        return [p for p in normalized.split("/") if p not in ("", ".", "..")]
+        parts = normalized.split("/")
+        if normalized.startswith("/") or any(p in ("", ".", "..") for p in parts):
+            raise ValueError("Export paths must be relative without traversal")
+        for part in parts:
+            if any(ord(c) < 32 or c in '<>:"|?*' for c in part) or part.endswith((" ", ".")):
+                raise ValueError("Invalid export filename")
+            if re.fullmatch(r"(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?", part, re.I):
+                raise ValueError("Reserved export filename")
+        return parts
 
     def _dest_path(self, output_dir: str, file_path: str, md_name: str, preserve_structure: bool) -> str:
-        output_dir_abs = os.path.abspath(output_dir)
+        output_dir_abs = os.path.realpath(output_dir)
         parts = self._safe_rel_parts(file_path)
         if not parts:
             raise ValueError(f"Invalid file path: {file_path}")
@@ -48,6 +65,7 @@ class Exporter:
         else:
             target = os.path.abspath(os.path.join(output_dir_abs, md_name))
 
+        target = os.path.realpath(target)
         if target != output_dir_abs and not target.startswith(output_dir_abs + os.sep):
             raise ValueError(f"Path escapes output directory: {file_path}")
         return target
@@ -68,7 +86,7 @@ class Exporter:
 
             os.makedirs(os.path.dirname(dest_path), exist_ok=True)
 
-            with open(dest_path, 'w', encoding='utf-8') as f:
+            with open(dest_path, 'x', encoding='utf-8', newline='') as f:
                 f.write(content)
 
         return output_dir
@@ -90,7 +108,7 @@ class Exporter:
         output_path = os.path.join(output_dir, "combined.md")
         output_path = self._handle_collision(output_path)
 
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, 'x', encoding='utf-8', newline='') as f:
             f.write("\n".join(combined_content))
 
         return output_path
@@ -104,7 +122,8 @@ class Exporter:
         zip_path = os.path.join(output_dir, "markitdown-export.zip")
         zip_path = self._handle_collision(zip_path)
 
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+        used_names = set()
+        with zipfile.ZipFile(zip_path, 'x', zipfile.ZIP_DEFLATED) as zf:
             for file_data in files:
                 file_path = self._get_file_path(file_data)
                 content = file_data["content"]
@@ -117,6 +136,13 @@ class Exporter:
                 else:
                     arcname = md_name
 
+                original_arcname = arcname
+                counter = 1
+                while arcname.casefold() in used_names:
+                    stem, ext = os.path.splitext(original_arcname)
+                    arcname = f"{stem}_{counter}{ext}"
+                    counter += 1
+                used_names.add(arcname.casefold())
                 zf.writestr(arcname, content)
 
         return zip_path

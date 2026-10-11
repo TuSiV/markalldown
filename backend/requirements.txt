@@ -7,3 +7,4 @@ py7zr
 aiofiles
 rapidocr_onnxruntime
 pypdfium2
+cryptography>=42,<48

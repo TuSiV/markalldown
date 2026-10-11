@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PrivacyPanel } from "./PrivacyPanel";
 import { X, FolderOpen, FileDown, Archive, Loader2, Check } from "lucide-react";
 import { useAppStore } from "../stores/appStore";
 import { api, localizeError } from "../lib/api";
@@ -10,7 +11,7 @@ interface ExportPanelProps {
 }
 
 export function ExportPanel({ onClose }: ExportPanelProps) {
-  const { files, port, token, exportOptions, setExportOptions } = useAppStore();
+  const { files, port, token, exportOptions, setExportOptions, privacyEnabled } = useAppStore();
   const t = useT();
   const locale = useI18n((s) => s.locale);
   const [exporting, setExporting] = useState(false);
@@ -49,6 +50,10 @@ export function ExportPanel({ onClose }: ExportPanelProps) {
       return;
     }
 
+    if (privacyEnabled) {
+      const { confirm } = await import("@tauri-apps/plugin-dialog");
+      if (!await confirm(locale === "en-US" ? "Export originals containing sensitive text?" : "当前启用了脱敏。确定仍要导出含敏感信息的原文？", { title: "MarkAllDown", kind: "warning" })) return;
+    }
     setExporting(true);
     try {
       const completedData = completedFiles.map(f => ({
@@ -200,6 +205,7 @@ export function ExportPanel({ onClose }: ExportPanelProps) {
             ))}
           </div>
         </div>
+        <PrivacyPanel exportPath={exportPath} />
       </div>
 
       <div className="p-4 border-t border-[rgba(55,53,47,0.09)]">
@@ -218,7 +224,7 @@ export function ExportPanel({ onClose }: ExportPanelProps) {
           ) : (
             <>
               <FileDown className="w-4 h-4" />
-              {t("exportCount", { n: completedFiles.length })}
+              {privacyEnabled ? (locale === "en-US" ? "Export original (sensitive)" : "导出原文（含敏感信息）") : t("exportCount", { n: completedFiles.length })}
             </>
           )}
         </button>

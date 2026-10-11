@@ -12,7 +12,7 @@ interface PreviewProps {
 }
 
 export function Preview({ fileId, onClose }: PreviewProps) {
-  const { files, port, token } = useAppStore();
+  const { files, port, token, privacyEnabled } = useAppStore();
   const t = useT();
   const locale = useI18n((s) => s.locale);
   const [saving, setSaving] = useState(false);
@@ -53,12 +53,19 @@ export function Preview({ fileId, onClose }: PreviewProps) {
 
   const markdown = content ?? file.preview ?? file.result ?? "";
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(markdown);
+  const confirmOriginal = async () => {
+    if (!privacyEnabled) return true;
+    const { confirm } = await import("@tauri-apps/plugin-dialog");
+    return confirm(locale === "en-US" ? "This preview contains original sensitive text. Continue copying or saving?" : "当前预览为含敏感信息的原文，确定复制或保存？", { title: "MarkAllDown", kind: "warning" });
+  };
+  const handleCopy = async () => {
+    if (!await confirmOriginal()) return;
+    await navigator.clipboard.writeText(markdown);
     toast.success(t("copied"));
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
+    if (!await confirmOriginal()) return;
     const blob = new Blob([markdown], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -80,6 +87,7 @@ export function Preview({ fileId, onClose }: PreviewProps) {
       toast.error(t("noSourceForSave"));
       return;
     }
+    if (!await confirmOriginal()) return;
     setSaving(true);
     try {
       const dir = await api.saveBesideSource(
@@ -113,6 +121,7 @@ export function Preview({ fileId, onClose }: PreviewProps) {
             <span className="text-xs text-[#9b9a97]">→</span>
             <span className="text-sm text-[#2eaadc]">
               {file.name.replace(/\.[^/.]+$/, "")}.md
+              {privacyEnabled && (locale === "en-US" ? " (original)" : "（原文）")}
             </span>
           </div>
 

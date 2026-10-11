@@ -55,7 +55,7 @@ export function Header({ onExport }: HeaderProps) {
 
         <button
           onClick={onExport}
-          disabled={!hasFiles || completedFiles === 0}
+          disabled={!isReady}
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg
                      bg-[#2eaadc] text-white hover:bg-[#2eaadc]/90 disabled:opacity-50
                      disabled:cursor-not-allowed transition-colors"
