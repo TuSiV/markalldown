@@ -1,4 +1,4 @@
-name: Privacy candidate builds
+name: Desktop 2.0.0 builds
 on:
   push:
     branches: [feature/redaction-ai]
@@ -100,10 +100,10 @@ jobs:
           mkdir -p release-assets
           find installers -type f -exec cp {} release-assets/ \;
           (cd release-assets && sha256sum * > SHA256SUMS.txt)
-      - name: Create candidate release only after all platforms pass
+      - name: Create 2.0.0 release only after all platforms pass
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v1.2.0-rc.1-build.${{ github.run_number }}"
-          gh release create "$tag" --target "${{ github.sha }}" --prerelease --title "MarkAllDown $tag" --notes-file RELEASE_NOTES.md
+          tag="v2.0.0"
+          gh release create "$tag" --target "${{ github.sha }}" --title "MarkAllDown $tag" --notes-file RELEASE_NOTES.md
           gh release upload "$tag" release-assets/*
