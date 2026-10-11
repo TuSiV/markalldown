@@ -32,7 +32,7 @@ def main():
         npm = "npm.cmd" if platform.system() == "Windows" else "npm"
         if not args.skip_install: run([npm,"ci"])
         command = [npm,"run","tauri","--","build"]
-        version = json.loads((ROOT/"package.json").read_text())["version"]
+        version = json.loads((ROOT/"package.json").read_text(encoding="utf-8"))["version"]
         if platform.system() == "Windows" and "-" in version:
             # MSI accepts only numeric prerelease components. Use NSIS for RC;
             # stable 2.0.0 retains both configured NSIS and MSI bundles.

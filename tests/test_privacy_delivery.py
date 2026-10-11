@@ -43,18 +43,18 @@ class DeliveryTests(unittest.TestCase):
         response = self.deliver(body)
         self.assertEqual(response.status_code,200,response.text)
         result = response.json()
-        pack = json.loads(Path(result['vaultPath']).read_text())
-        self.assertNotIn('13800138000', Path(result['vaultPath']).read_text())
+        pack = json.loads(Path(result['vaultPath']).read_text(encoding="utf-8"))
+        self.assertNotIn('13800138000', Path(result['vaultPath']).read_text(encoding="utf-8"))
         self.assertNotEqual(Path(result['vaultPath']).parent, Path(result['path']))
         if os.name == 'posix': self.assertEqual(Path(result['vaultPath']).stat().st_mode & 0o777,0o600)
         for i, source in enumerate(sources):
             md = Path(result['path']) / f'document_{i+1:04d}.md'
-            self.assertEqual(restore_markdown(md.read_text(),[pack['vaults'][i]],body['passphrase'])[0],source)
+            self.assertEqual(restore_markdown(md.read_text(encoding="utf-8"),[pack['vaults'][i]],body['passphrase'])[0],source)
     def test_combined_restores_both_documents(self):
         body,sources = self.payload('combined')
         response = self.deliver(body)
         self.assertEqual(response.status_code,200,response.text)
-        restored = restore_markdown(Path(response.json()['path']).read_text(),body['pack']['vaults'],body['passphrase'])[0]
+        restored = restore_markdown(Path(response.json()['path']).read_text(encoding="utf-8"),body['pack']['vaults'],body['passphrase'])[0]
         self.assertEqual(restored,'\n'.join(f'# document_{i+1:04d}.md\n\n{source}\n\n---\n' for i,source in enumerate(sources)))
     def test_zip_contains_no_vault_and_exact_restore(self):
         body,sources = self.payload('zip')

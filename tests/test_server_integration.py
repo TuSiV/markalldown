@@ -54,7 +54,7 @@ class RealApplicationTests(unittest.TestCase):
                         'passphrase': 'test secure password',
                         'options': {'exportPath': directory, 'format': 'individual', 'structure': 'flat'}})
                     self.assertEqual(exported.status_code, 200, exported.text)
-                    text = (Path(exported.json()['path']) / 'document_0001.md').read_text()
+                    text = (Path(exported.json()['path']) / 'document_0001.md').read_text(encoding="utf-8")
                     restored = self.client.post('/api/restore', headers=self.headers, json={
                         'content': text, 'vaults': [result['vault']], 'passphrase': 'test secure password'})
                     self.assertEqual(restored.status_code, 200, restored.text)
@@ -63,4 +63,4 @@ class RealApplicationTests(unittest.TestCase):
                         'files': [{'name': name, 'cachePath': cache_path}],
                         'options': {'exportPath': directory, 'format': 'individual', 'preserveNames': True, 'structure': 'flat'}})
                     self.assertEqual(legacy.status_code, 200, legacy.text)
-                    self.assertEqual((Path(directory) / (Path(name).stem + '.md')).read_text(), original)
+                    self.assertEqual((Path(directory) / (Path(name).stem + '.md')).read_text(encoding="utf-8"), original)

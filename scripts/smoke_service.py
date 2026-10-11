@@ -53,10 +53,10 @@ def exercise(port,token):
                 'pack':{'format':'MarkAllDownEncryptedVaultPack','version':1,'vaults':[result['vault']]},
                 'passphrase':'smoke-test-password','options':{'exportPath':directory,'format':fmt,'structure':'flat'}})
             assert Path(out['vaultPath']).is_file()
-            if fmt=='individual': text=(Path(out['path'])/'document_0001.md').read_text()
+            if fmt=='individual': text=(Path(out['path'])/'document_0001.md').read_text(encoding="utf-8")
             elif fmt=='zip':
                 with zipfile.ZipFile(out['path']) as z:text=z.read('document_0001.md').decode()
-            else:text=Path(out['path']).read_text()
+            else:text=Path(out['path']).read_text(encoding="utf-8")
             restored=request(port,token,'restore',{'content':text,'vaults':[result['vault']],'passphrase':'smoke-test-password'})['content']
             assert source in restored
         try: request(port,token,'redact',{'content':source},auth=False)
