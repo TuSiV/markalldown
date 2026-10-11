@@ -74,7 +74,7 @@ def main():
     env=os.environ.copy()
     env['PATH']=str(Path(env.get('SystemRoot','C:/Windows'))/'System32') if os.name=='nt' else '/usr/bin:/bin'
     command=[sys.executable,str(Path(__file__).resolve().parents[1]/'backend/server.py')] if args.source else [str(Path(args.binary).resolve())]
-    proc=subprocess.Popen(command+['--port',str(port),'--token',token],env=env)
+    proc=subprocess.Popen(command+['--port',str(port),'--token='+token],env=env)
     try:
         deadline=time.monotonic()+120
         while time.monotonic()<deadline:
