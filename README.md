@@ -2,7 +2,7 @@
 
 MarkAllDown 是一款本地桌面应用，可将 PDF / Office / 图片 / 压缩包等多种文件批量转换为 Markdown。转换引擎基于 [Microsoft MarkItDown](https://github.com/microsoft/markitdown)，并内置中文优先 OCR（扫描件与图片）。
 
-> 产品名：**MarkAllDown** · 版本 **1.1.0** · 纯本地运行，不上传文件到外部服务（OCR 亦在本地）
+> 产品名：**MarkAllDown** · 版本 **1.1.1** · 纯本地运行，不上传文件到外部服务（OCR 亦在本地）
 
 ## 功能
 
@@ -35,9 +35,9 @@ MarkAllDown 是一款本地桌面应用，可将 PDF / Office / 图片 / 压缩�
 
 ### 前置要求
 
-- Node.js 18+
+- Node.js 22.12+（CI 使用 24）
 - Python 3.11+
-- Rust 1.77+
+- Rust stable；Windows 需 C++ 构建工具，macOS 需 Xcode Command Line Tools
 
 ### 安装依赖
 
@@ -66,7 +66,8 @@ cd backend
 python -m PyInstaller markalldown_server.spec --clean --noconfirm
 
 # 2) 拷贝 sidecar 到 Tauri 外部二进制目录
-#    src-tauri/binaries/markalldown-server-<host-triple>.exe
+#    Windows: src-tauri/binaries/markalldown-server-<host-triple>.exe
+#    macOS: src-tauri/binaries/markalldown-server-<host-triple>
 
 # 3) 构建桌面安装包
 npm run tauri build
@@ -80,6 +81,12 @@ npm run tauri build
 | `src-tauri/target/release/bundle/msi/MarkAllDown_*_x64_en-US.msi` | MSI 安装包（en-US） |
 | `src-tauri/target/release/markalldown.exe` | 主程序 |
 | `src-tauri/target/release/markalldown-server.exe` | 转换服务 sidecar |
+
+### macOS 安装包
+
+1.1.1 同时提供 Apple Silicon（aarch64）与 Intel（x64）DMG。转换服务与 OCR 模型随应用内置，无需另装 Python。请在 [1.1.1 发布页](https://github.com/TuSiV/markalldown/releases/tag/v1.1.1) 选择对应架构；Windows EXE/MSI 位于同一发布页，并附 SHA256SUMS.txt。
+
+macOS 包尚未签名、公证。CI 已验证 DMG 复制安装、实际桌面启动及内置服务转换/OCR/导出；未逐控件做人工界面验收。主分支保留文件转换功能，2.0.0 脱敏/AI 功能在独立功能分支。
 
 ## 使用说明
 

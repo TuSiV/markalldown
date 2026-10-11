@@ -46,43 +46,30 @@ fn pick_port() -> u16 {
         .unwrap_or(18765)
 }
 
-fn find_sidecar(_app: &AppHandle) -> Result<PathBuf, String> {
-    let exe_path = std::env::current_exe().unwrap_or_default();
-    let exe_dir = exe_path.parent().unwrap_or(std::path::Path::new(".")).to_path_buf();
-
-    // 安装后 / 打包后：sidecar 与主程序同目录
-    let exe_stem = exe_path
-        .file_stem()
-        .map(|s| s.to_string_lossy().to_string())
-        .unwrap_or_else(|| "markitdown-open".into());
-    let sibling_names = [
-        "markalldown-server.exe".to_string(),
-        format!("{}-server.exe", exe_stem),
-    ];
-
-    for name in &sibling_names {
-        let candidate = exe_dir.join(name);
-        if candidate.exists() {
-            log::info!("Found sidecar at: {:?}", candidate);
-            return Ok(candidate);
+fn find_sidecar(app: &AppHandle) -> Result<PathBuf, String> {
+    let exe_path = std::env::current_exe().map_err(|e| e.to_string())?;
+    let exe_dir = exe_path.parent().ok_or("Application directory unavailable")?;
+    let suffix = if cfg!(windows) { ".exe" } else { "" };
+    let basename = format!("markalldown-server{}", suffix);
+    let mut candidates = vec![exe_dir.join(&basename)];
+    if let Ok(resources) = app.path().resource_dir() {
+        candidates.push(resources.join(&basename));
+        // Some macOS distributions place executable resources in MacOS.
+        candidates.push(resources.join("../MacOS").join(&basename));
+    }
+    #[cfg(debug_assertions)]
+    {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let target = env!("MARKALLDOWN_TARGET");
+        candidates.push(root.join("binaries").join(format!("markalldown-server-{}{}", target, suffix)));
+        candidates.push(root.join("../backend/dist").join(&basename));
+    }
+    for candidate in candidates {
+        if candidate.is_file() {
+            return candidate.canonicalize().map_err(|e| e.to_string());
         }
     }
-
-    // 开发模式：仓库内 binaries / backend/dist
-    if let Some(project_root) = option_env!("CARGO_MANIFEST_DIR") {
-        let root = PathBuf::from(project_root);
-        for candidate in [
-            root.join("binaries/markalldown-server-x86_64-pc-windows-msvc.exe"),
-            root.join("../backend/dist/markalldown-server.exe"),
-        ] {
-            if candidate.exists() {
-                log::info!("Found sidecar at: {:?}", candidate);
-                return Ok(candidate);
-            }
-        }
-    }
-
-    Err("Sidecar binary not found".to_string())
+    Err("Bundled conversion service not found".to_string())
 }
 
 fn start_sidecar(app: &AppHandle) -> Result<(u16, String), String> {
