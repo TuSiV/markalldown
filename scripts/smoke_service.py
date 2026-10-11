@@ -70,7 +70,7 @@ def main():
     token=secrets.token_urlsafe(32)
     env=os.environ.copy()
     env['PATH']=str(Path(env.get('SystemRoot','C:/Windows'))/'System32') if os.name=='nt' else '/usr/bin:/bin'
-    proc=subprocess.Popen([str(Path(args.binary).resolve()),'--port',str(port),'--token',token],env=env)
+    proc=subprocess.Popen([str(Path(args.binary).resolve()),'--port',str(port),'--token='+token],env=env)
     try:
         deadline=time.monotonic()+120
         while time.monotonic()<deadline:
