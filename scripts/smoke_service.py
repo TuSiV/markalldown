@@ -23,6 +23,26 @@ def request(port, token, route, data=None, auth=True):
 
 def exercise(port,token):
     from urllib.error import HTTPError
+    # Real conversion through the frozen API, including bundled OCR models.
+    from PIL import Image, ImageDraw, ImageFont
+    def convert(name, raw):
+        boundary = "smoke" + secrets.token_hex(12)
+        payload = (f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="{name}"\r\nContent-Type: application/octet-stream\r\n\r\n'.encode()
+                   + raw + f'\r\n--{boundary}--\r\n'.encode())
+        with urlopen(Request(f'http://127.0.0.1:{port}/api/convert', data=payload, headers={
+            'X-API-Token':token,'Content-Type':f'multipart/form-data; boundary={boundary}'}), timeout=120) as r:
+            return json.load(r)
+    plain = convert('synthetic.md', b'# Synthetic contract\nPhone 13800138000')
+    assert plain.get('cachePath')
+    image = Image.new('RGB',(1600,500),'white')
+    fonts=['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf','C:/Windows/Fonts/arial.ttf','/System/Library/Fonts/Supplemental/Arial.ttf']
+    font=next((ImageFont.truetype(f,64) for f in fonts if Path(f).exists()),ImageFont.load_default(size=64))
+    ImageDraw.Draw(image).text((80,150),'Phone 13800138000',font=font,fill='black')
+    png=io.BytesIO();image.save(png,format='PNG')
+    scan=convert('synthetic-scan.png',png.getvalue())
+    from urllib.parse import urlencode
+    text=request(port,token,'text?'+urlencode({'path':scan['cachePath']}))['content']
+    assert '13800138000' in text, 'Packaged OCR failed to read synthetic phone'
     with tempfile.TemporaryDirectory() as directory:
         source='# Synthetic contract\nPhone 13800138000. Email abc@example.com.\n'
         result=request(port,token,'redact',{'content':source,'options':{},'passphrase':'smoke-test-password'})
