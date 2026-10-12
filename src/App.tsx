@@ -66,7 +66,7 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen bg-white">
-      <Header workspace onExport={() => setPanel("export")} onRedact={() => setPanel("redaction")} onRecovery={() => setPanel("recovery")} />
+      <Header workspace onSettings={() => setPanel("settings")} onExport={() => setPanel("export")} onRedact={() => setPanel("redaction")} onRecovery={() => setPanel("recovery")} />
 
       <main className="flex-1 flex overflow-hidden bg-[#f3f6fa]">
         <Sidebar page={panel} onNavigate={setPanel} />

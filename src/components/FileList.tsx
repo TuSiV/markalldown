@@ -1,12 +1,13 @@
 import { FileText, CheckCircle2, XCircle, Loader2, Trash2, Eye, AlertCircle, FolderOpen } from "lucide-react";
 import { useAppStore } from "../stores/appStore";
 import { useState } from "react";
+import { FileGlyph } from "./Visual";
 import { Preview } from "./Preview";
 import { api, localizeError } from "../lib/api";
 import { toast } from "sonner";
 import { useT, useI18n } from "../i18n";
 
-export function FileList({ onPreview }: { onPreview?: (id: string) => void }) {
+export function FileList({ onPreview, selectedId }: { onPreview?: (id: string) => void; selectedId?: string | null }) {
   const { files, removeFile, clearFiles, port, token } = useAppStore();
   const t = useT();
   const locale = useI18n((s) => s.locale);
@@ -53,7 +54,7 @@ export function FileList({ onPreview }: { onPreview?: (id: string) => void }) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "converting":
-        return <Loader2 className="w-4 h-4 text-[#2eaadc] animate-spin" />;
+        return <Loader2 className="w-4 h-4 text-[#2563eb] animate-spin" />;
       case "done":
         return <CheckCircle2 className="w-4 h-4 text-[#0f7b6c]" />;
       case "error":
@@ -75,8 +76,8 @@ export function FileList({ onPreview }: { onPreview?: (id: string) => void }) {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-medium text-[#787774]">
+      <div className="queue-heading">
+        <h2 className="font-semibold text-slate-700">
           {t("fileList", { n: files.length })}
         </h2>
         <button
@@ -90,7 +91,7 @@ export function FileList({ onPreview }: { onPreview?: (id: string) => void }) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto rounded-lg border border-[rgba(55,53,47,0.09)]">
+      <div className="file-queue flex-1 overflow-y-auto">
         {files.length === 0 ? (
           <div className="flex items-center justify-center py-12 text-[#9b9a97]">
             <p>{t("emptyList")}</p>
@@ -100,23 +101,23 @@ export function FileList({ onPreview }: { onPreview?: (id: string) => void }) {
             {files.map((file) => (
               <div
                 key={file.id}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-[#f7f6f3] transition-colors"
+                className={`file-row ${selectedId === file.id ? "selected" : ""}`}
               >
                 <div className="flex-shrink-0">
-                  {getStatusIcon(file.status)}
+                  <FileGlyph name={file.name} />
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-[#9b9a97] flex-shrink-0" />
-                    <span className="text-sm font-medium truncate">{file.name}</span>
-                    <span className="text-xs text-[#9b9a97]">{getStatusText(file.status)}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+
+                    <button disabled={file.status !== "done" || !file.cachePath} onClick={() => onPreview ? onPreview(file.id) : setPreviewFile(file.id)} className="file-name truncate">{file.name}</button>
+                    <span className={`status-badge status-${file.status}`}>{getStatusIcon(file.status)}{getStatusText(file.status)}</span>
                   </div>
 
                   {file.status === "converting" && (
                     <div className="mt-1.5 w-full bg-[#f7f6f3] rounded-full h-1.5">
                       <div
-                        className="bg-[#2eaadc] h-1.5 rounded-full transition-all duration-300"
+                        className="bg-[#2563eb] h-1.5 rounded-full transition-all duration-300"
                         style={{ width: `${file.progress}%` }}
                       />
                     </div>
@@ -138,8 +139,9 @@ export function FileList({ onPreview }: { onPreview?: (id: string) => void }) {
                   {file.status === "done" && file.cachePath && (
                     <button
                       onClick={() => onPreview ? onPreview(file.id) : setPreviewFile(file.id)}
-                      className="p-1.5 text-[#9b9a97] hover:text-[#2eaadc] hover:bg-[rgba(46,170,220,0.1)]
+                      className="p-1.5 text-[#9b9a97] hover:text-[#2563eb] hover:bg-[rgba(37,99,235,0.1)]
                                  rounded-md transition-colors"
+                      aria-label={`${t("preview")} ${file.name}`}
                       title={t("preview")}
                     >
                       <Eye className="w-4 h-4" />
@@ -165,6 +167,7 @@ export function FileList({ onPreview }: { onPreview?: (id: string) => void }) {
                     disabled={file.status === "converting" || file.status === "pending"}
                     className="p-1.5 text-[#9b9a97] hover:text-[#eb5757] hover:bg-[rgba(235,87,87,0.1)]
                                rounded-md transition-colors"
+                    aria-label={`${t("remove")} ${file.name}`}
                     title={t("remove")}
                   >
                     <Trash2 className="w-4 h-4" />

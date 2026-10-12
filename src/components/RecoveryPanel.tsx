@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { confirm, save } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
-import { X, Upload } from "lucide-react";
+import { X, Upload, FileText, ShieldCheck, KeyRound, Eye } from "lucide-react";
 import { useAppStore } from "../stores/appStore";
 import { useI18n } from "../i18n";
 import { privacyApi, type LibraryPack, type RecoveryPreview, type RecoveryRequest } from "../lib/privacyApi";
@@ -86,17 +86,19 @@ export function RecoveryPanel({ onClose }: { onClose: () => void }) {
       toast.success(tr(`恢复副本已保存：${result.path}`, `Restored copy saved: ${result.path}`));
     } catch (e) { error(e); } finally { setBusy(false); }
   };
+  const recoveryStep = preview ? 4 : password && document && (mode === "file" ? mapping : packId) ? 3 : document ? 2 : 1;
   return <section className="workspace-page h-full overflow-y-auto">
     <div className="max-w-7xl mx-auto space-y-5">
       <div className="flex justify-between items-center"><h2 className="text-2xl font-semibold text-slate-800">{tr("文件恢复", "Restore files")}</h2><button onClick={onClose} aria-label={tr("关闭恢复", "Close recovery")}><X className="w-5 h-5" /></button></div>
       <p className="text-sm text-[#787774]">{tr("无需先转换文件。选择脱敏 Markdown、加密恢复包和口令，预览后另存恢复副本。恢复的是文本，不会重建原始 Word/PDF。", "No conversion required. Select redacted Markdown, an encrypted pack and its password; preview and save a new copy. Recovery restores text, not the original Word/PDF file.")}</p>
-      <div className="grid grid-cols-1 2xl:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.1fr)] gap-5 items-start">
-      <fieldset disabled={busy} className="bg-white border rounded-lg p-4 space-y-4 text-sm">
-        <div className="rounded-lg border border-[#2eaadc]/40 bg-[#2eaadc]/5 p-4 space-y-3">
+      <ol className="workflow-steps">{[tr("选择脱敏 MD", "Choose Markdown"),tr("选择恢复包", "Choose recovery pack"),tr("输入口令并预览", "Password and preview"),tr("审核并另存", "Review and save")].map((step,i)=><li key={step} className={i+1===recoveryStep ? "active" : i+1<recoveryStep ? "complete" : ""}><span>{i+1}</span>{step}</li>)}</ol>
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.1fr)] gap-5 items-start">
+      <fieldset disabled={busy} className="ui-card recovery-form space-y-5 text-sm">
+        <div className="upload-card">
           <label htmlFor="recovery-document" className="block font-semibold text-[#37352f]">{tr("脱敏 Markdown 文件", "Redacted Markdown file")}</label>
           <input id="recovery-document" ref={documentInput} type="file" accept=".md,.txt" className="hidden" onChange={e => setDocument(e.target.files?.[0] || null)} />
           <div className="flex flex-wrap items-center gap-3">
-            <button type="button" onClick={() => documentInput.current?.click()} className="inline-flex items-center gap-2 min-h-11 rounded-lg bg-[#167da5] hover:bg-[#116685] px-4 py-2.5 font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#167da5] disabled:opacity-50">
+            <button type="button" onClick={() => documentInput.current?.click()} className="inline-flex items-center gap-2 min-h-11 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-4 py-2.5 font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb] disabled:opacity-50">
               <Upload className="w-4 h-4" aria-hidden="true" />{tr("选择 MD 文件", "Choose MD file")}
             </button>
             <p aria-live="polite" className="min-w-0 break-all text-[#37352f]">{document ? document.name : tr("尚未选择 MD 文件", "No MD file selected")}</p>
@@ -104,11 +106,11 @@ export function RecoveryPanel({ onClose }: { onClose: () => void }) {
         </div>
         <button type="button" disabled={!document || !conn} onClick={find} className="min-h-11 border border-[#787774] rounded-lg px-4 py-2 font-medium hover:bg-gray-100 disabled:opacity-50">{tr("在本地恢复库匹配", "Find a local recovery pack")}</button>
         <label className="block space-y-1"><span>{tr("恢复映射来源", "Recovery mapping source")}</span><select value={mode} onChange={e => setMode(e.target.value)} className="border rounded p-2 w-full"><option value="file">{tr("外部加密恢复包", "External encrypted pack")}</option><option value="library">{tr("本机恢复库", "Local recovery library")}</option></select></label>
-        {mode === "file" ? <div className="rounded-lg border border-[#2eaadc]/40 bg-[#2eaadc]/5 p-4 space-y-3">
+        {mode === "file" ? <div className="upload-card">
           <label htmlFor="recovery-mapping" className="block font-semibold text-[#37352f]">{tr("加密恢复包 JSON", "Encrypted recovery pack JSON")}</label>
           <input id="recovery-mapping" ref={mappingInput} type="file" accept=".json" className="hidden" onChange={e => setMapping(e.target.files?.[0] || null)} />
           <div className="flex flex-wrap items-center gap-3">
-            <button type="button" onClick={() => mappingInput.current?.click()} className="inline-flex items-center gap-2 min-h-11 rounded-lg bg-[#167da5] hover:bg-[#116685] px-4 py-2.5 font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#167da5] disabled:opacity-50">
+            <button type="button" onClick={() => mappingInput.current?.click()} className="inline-flex items-center gap-2 min-h-11 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-4 py-2.5 font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb] disabled:opacity-50">
               <Upload className="w-4 h-4" aria-hidden="true" />{tr("选择 JSON 恢复包", "Choose JSON recovery pack")}
             </button>
             <p aria-live="polite" className="min-w-0 break-all text-[#37352f]">{mapping ? mapping.name : tr("尚未选择 JSON 恢复包", "No JSON pack selected")}</p>
@@ -118,13 +120,13 @@ export function RecoveryPanel({ onClose }: { onClose: () => void }) {
           <button type="button" disabled={!packId} onClick={removePack} className="min-h-11 border border-red-300 bg-red-50 rounded-lg px-4 py-2 font-medium text-red-700 hover:bg-red-100 disabled:opacity-50">{tr("从本机库移除所选恢复包", "Remove selected local pack")}</button>
         </div>}
         <p className="text-xs text-[#787774]">{tr("恢复库只保留你明确保存的加密恢复包、随机编号和保存时间，不保存原文或口令；也不是云端备份。", "The library keeps only explicitly saved encrypted packs, random IDs and timestamps. It stores no source text or passwords and is not a cloud backup.")}</p>
-        <label className="block space-y-1"><span>{tr("恢复包口令", "Recovery pack password")}</span><input type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete="off" className="border rounded p-2 w-full" /></label>
-        <button type="button" disabled={!conn || !document || !password || (mode === "file" ? !mapping : !packId)} onClick={inspect} className="min-h-11 bg-[#167da5] hover:bg-[#116685] text-white font-semibold rounded-lg px-5 py-2.5 shadow-sm disabled:opacity-50">{busy ? tr("处理中…", "Processing...") : tr("预览恢复结果", "Preview recovery")}</button>
+        <label className="form-label"><span className="flex items-center gap-2"><KeyRound size={16}/>{tr("恢复包口令", "Recovery pack password")}</span><input type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete="off" className="border rounded p-2 w-full" /></label>
+        <button type="button" disabled={!conn || !document || !password || (mode === "file" ? !mapping : !packId)} onClick={inspect} className="min-h-11 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold rounded-lg px-5 py-2.5 shadow-sm disabled:opacity-50">{busy ? tr("处理中…", "Processing...") : tr("预览恢复结果", "Preview recovery")}</button>
       </fieldset>
-      {preview ? <div className="bg-white border rounded-lg p-4 space-y-3 text-sm">
+      {preview ? <div className="ui-card recovery-result space-y-4 text-sm">
         <p className={preview.integrity === "exact" ? "text-green-700" : "text-amber-700"}>{preview.integrity === "exact" ? tr("文件与加密导出清单一致", "File matches the authenticated export manifest") : preview.integrity === "legacy" ? tr("旧版恢复包：可恢复占位符，无法认证导出文件完整性", "Legacy pack: placeholders can be restored, but export integrity cannot be authenticated") : tr("文件已编辑或为片段：只能恢复已知占位符，不代表全文与原文一致", "Edited document or excerpt: restores known placeholders; does not prove the full text matches the original")}</p>
-        <p>{tr(`已恢复 ${preview.restored} 处占位符`, `Restored ${preview.restored} placeholders`)}</p>
-        <pre aria-label={tr("恢复结果全文", "Full recovery preview")} className="whitespace-pre-wrap break-all border rounded p-3 max-h-96 overflow-y-auto">{preview.content}</pre>
+        <div className="recovery-stat"><ShieldCheck size={20}/><p>{tr(`已恢复 ${preview.restored} 处占位符`, `Restored ${preview.restored} placeholders`)}</p><span className={`status-badge ${preview.integrity === "exact" ? "status-done" : "status-pending"}`}>{preview.integrity.toUpperCase()}</span></div>
+        <pre aria-label={tr("恢复结果全文", "Full recovery preview")} className="review-paper recovery-paper">{preview.content}</pre>
         <label className="flex gap-2 items-start"><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)} disabled={busy} />{tr("我已检查恢复结果全文", "I reviewed the full recovered document")}</label>
         {preview.integrity !== "exact" && <label className="flex gap-2 items-start"><input type="checkbox" checked={allowEdited} onChange={e => setAllowEdited(e.target.checked)} disabled={busy} />{tr("我确认仅恢复已知占位符，不将结果视为原文完整性证明", "I accept placeholder-only recovery without proof of original integrity")}</label>}
         <div className="flex flex-wrap gap-2"><button type="button" onClick={saveResult} disabled={busy || !reviewed || (preview.integrity !== "exact" && !allowEdited)} className="min-h-11 bg-[#0f7b6c] hover:bg-[#0c6256] text-white font-semibold rounded-lg px-5 py-2.5 shadow-sm disabled:opacity-50">{tr("另存恢复副本", "Save restored copy")}</button>

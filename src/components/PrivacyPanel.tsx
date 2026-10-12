@@ -1,3 +1,4 @@
+import { FileGlyph, StatCard, HighlightedText } from "./Visual";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "../lib/api";
@@ -34,6 +35,7 @@ export function PrivacyPanel({ onExport }: { onExport: () => void }) {
   const setCategories = setter("categories"), setKeywords = setter("keywords"), setWhitelist = setter("whitelist");
   const setPassphrase = setter("passphrase"), setAnonymousNames = setter("anonymousNames");
   const [reviewedRedaction, setReviewedRedaction] = useState<PrivacyResult | null>(null);
+  const [viewMode, setViewMode] = useState<"masked" | "compare" | "marked">("compare");
   const [busy, setBusy] = useState(false);
   const [sourceText, setSourceText] = useState("");
   const [previewText, setPreviewText] = useState("");
@@ -132,118 +134,47 @@ export function PrivacyPanel({ onExport }: { onExport: () => void }) {
     } finally { setBusy(false); }
   };
 
-  return (
-    <section className="privacy-workspace space-y-4 text-sm text-[#37352f]">
-      <label className="flex items-center gap-2 font-semibold text-sm cursor-pointer">
-        <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />
-        {tr("启用脱敏", "Enable redaction")}
-      </label>
-      <p className="text-[#787774]">
-        {tr("先完成脱敏与全文审核，再到导出步骤保存已审核的脱敏文件。预览中的复制和保存仍使用原文。",
-          "Complete redaction and full review before exporting. Preview copy/save still use original text.")}
-      </p>
-      <p>{tr("每批最多 100 个文件；每批一个恢复包，可从中单独恢复任一文件。", "Up to 100 files per batch; one recovery pack can restore any individual file.")}</p>
-      {enabled && <fieldset disabled={busy} className="grid grid-cols-1 xl:grid-cols-[270px_minmax(0,1fr)] 2xl:grid-cols-[270px_minmax(0,1fr)_300px] gap-5 items-start">
-        <div className="ui-card space-y-3">
-        <h3 className="font-semibold">{tr("检测与规则", "Detection and rules")}</h3>
-        <div className="font-medium">{tr("检测类别", "Detection categories")}</div>
-        <div className="grid grid-cols-2 gap-2">
-          {CATEGORY_OPTIONS.map(([key, zh, en]) => <label key={key} className="flex items-center gap-1">
-            <input type="checkbox" checked={categories.includes(key)} onChange={e => setCategories(old => e.target.checked ? [...old, key] : old.filter(v => v !== key))} />
-            {english ? en : zh}
-          </label>)}
+  const chooseFile = (id: string) => { setReviewFileId(id); setPreviewCount(null); setReviewedRedaction(null); setPreviewText(""); setFindings([]); };
+  return <section className="privacy-workspace">
+    <div className="review-banner"><div><h3>{tr("先识别，再审核，最后导出", "Detect, review, then export")}</h3><p>{tr("每批最多 100 个文件；每批一个恢复包，可单独恢复任一文件。", "Up to 100 documents per batch; one pack can restore any document.")}</p></div><label className="switch-label"><input className="ui-switch" type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />{tr("启用脱敏", "Enable redaction")}</label></div>
+    {!enabled && <div className="empty-workspace"><h3>{tr("启用脱敏以开始审核", "Enable redaction to begin")}</h3><p>{tr("原文预览、复制和保存与脱敏导出分别处理。", "Original preview, copy and save are separate from redacted export.")}</p></div>}
+    {enabled && <fieldset disabled={busy} className="review-grid">
+      <aside className="ui-card review-queue space-y-4">
+        <div className="card-title"><h3>{tr("审核文件队列", "Review queue")}</h3><span className="count-pill">{ready.length}</span></div>
+        <div className="review-file-list">{ready.map(f => <button type="button" key={f.id} aria-pressed={selectedFile?.id === f.id} onClick={() => chooseFile(f.id)} className="review-file"><FileGlyph name={f.name}/><span className="min-w-0 flex-1"><strong>{f.name}</strong><span className={`status-badge ${validPrepared(f)?.approved ? "status-done" : "status-pending"}`}>{validPrepared(f)?.approved ? tr("已审核", "Reviewed") : tr("待审核", "Pending")}</span></span></button>)}</div>
+        {!ready.length && <p className="hint">{tr("请先转换或导入 MD 文件。", "Convert or import Markdown first.")}</p>}
+        <label className="sr-only">{tr("选择要预览的文件", "Select file to review")}<select value={reviewFileId} onChange={e => chooseFile(e.target.value)}><option value="">{tr("首个已转换文件", "First completed file")}</option>{ready.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}</select></label>
+        <details className="rule-details" open><summary>{tr("检测规则", "Detection rules")}</summary><div className="rule-chips">{CATEGORY_OPTIONS.map(([key,zh,en]) => <label className={categories.includes(key) ? "rule-chip active" : "rule-chip"} key={key}><input type="checkbox" checked={categories.includes(key)} onChange={e => setCategories(old => e.target.checked ? [...old,key] : old.filter(v => v !== key))}/>{english ? en : zh}</label>)}</div></details>
+        <label className="form-label">{tr("自定义敏感词（每行一个，精确替换）", "Sensitive terms (one exact phrase per line)")}<textarea value={keywords} onChange={e => setKeywords(e.target.value)} rows={3} placeholder={tr("姓名、公司、项目名称…", "Names, organizations, projects…")}/></label>
+        <label className="form-label">{tr("白名单（每行一个，不替换）", "Whitelist (one phrase per line, not redacted)")}<textarea value={whitelist} onChange={e => setWhitelist(e.target.value)} rows={2}/></label>
+      </aside>
+      <div className="ui-card review-document min-w-0">
+        <div className="card-title"><div><h3>{selectedFile?.name || tr("全文审核", "Full review")}</h3><p className="hint">Markdown · {previewCount === null ? tr("等待识别", "Awaiting detection") : tr(`${previewCount} 处替换`, `${previewCount} replacements`)}</p></div></div>
+        <div className="segmented-controls" aria-label={tr("审核视图", "Review view")}><button type="button" aria-pressed={viewMode === "marked"} onClick={() => setViewMode("marked")}>{tr("标记原文", "Marked original")}</button><button type="button" aria-pressed={viewMode === "masked"} onClick={() => setViewMode("masked")}>{tr("脱敏稿", "Masked text")}</button><button type="button" aria-pressed={viewMode === "compare"} onClick={() => setViewMode("compare")}>{tr("左右对照", "Compare")}</button></div>
+        {previewCount !== null ? <div className={viewMode === "compare" ? "review-text-columns" : "review-text-single"}>
+          {viewMode !== "masked" && <div><p className="pane-label">{tr("原文 · 仅本地", "Original · local")}</p><pre className="review-paper"><HighlightedText text={sourceText} terms={findings}/></pre></div>}
+          {viewMode !== "marked" && <div><p className="pane-label">{tr("脱敏后的完整文本", "Full masked text")}</p><pre className="review-paper">{previewText}</pre></div>}
+        </div> : <div className="empty-workspace"><h3>{tr("全文将在此展示", "Full text appears here")}</h3><p>{tr("设置检测规则与口令后，检查所选文件。", "Set rules and a password, then review the selected file.")}</p></div>}
+        <div className="review-document-footer"><button type="button" disabled={busy || !ready.length} onClick={preview} className="ui-primary">{busy ? tr("处理中…", "Processing…") : tr("检查所选文件的脱敏内容", "Review selected file")}</button>
+          {prepared && reviewedRedaction === prepared.value && <label className="review-approval"><input type="checkbox" checked={prepared.approved} onChange={e => {const approved=e.target.checked;setPreparedFiles(old => ({...old,[prepared.fileId]:{...prepared,approved}}));}}/>{tr("我已检查所选文件的全文及替换结果", "I reviewed the entire selected document and replacements")}</label>}
+          <button type="button" className="ui-secondary" disabled={!ready.some(f => f.id !== selectedFile?.id && !validPrepared(f)?.approved)} onClick={() => {const f=ready.find(f => f.id !== selectedFile?.id && !validPrepared(f)?.approved);if(f)chooseFile(f.id);}}>{tr("下一份待审核", "Next pending file")}</button>
         </div>
-        <label className="block space-y-1">
-          <span className="font-medium">{tr("自定义敏感词（每行一个，精确替换）", "Sensitive terms (one exact phrase per line)")}</span>
-          <textarea value={keywords} onChange={e => setKeywords(e.target.value)} rows={3} className="border rounded p-2 w-full" placeholder={tr("公司名称、人员姓名、项目名称…", "Organizations, names, projects...")} />
-        </label>
-        <label className="block space-y-1">
-          <span className="font-medium">{tr("白名单（每行一个，不替换）", "Whitelist (one phrase per line, not redacted)")}</span>
-          <textarea value={whitelist} onChange={e => setWhitelist(e.target.value)} rows={2} className="border rounded p-2 w-full" />
-        </label>
-        <label className="flex gap-2 items-start cursor-pointer">
-          <input type="checkbox" checked={anonymousNames} onChange={e => setAnonymousNames(e.target.checked)} />
-          <span>{tr("匿名化脱敏版文件名和目录（可选，默认保留原文件名）", "Anonymize redacted output filenames and folders (optional; keep original names by default)")}</span>
-        </label>
-        <label className="block space-y-1">
-          <span className="font-medium">{tr("映射文件加密口令（至少8字符，不会保存）", "Vault passphrase (8+ chars, never stored)")}</span>
-          <input type="password" value={passphrase} onChange={e => setPassphrase(e.target.value)} autoComplete="new-password" className="border rounded p-2 w-full" />
-        </label>
+      </div>
+      <aside className="space-y-4">
+        <div className="ui-card space-y-4"><h3 className="section-title">{tr("审核统计", "Review summary")}</h3><div className="grid grid-cols-2 gap-2"><StatCard value={previewCount ?? "—"} label={tr("当前替换", "Replacements")}/><StatCard value={approvedCount} label={tr("已审核文件", "Reviewed files")} tone="green"/></div><p className="hint">{tr(`整批审核：${approvedCount}/${ready.length} 个文件已确认`, `Batch review: ${approvedCount}/${ready.length} approved`)}</p>
+          <div className="finding-list">{findings.map((item,i) => <div className="finding-row" key={`${item.category}-${i}`}><span><strong>{item.original}</strong><small>{CATEGORY_OPTIONS.find(c=>c[0]===item.category)?.[english ? 2 : 1] || item.category} × {item.count}</small></span><button type="button" className="text-button" onClick={() => {setWhitelist(prev => [...terms(prev),item.original].filter((x,i,arr)=>arr.indexOf(x)===i).join("\n"));setPreviewCount(null);}}>{tr("加入白名单", "Whitelist")}</button></div>)}</div>
         </div>
-        <div className="ui-card space-y-3 min-w-0">
-        <h3 className="font-semibold">{tr("文件队列与全文审核", "Files and full review")}</h3>
-        <div className="max-h-40 overflow-auto space-y-1" aria-label={tr("审核文件队列", "Review queue")}>{ready.map(f => <button type="button" key={f.id} aria-pressed={selectedFile?.id === f.id} onClick={() => {setReviewFileId(f.id);setReviewedRedaction(null);setPreviewCount(null);setPreviewText("");setFindings([]);}} className="w-full flex justify-between gap-2 text-left rounded-lg border px-3 py-2 hover:bg-blue-50"><span className="truncate">{f.name}</span><span className={validPrepared(f)?.approved ? "text-emerald-700 shrink-0" : "text-amber-700 shrink-0"}>{validPrepared(f)?.approved ? tr("已审核", "Reviewed") : tr("待审核", "Pending")}</span></button>)}</div>
-        <select aria-label={tr("选择要预览的文件", "Select file to review")} value={reviewFileId} onChange={e => { setReviewFileId(e.target.value); setPreviewCount(null); setReviewedRedaction(null); setPreviewText(""); setFindings([]); }} className="border rounded p-2 w-full">
-          <option value="">{tr("首个已转换文件", "First completed file")}</option>
-          {ready.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-        </select>
-        <button type="button" disabled={busy} onClick={preview} className="border rounded px-3 py-2 disabled:opacity-50">
-          {tr("检查所选文件的脱敏内容", "Review selected file")}
-        </button>
-        {previewCount !== null && <div className="bg-gray-50 border rounded p-2 space-y-1">
-          <p>{tr(`所选文件检测到 ${previewCount} 处替换，请检查是否漏检或误检。`, `Selected file: ${previewCount} replacements. Review false positives and omissions.`)}</p>
-          <div className="max-h-36 overflow-y-auto space-y-1">
-            {findings.map((item, i) => <div key={`${item.category}-${i}`} className="flex gap-1 justify-between items-center border-b">
-              <span className="break-all">{item.original} ({item.category} ×{item.count})</span>
-              <button type="button" className="border rounded px-2 shrink-0" onClick={() => {
-                setWhitelist(prev => [...terms(prev), item.original].filter((x, i, arr) => arr.indexOf(x) === i).join("\n"));
-                setFindings(old => old.filter((_, idx) => idx !== i));
-                setPreviewCount(null);
-              }}>{tr("加入白名单", "Whitelist")}</button>
-            </div>)}
-          </div>
-          <p className="text-[#787774]">{tr("以下为完整脱敏稿；AI 仅发送前 20,000 字符。", "Full redacted document; AI receives only the first 20,000 characters.")}</p>
-          <details><summary>{tr("查看原文全文（仅本地）", "Full original text (local only)")}</summary>
-            <pre className="whitespace-pre-wrap break-all max-h-[65vh] overflow-y-auto">{sourceText}</pre>
-          </details>
-          <pre className="whitespace-pre-wrap break-all max-h-[65vh] overflow-y-auto">{previewText}</pre>
-        </div>}
-        {prepared && reviewedRedaction === prepared.value && <label className="flex gap-2 items-start">
-          <input type="checkbox" checked={prepared.approved} onChange={e => {
-            const approved = e.target.checked;
-            setPreparedFiles(old => ({ ...old, [prepared.fileId]: { ...prepared, approved } }));
-          }} />
-          {tr("我已检查所选文件的全文及替换结果", "I reviewed the entire selected document and replacements")}
-        </label>}
-        <button type="button" className="ui-secondary" disabled={!ready.some(f => f.id !== selectedFile?.id && !validPrepared(f)?.approved)} onClick={() => {const f=ready.find(f => f.id !== selectedFile?.id && !validPrepared(f)?.approved);if(f) {setReviewFileId(f.id);setReviewedRedaction(null);setPreviewCount(null);setPreviewText("");setFindings([]);}}}>{tr("下一份待审核", "Next pending file")}</button>
-        <p>{tr(`整批审核：${approvedCount}/${ready.length} 个文件已确认`, `Batch review: ${approvedCount}/${ready.length} approved`)}</p>
+        <div className="ui-card space-y-4"><h3 className="section-title">{tr("加密与导出", "Encryption and export")}</h3><label className="form-label">{tr("映射文件加密口令（至少8字符，不会保存）", "Vault passphrase (8+ chars, never stored)")}<input type="password" value={passphrase} onChange={e => setPassphrase(e.target.value)} autoComplete="new-password"/></label>
+          <label className="checkbox-row"><input type="checkbox" checked={anonymousNames} onChange={e => setAnonymousNames(e.target.checked)}/><span>{tr("匿名化脱敏版文件名和目录（可选，默认保留原文件名）", "Anonymize redacted output filenames and folders (optional; keep original names by default)")}</span></label>
+          <label className="checkbox-row"><input type="checkbox" checked={saveToLibrary} onChange={e => updateSettings({saveToLibrary:e.target.checked})}/><span>{tr("导出时将加密恢复包另存到本机恢复库（默认关闭，不保存原文或口令）", "Also keep the encrypted recovery pack in the local library (off by default; no source or password)")}</span></label>
+          <button type="button" className="ui-primary w-full" disabled={busy || !ready.length || ready.length>100 || approvedCount!==ready.length} onClick={onExport}>{tr(`完成审核，前往导出（${ready.length} 个文件）`, `Finish review and export (${ready.length} files)`)}</button>
+          {prepared && <details className="identity-details"><summary>{tr("文档与脱敏版本编号", "Document and processing IDs")}</summary><p>{prepared.value.documentId}</p><p>{prepared.value.processingId}</p></details>}
         </div>
-        <div className="ui-card space-y-3 xl:col-span-2 2xl:col-span-1">
-        <label className="flex items-center gap-2 font-medium cursor-pointer">
-          <input type="checkbox" checked={aiEnabled} onChange={e => setAiEnabled(e.target.checked)} />
-          {tr("可选 AI 辅助识别（默认关闭）", "Optional AI suggestions (off by default)")}
-        </label>
-        {aiEnabled && <div className="space-y-2 border rounded p-2">
-          <p className="text-amber-700">{tr("AI 将接收脱敏后最多2万字符；漏检信息仍可能外发。结果只作为候选，不会自动替换。",
-            "AI receives up to 20K redacted characters. Undetected sensitive data may still leave your device. Suggestions are never auto-applied.")}</p>
-          <input type="url" value={aiBaseUrl} onChange={e => setAiBaseUrl(e.target.value)} placeholder="https://provider.example/v1" className="w-full p-2 rounded border" aria-label="AI endpoint" />
-          <input value={aiModel} onChange={e => setAiModel(e.target.value)} placeholder={tr("模型标识，例如 provider-model", "Model ID")} className="w-full p-2 rounded border" aria-label="AI model" />
-          <input type="password" value={aiKey} onChange={e => setAiKey(e.target.value)} placeholder="API key" autoComplete="off" className="w-full p-2 rounded border" aria-label="AI API key" />
-          <label className="flex gap-2 items-start"><input type="checkbox" checked={aiConsent} onChange={e => setAiConsent(e.target.checked)} />{tr("我同意将当前脱敏稿发送至指定 AI 服务", "I agree to send this redacted text to the selected AI service")}</label>
-          <button type="button" onClick={suggest} disabled={busy || !aiConsent} className="rounded border px-3 py-2 disabled:opacity-50">
-            {tr("获取 AI 候选敏感词", "Get AI candidate terms")}
-          </button>
-          {suggestions.map((item, i) => <div key={`${item.category}-${item.text}-${i}`} className="flex items-center justify-between gap-2">
-            <span className="break-all">{item.text} ({item.category})</span>
-            <button className="border rounded px-2 py-1" onClick={() => {
-              setKeywords(prev => [...terms(prev), item.text].filter((x, i, arr) => arr.indexOf(x) === i).join("\n"));
-              setSuggestions(prev => prev.filter((_, idx) => idx !== i));
-            }}>{tr("加入词表", "Add term")}</button>
-          </div>)}
-        </div>}
-        <label className="flex gap-2 items-start">
-          <input type="checkbox" checked={saveToLibrary} onChange={e => updateSettings({ saveToLibrary: e.target.checked })} />
-          {tr("导出时将加密恢复包另存到本机恢复库（默认关闭，不保存原文或口令）", "Also keep the encrypted recovery pack in the local library (off by default; no source or password)")}
-        </label>
-        {prepared && <p className="break-all text-[#787774]">{tr("文档编号", "Document ID")}: {prepared.value.documentId}<br />{tr("脱敏版本编号", "Processing ID")}: {prepared.value.processingId}</p>}
-        <p className="text-[#787774]">{tr("文件正文中的链接、图片及未识别文字不会被自动脱敏；若取消匿名文件名，原始路径还会暴露。分享前仍须检查。映射文件单独保存并以 AES-256-GCM 加密。",
-          "Document content links, image pixels and undetected text are NOT automatically redacted. Filenames are anonymized only if the option above remains enabled. Encrypted recovery mapping is saved separately.")}</p>
-        <button type="button" disabled={busy || !enabled || !ready.length || ready.length > 100 || approvedCount !== ready.length} onClick={onExport} className="w-full bg-[#0f7b6c] text-white rounded py-2.5 disabled:opacity-50">
-          {busy ? tr("处理中…", "Processing...") : tr(`完成审核，前往导出（${ready.length} 个文件）`, `Finish review and export (${ready.length} files)`)}
-        </button>
+        <div className="ui-card space-y-3"><label className="switch-label"><input className="ui-switch" type="checkbox" checked={aiEnabled} onChange={e => setAiEnabled(e.target.checked)}/>{tr("可选 AI 辅助识别（默认关闭）", "Optional AI suggestions (off by default)")}</label>
+          {aiEnabled && <div className="space-y-3"><p className="notice warning">{tr("AI 接收最多 2 万字符的脱敏稿；漏检内容仍可能外发。候选词须人工确认。", "AI receives up to 20K masked characters; missed sensitive text may still leave your device. Review suggestions manually.")}</p><input type="url" aria-label="AI endpoint" value={aiBaseUrl} onChange={e => setAiBaseUrl(e.target.value)}/><input aria-label="AI model" value={aiModel} onChange={e => setAiModel(e.target.value)} placeholder={tr("模型名称", "Model ID")}/><input type="password" aria-label="AI API key" value={aiKey} onChange={e => setAiKey(e.target.value)} autoComplete="off"/><label className="checkbox-row"><input type="checkbox" checked={aiConsent} onChange={e => setAiConsent(e.target.checked)}/>{tr("我同意将当前脱敏稿发送至指定 AI 服务", "I agree to send this redacted text to the selected AI service")}</label><button type="button" className="ui-secondary w-full" disabled={busy || !aiConsent} onClick={suggest}>{tr("获取 AI 候选敏感词", "Get AI candidate terms")}</button>{suggestions.map((item,i) => <div className="finding-row" key={i}><span>{item.text}</span><button type="button" className="text-button" onClick={() => {setKeywords(prev => [...terms(prev),item.text].filter((x,i,arr)=>arr.indexOf(x)===i).join("\n"));setSuggestions(prev=>prev.filter((_,idx)=>idx!==i));}}>{tr("加入词表", "Add term")}</button></div>)}</div>}
         </div>
-      </fieldset>}
-
-    </section>
-  );
+        <p className="notice">{tr("仍须检查未识别文字、链接和图片。恢复包单独加密保存。", "Review undetected text, links and images. Recovery mappings are saved separately and encrypted.")}</p>
+      </aside>
+    </fieldset>}
+  </section>;
 }

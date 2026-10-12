@@ -27,8 +27,11 @@ it("navigates all five workspaces without requiring converted documents for reco
 });
 it("settings persist only working non-sensitive preferences and reset actual export options",()=>{
  usePrivacyStore.setState({passphrase:"never persist this",keywords:"private organization"});render(<SettingsPanel/>);
+ fireEvent.click(screen.getByRole("tab",{name:"转换"}));
  fireEvent.change(screen.getByLabelText("并发转换数量（下一批生效）"),{target:{value:"3"}});
+ fireEvent.click(screen.getByRole("tab",{name:"导出"}));
  fireEvent.change(screen.getByLabelText("默认格式"),{target:{value:"zip"}});
+ fireEvent.click(screen.getByRole("tab",{name:"通用与预览"}));
  fireEvent.change(screen.getByLabelText("预览字号"),{target:{value:"18"}});
  expect(useUIStore.getState().concurrency).toBe(3);expect(useAppStore.getState().exportOptions.format).toBe("zip");
  const prefs=localStorage.getItem("markalldown.ui.preferences")!;expect(prefs).toContain('"fontSize":18');expect(prefs).not.toContain("never persist");expect(prefs).not.toContain("private organization");
@@ -43,4 +46,11 @@ it("renders source and reading modes from the complete cached text",async()=>{
  useAppStore.setState({files:[{id:"one",name:"one.md",size:1,type:"md",status:"done",progress:100,cachePath:"/one"}]});
  render(<Preview inline fileId="one" onClose={vi.fn()}/>);await screen.findByRole("heading",{name:"Full Markdown"});
  fireEvent.click(screen.getByRole("button",{name:"Markdown 源文"}));expect(screen.getByText("# Full Markdown")).toBeTruthy();
+});
+
+it("settings tabs expose working controls only in the selected section",()=>{
+ render(<SettingsPanel/>);expect(screen.getByRole("combobox",{name:"界面语言"})).toBeTruthy();
+ expect(screen.queryByRole("combobox",{name:"默认格式"})).toBeNull();
+ fireEvent.click(screen.getByRole("tab",{name:"导出"}));expect(screen.getByRole("combobox",{name:"默认格式"})).toBeTruthy();
+ expect(screen.queryByRole("combobox",{name:"界面语言"})).toBeNull();
 });

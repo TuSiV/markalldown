@@ -124,7 +124,7 @@ export function Preview({ fileId, onClose, inline = false }: PreviewProps) {
             <FileText className="w-4 h-4 text-[#9b9a97]" />
             <span className="text-sm font-medium">{file.name}</span>
             <span className="text-xs text-[#9b9a97]">→</span>
-            <span className="text-sm text-[#2eaadc]">
+            <span className="text-sm text-[#2563eb]">
               {file.name.replace(/\.[^/.]+$/, "")}.md
               {privacyEnabled && (locale === "en-US" ? " (original)" : "（原文）")}
             </span>
@@ -169,12 +169,13 @@ export function Preview({ fileId, onClose, inline = false }: PreviewProps) {
           </div>
         </div>
 
-        <div className="flex gap-2 px-4 py-2 border-b text-xs">
+        <div className="preview-toolbar flex gap-2 px-4 py-3 border-b text-xs">
           <button className="ui-tab" aria-pressed={previewMode === "rendered"} onClick={() => update({ previewMode: "rendered" })}>{locale === "en-US" ? "Rendered" : "阅读预览"}</button>
           <button className="ui-tab" aria-pressed={previewMode === "source"} onClick={() => update({ previewMode: "source" })}>{locale === "en-US" ? "Markdown source" : "Markdown 源文"}</button>
+          <span className="ml-auto text-slate-500 self-center">{markdown.length.toLocaleString()} {locale === "en-US" ? "characters" : "字符"}</span>
           {failed && <span className="text-red-700">{locale === "en-US" ? "Full text unavailable; excerpt only" : "全文读取失败，仅显示片段；请重新打开"}</span>}
         </div>
-        <div style={{ fontSize }} className="flex-1 overflow-y-auto p-6 markdown-view">
+        <div style={{ fontSize }} className="flex-1 overflow-y-auto p-7 markdown-view document-paper">
           {loading ? (
             <div className="flex items-center gap-2 text-[#9b9a97] text-sm">
               <Loader2 className="w-4 h-4 animate-spin" />

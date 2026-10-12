@@ -1,11 +1,9 @@
-# MarkAllDown 2.2.0
+# MarkAllDown 2.2.1
 
-Introduces a light A+B desktop workspace with persistent sidebar navigation and five independent pages: conversion, redaction review, recovery, export and settings. The layout adapts to smaller windows while keeping the same working actions.
+Completes the detailed A+B UI treatment beyond the workspace layout: file-type icons, status badges, import surfaces, button hierarchy, shared form controls and switch/segmented states, document typography, review highlights and original/masked comparison, recovery progress indicators, export option cards and persistent action area, and working settings tabs.
 
-Conversion has a queue and full Markdown preview with rendered/source modes. Review has a real file queue, pending/reviewed states, next-pending navigation, original comparison and existing per-file approval gates. Recovery provides explicit MD/JSON selection, encrypted library operations and authenticated preview before exclusive save. Export shows the actual batch, review count and successful output/recovery paths; original names remain the default.
+Redaction review has a three-column queue/document/summary workspace with detected-term highlights. All existing rule changes, full-document review gates, optional AI consent, encrypted recovery and per-file recovery remain intact. Detected terms are rendered as escaped text, never executable markup.
 
-Working settings include language, automatic preview, preview mode/font size, 1–4 concurrent conversions and export defaults. Only non-sensitive preferences persist. Concurrent requests use background workers with per-thread Markdown engines and shared OCR/PDF protection. Conversion no longer blocks service health requests.
+Adds browser rendering checks and screenshots for all five workspaces at 1440 and 800 pixels, including tab switching, sensitive highlights and review acknowledgement. Rendering uses explicitly synthetic service/dialog fixtures; backend and native smoke checks separately validate real service operations. Release requires UI rendering plus all three native platforms to pass.
 
-No placeholder startup, updater, cache statistics, log-folder or OCR-mode controls are shipped. Failed full-text reads are labelled as excerpts and cannot be copied/downloaded as complete documents. Review/password data remains session-only; navigating workspaces retains the active session.
-
-Includes Windows NSIS/MSI and both macOS architectures. macOS bundles are ad-hoc signed and integrity-checked, without Developer ID signing or notarization; first launch may require Privacy & Security > Open Anyway.
+Includes Windows NSIS/MSI and both macOS architectures. macOS bundles are ad-hoc signed and integrity-checked, without Apple Developer ID signing or notarization; first launch may require Privacy & Security > Open Anyway.
