@@ -1,15 +1,18 @@
-import { FileDown, Loader2, Languages } from "lucide-react";
+import { FileDown, Loader2, Languages, ShieldCheck, RotateCcw } from "lucide-react";
 import { useAppStore } from "../stores/appStore";
 import { useI18n, useT } from "../i18n";
 
 interface HeaderProps {
   onExport: () => void;
+  onRedact: () => void;
+  onRecovery: () => void;
 }
 
-export function Header({ onExport }: HeaderProps) {
+export function Header({ onExport, onRedact, onRecovery }: HeaderProps) {
   const { files, isReady, isConverting } = useAppStore();
   const t = useT();
   const toggleLocale = useI18n((s) => s.toggleLocale);
+  const english = useI18n(s => s.locale) === "en-US";
   const hasFiles = files.length > 0;
   const completedFiles = files.filter(f => f.status === "done" && f.cachePath).length;
 
@@ -53,6 +56,8 @@ export function Header({ onExport }: HeaderProps) {
           {t("langSwitch")}
         </button>
 
+        <button onClick={onRedact} disabled={!isReady} className="flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg disabled:opacity-50"><ShieldCheck className="w-4 h-4" />{english ? "Redact" : "脱敏审核"}</button>
+        <button onClick={onRecovery} disabled={!isReady} className="flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg disabled:opacity-50"><RotateCcw className="w-4 h-4" />{english ? "Restore" : "文件恢复"}</button>
         <button
           onClick={onExport}
           disabled={!isReady}

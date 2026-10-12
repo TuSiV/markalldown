@@ -19,11 +19,30 @@ from uuid import uuid4
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 MAX_TEXT = 5_000_000
+MAX_RECOVERY_TEXT = 8_000_000
+MAX_RECOVERY_OUTPUT = 32_000_000
 MAX_TERMS = 1000
 MAX_MATCHES = 20_000
 TOKEN_PATTERN = re.compile(r"【MAD_[^】\n]{1,150}】")
 MAX_TERM_LENGTH = 200
 VAULT_AAD = b"MarkAllDown:RedactionVault:v1"
+IDENTITY_PATTERN = re.compile(r"^<!-- MarkAllDown:document=([a-f0-9]{32});processing=([a-f0-9]{32}) -->\r?\n", re.M)
+
+
+def identity_header(document_id: str, processing_id: str) -> str:
+    if not all(isinstance(v, str) and re.fullmatch(r"[a-f0-9]{32}", v) for v in (document_id, processing_id)):
+        raise ValueError("Invalid document identity")
+    return f"<!-- MarkAllDown:document={document_id};processing={processing_id} -->\n"
+
+
+def attach_identity(text: str, document_id: str, processing_id: str) -> str:
+    header = identity_header(document_id, processing_id)
+    # Keep a conventional YAML front matter block at the start of Markdown.
+    front_matter = re.match(r"\A(?:\ufeff)?---\r?\n.*?\r?\n(?:---|\.\.\.)\r?\n", text, re.S)
+    if front_matter:
+        end = front_matter.end()
+        return text[:end] + header + text[end:]
+    return header + text
 
 # Use conservative patterns. High-recall semantic categories (people,
 # organizations, project names) must be handled via explicit custom terms/AI review.
@@ -63,7 +82,7 @@ def _terms(value: Any, field: str) -> list[str]:
     return out
 
 
-def redact_markdown(text: str, options: dict[str, Any]) -> tuple[str, dict[str, Any], dict[str, Any]]:
+def redact_markdown(text: str, options: dict[str, Any], processing_id: str | None = None) -> tuple[str, dict[str, Any], dict[str, Any]]:
     """Return (masked_text, mapping, summary). Original input is never mutated."""
     if not isinstance(text, str) or len(text) > MAX_TEXT:
         raise ValueError("Input must be text up to 5,000,000 characters")
@@ -127,7 +146,9 @@ def redact_markdown(text: str, options: dict[str, Any]) -> tuple[str, dict[str, 
     selected.sort(key=lambda m: m.start)
 
     # Unique per file to make combined and ZIP exports restorable without token collisions.
-    run_id = uuid4().hex[:12]
+    run_id = processing_id or uuid4().hex[:12]
+    if not re.fullmatch(r"[a-f0-9]{12}|[a-f0-9]{32}", run_id):
+        raise ValueError("Invalid processing identity")
     used: dict[tuple[str, str], str] = {}
     mapping: dict[str, str] = {}
     counts: Counter[str] = Counter()
@@ -168,6 +189,8 @@ def encrypt_mapping(mapping: dict[str, str], passphrase: str) -> dict[str, str]:
 
 
 def decrypt_mapping(vault: dict[str, Any], passphrase: str) -> dict[str, str]:
+    if isinstance(vault, dict) and vault.get("version") == "MAD-R2":
+        return decrypt_document(vault, passphrase)["mapping"]
     if not isinstance(vault, dict) or vault.get("version") != "MAD-R1":
         raise ValueError("Unsupported vault version")
     if vault.get("kdf") != "scrypt-16384-8-1" or vault.get("cipher") != "AES-256-GCM":
@@ -190,15 +213,21 @@ def decrypt_mapping(vault: dict[str, Any], passphrase: str) -> dict[str, str]:
 
 
 def restore_markdown(text: str, vaults: list[dict[str, Any]], passphrase: str) -> tuple[str, int]:
-    if not isinstance(text, str) or len(text) > MAX_TEXT:
-        raise ValueError("Input must be text up to 5,000,000 characters")
+    if not isinstance(text, str) or len(text) > MAX_RECOVERY_TEXT:
+        raise ValueError("Recovery input exceeds 8,000,000 characters")
     if not isinstance(vaults, list) or len(vaults) > 5000 or not vaults:
         raise ValueError("Provide 1 to 5000 vaults")
     if len(vaults) > 100:
         raise ValueError("At most 100 vaults per recovery request")
     combined: dict[str, str] = {}
+    documents = {}
     for vault in vaults:
-        mapping = decrypt_mapping(vault, passphrase)
+        if isinstance(vault, dict) and vault.get("version") == "MAD-R2":
+            document = decrypt_document(vault, passphrase)
+            documents[document["processingId"]] = document["documentId"]
+            mapping = document["mapping"]
+        else:
+            mapping = decrypt_mapping(vault, passphrase)
         for k, v in mapping.items():
             if k in combined and combined[k] != v:
                 raise ValueError("Inconsistent vault mappings")
@@ -210,9 +239,68 @@ def restore_markdown(text: str, vaults: list[dict[str, Any]], passphrase: str) -
     unknown = [m.group(0) for m in re.finditer(r"【MAD_[^】\n]{1,150}】", text) if m.group(0) not in combined]
     if unknown:
         raise ValueError("Redacted text contains unknown placeholders; check that all mapping vaults are provided")
+    has_identity = False
+    if documents:
+        headers = IDENTITY_PATTERN.findall(text)
+        has_identity = bool(headers)
+        for doc_id, proc_id in headers:
+            if documents.get(proc_id) != doc_id:
+                raise ValueError("Document identity does not match recovery mapping")
+        text = IDENTITY_PATTERN.sub("", text)
+        if "<!-- MarkAllDown:" in text:
+            raise ValueError("Invalid document identity marker")
     if not combined:
         return text, 0
+    # Bound the output before substitution: an imported/edited document can
+    # repeat a placeholder whose encrypted original value is very large.
+    output_length = len(text)
+    for match in token_pattern.finditer(text):
+        output_length += len(combined[match.group()]) - len(match.group())
+        if output_length > MAX_RECOVERY_OUTPUT:
+            raise ValueError("Restored text exceeds recovery size limit; split the document")
     restored, count = token_pattern.subn(lambda m: combined[m.group()], text)
-    if count == 0 and combined:
+    if count == 0 and combined and not has_identity:
         raise ValueError("No matching placeholders found in this text")
     return restored, count
+
+
+def seal_payload(payload: dict, passphrase: str, version: str) -> dict:
+    if not isinstance(passphrase, str) or not 8 <= len(passphrase) <= 1024:
+        raise ValueError("Invalid vault passphrase")
+    salt, nonce = secrets.token_bytes(16), secrets.token_bytes(12)
+    key = hashlib.scrypt(passphrase.encode("utf-8"), salt=salt, n=2**14, r=8, p=1, dklen=32)
+    raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    data = AESGCM(key).encrypt(nonce, raw, ("MarkAllDown:" + version).encode("ascii"))
+    return {"version": version, "kdf": "scrypt-16384-8-1", "cipher": "AES-256-GCM",
+            "salt": base64.b64encode(salt).decode(), "nonce": base64.b64encode(nonce).decode(), "data": base64.b64encode(data).decode()}
+
+
+def open_payload(vault: dict, passphrase: str, version: str) -> dict:
+    if not isinstance(vault, dict) or vault.get("version") != version or vault.get("kdf") != "scrypt-16384-8-1" or vault.get("cipher") != "AES-256-GCM":
+        raise ValueError("Invalid encrypted payload")
+    if not isinstance(passphrase, str) or not 8 <= len(passphrase) <= 1024:
+        raise ValueError("Invalid vault passphrase")
+    try:
+        salt = base64.b64decode(vault["salt"], validate=True)
+        nonce = base64.b64decode(vault["nonce"], validate=True)
+        data = base64.b64decode(vault["data"], validate=True)
+        if len(salt) != 16 or len(nonce) != 12 or len(data) > 20_000_000:
+            raise ValueError("Invalid encrypted payload sizes")
+        key = hashlib.scrypt(passphrase.encode("utf-8"), salt=salt, n=2**14, r=8, p=1, dklen=32)
+        payload = json.loads(AESGCM(key).decrypt(nonce, data, ("MarkAllDown:" + version).encode("ascii")))
+        if not isinstance(payload, dict):
+            raise ValueError("Invalid encrypted payload")
+        return payload
+    except Exception as e:
+        raise ValueError("Incorrect passphrase or damaged recovery data") from e
+
+
+def decrypt_document(vault: dict, passphrase: str) -> dict:
+    document = open_payload(vault, passphrase, "MAD-R2")
+    identity_header(document.get("documentId"), document.get("processingId"))
+    if any(not isinstance(document.get(k), str) or not re.fullmatch(r"[a-f0-9]{64}", document[k]) for k in ("sourceHash", "redactedHash")):
+        raise ValueError("Invalid document hashes")
+    mapping = document.get("mapping")
+    if not isinstance(mapping, dict) or any(not isinstance(k, str) or not isinstance(v, str) or not k.startswith("【MAD_" + document["processingId"] + "_") for k, v in mapping.items()):
+        raise ValueError("Invalid document mapping")
+    return document

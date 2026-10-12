@@ -1,7 +1,11 @@
-# MarkAllDown 2.0.1
+# MarkAllDown 2.1.0
 
-Fixes the missing outer macOS application signature shared by 2.0.0. macOS bundles now use Tauri ad-hoc signing, with mandatory deep/strict signature verification for the app and explicit verification of the main executable and conversion sidecar after DMG installation. CI also inspects the previous released DMG and records quarantine/Gatekeeper assessments separately from runtime tests.
+Separates redaction review, export and file recovery into independent workspaces. Export saves already-reviewed masked text; recovery no longer requires conversion records or opening the export panel.
 
-Includes Windows NSIS/MSI, Apple Silicon DMG and Intel DMG, with SHA256SUMS.txt. Conversion/OCR/export runtime tests remain required; redaction and restoration tests remain required.
+Adds random document/processing identities and authenticated encrypted version-2 batch recovery manifests. One JSON pack covers up to 100 documents and can restore any individual Markdown file, renamed copies, or combined exports. ZIP keeps mappings outside the shareable archive. Existing version-1 packs remain supported with a legacy integrity label.
 
-Ad-hoc signing verifies bundle integrity but is not an Apple Developer ID signature or notarization. macOS may still require explicit approval in System Settings > Privacy & Security > Open Anyway. Successful direct executable startup does not establish browser/Finder first-launch acceptance. No system-wide Gatekeeper disablement is required or recommended.
+Recovery previews the full restored document and distinguishes exact export matches from edited/excerpt and legacy input. Saving requires review; edited/legacy input requires additional acknowledgement, and existing files are never overwritten.
+
+Adds an opt-in local encrypted recovery library with import, ID-based matching and removal. It keeps encrypted packs and opaque lookup metadata, never original document text or passwords. No export history is required for recovery.
+
+Includes Windows NSIS/MSI and both macOS architectures. Native smoke checks exercise conversion/OCR, reviewed export, independent recovery and library persistence. macOS apps are ad-hoc signed with mandatory deep/strict validation but are not Developer ID signed or notarized; first launch may still need Privacy & Security > Open Anyway.

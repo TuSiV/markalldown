@@ -59,10 +59,29 @@ def exercise(port,token):
             else:text=Path(out['path']).read_text(encoding="utf-8")
             restored=request(port,token,'restore',{'content':text,'vaults':[result['vault']],'passphrase':'smoke-test-password'})['content']
             assert source in restored
+        # Portable pack and independent recovery, including the bundled SQLite library.
+        output=request(port,token,'privacy/export',{
+            'files':[{'name':'portable.md','content':result['content'],'sourceHash':result['sourceHash'],'reviewed':True}],
+            'pack':{'format':'MarkAllDownEncryptedVaultPack','version':2,'vaults':[result['vault']]},
+            'passphrase':'smoke-test-password','saveToLibrary':True,
+            'options':{'exportPath':directory,'format':'individual','structure':'flat'}})
+        markdown=(Path(output['path'])/'portable.md').read_bytes().decode('utf-8')
+        pack=json.loads(Path(output['vaultPath']).read_bytes())
+        preview=request(port,token,'recovery/preview',{'content':markdown,'pack':pack,'passphrase':'smoke-test-password'})
+        assert preview['integrity']=='exact' and preview['content']==source
+        matches=request(port,token,'recovery/library/find',{'content':markdown})['packs']
+        assert output['libraryPackId'] in [p['packId'] for p in matches]
+        local=request(port,token,'recovery/preview',{'content':markdown,'libraryPackId':output['libraryPackId'],'passphrase':'smoke-test-password'})
+        assert local['content']==source
+        saved=Path(directory)/'restored-copy.md'
+        request(port,token,'recovery/save',{'content':markdown,'pack':pack,'passphrase':'smoke-test-password','path':str(saved),'reviewed':True})
+        assert saved.read_bytes()==source.encode('utf-8')
+        request(port,token,'recovery/library/delete',{'packId':output['libraryPackId']})
+        assert output['libraryPackId'] not in [p['packId'] for p in request(port,token,'recovery/library/list',{})['packs']]
         try: request(port,token,'redact',{'content':source},auth=False)
         except HTTPError as e: assert e.code==401
         else: raise AssertionError('Missing authentication accepted')
-    print('Packaged service: authenticated redact/export/restore smoke checks passed')
+    print('Packaged service: conversion/OCR, redact/export/restore, portable pack and local library checks passed')
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('binary');args=parser.parse_args()

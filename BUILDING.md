@@ -7,7 +7,7 @@ Use Node.js 22.12+ (CI: 24), Python 3.12 and stable Rust on the target OS. Windo
 - The desktop locates platform-specific service binaries beside the application or in resources. Source checkout paths are only searched in debug builds.
 - CI builds Windows x64, macOS arm64 and macOS x64, runs source tests, exercises the frozen service, installs/copies the actual bundle, then launches the installed app and tests its service. The launched process PATH excludes installed Python, establishing that the packaged service is standalone.
 - These checks exercise actual main-process and sidecar startup, conversion API logic and recovery workflow. They are not automated visual clicks of every desktop control. React interaction tests exercise review and consent state.
-- Release upload runs only if all native jobs succeed. It creates the v2.0.1 release on the feature commit; main is untouched. macOS apps use ad-hoc signatures and are not Developer ID signed or notarized.
+- Release upload runs only if all native jobs succeed. It creates the v2.1.0 release on the feature commit; main is untouched. macOS apps use ad-hoc signatures and are not Developer ID signed or notarized.
 - The local AI protocol test uses a real loopback HTTP server with deterministic synthetic replies. A production model/provider requires its own endpoint, model and credentials. No third-party production AI verification is claimed.
 
 Required source checks:
@@ -25,3 +25,5 @@ Frozen service check: `python scripts/smoke_service.py /path/to/markalldown-serv
 Installed desktop check: `python scripts/smoke_desktop.py /path/to/main/executable`.
 
 The installed DMG app must pass codesign deep/strict verification. Quarantined spctl assessments are recorded separately: ad-hoc signing does not imply Gatekeeper approval. Native process smoke alone is not browser/Finder first-launch acceptance.
+
+The frozen-service and installed-desktop smoke checks also exercise version-2 export manifests, independent preview/save, and encrypted recovery library matching/removal. Unit tests verify old-pack compatibility, per-file batch recovery, modified-file acknowledgement, metadata tampering, non-overwrite saves and ciphertext-only persistence.

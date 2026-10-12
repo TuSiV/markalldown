@@ -13,6 +13,8 @@ export interface EncryptedVault {
   data: string;
 }
 export interface PrivacyResult {
+  documentId: string;
+  processingId: string;
   sourceHash: string;
   content: string;
   vault: EncryptedVault;
@@ -37,12 +39,21 @@ async function post<T>(conn: PrivacyConnection, endpoint: string, data: unknown)
   return response.json() as Promise<T>;
 }
 
+export interface RecoveryRequest { content: string; pack?: unknown; libraryPackId?: string; passphrase: string }
+export interface RecoveryPreview { content: string; restored: number; integrity: "exact" | "edited" | "legacy"; originalMatch: boolean | null; documentIds: string[]; processingIds: string[] }
+export interface LibraryPack { packId: string; savedAt: number; documents: number; legacy: boolean }
 export const privacyApi = {
+  previewRecovery(conn: PrivacyConnection, data: RecoveryRequest) { return post<RecoveryPreview>(conn, "recovery/preview", data); },
+  saveRecovery(conn: PrivacyConnection, data: RecoveryRequest & { path: string; reviewed: boolean; allowEdited: boolean }) { return post<{path:string}>(conn,"recovery/save",data); },
+  listLibrary(conn: PrivacyConnection) { return post<{packs: LibraryPack[]}>(conn,"recovery/library/list",{}); },
+  findLibrary(conn: PrivacyConnection, content: string) { return post<{packs: LibraryPack[]}>(conn,"recovery/library/find",{content}); },
+  saveLibrary(conn: PrivacyConnection, pack: unknown, passphrase: string) { return post<{packId:string}>(conn,"recovery/library/save",{pack,passphrase}); },
+  deleteLibrary(conn: PrivacyConnection, packId: string) { return post<{deleted:boolean}>(conn,"recovery/library/delete",{packId}); },
   exportReviewed(conn: PrivacyConnection, data: unknown) {
-    return post<{ path: string; vaultPath: string; files: number }>(conn, "privacy/export", data);
+    return post<{ path: string; vaultPath: string; files: number; packId: string; libraryPackId: string | null }>(conn, "privacy/export", data);
   },
-  redact(conn: PrivacyConnection, content: string, options: PrivacyOptions, passphrase: string) {
-    return post<PrivacyResult>(conn, "redact", { content, options, passphrase });
+  redact(conn: PrivacyConnection, content: string, options: PrivacyOptions, passphrase: string, documentId?: string) {
+    return post<PrivacyResult>(conn, "redact", { content, options, passphrase, documentId });
   },
   restore(conn: PrivacyConnection, content: string, vaults: EncryptedVault[], passphrase: string) {
     return post<{ content: string; restored: number }>(conn, "restore", { content, vaults, passphrase });

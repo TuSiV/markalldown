@@ -3,6 +3,8 @@ import { Toaster } from "sonner";
 import { DropZone } from "./components/DropZone";
 import { FileList } from "./components/FileList";
 import { ExportPanel } from "./components/ExportPanel";
+import { RecoveryPanel } from "./components/RecoveryPanel";
+import { RedactionPanel } from "./components/RedactionPanel";
 import { Header } from "./components/Header";
 import { useAppStore } from "./stores/appStore";
 import { api } from "./lib/api";
@@ -13,7 +15,7 @@ function App() {
   const { files, setConnection, setReady } = useAppStore();
   const t = useT();
   const locale = useI18n((s) => s.locale);
-  const [showExport, setShowExport] = useState(false);
+  const [panel, setPanel] = useState<"export" | "redaction" | "recovery" | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,9 +63,10 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen bg-white">
-      <Header onExport={() => setShowExport(!showExport)} />
+      <Header onExport={() => setPanel(panel === "export" ? null : "export")} onRedact={() => setPanel(panel === "redaction" ? null : "redaction")} onRecovery={() => setPanel(panel === "recovery" ? null : "recovery")} />
 
       <main className="flex-1 flex overflow-hidden">
+        {panel === "recovery" ? <RecoveryPanel onClose={() => setPanel(null)} /> : <>
         <div className="flex-1 flex flex-col overflow-hidden p-6">
           {!hasFiles ? (
             <div className="flex-1 flex items-center justify-center">
@@ -77,9 +80,9 @@ function App() {
           )}
         </div>
 
-        {showExport && (
-          <ExportPanel onClose={() => setShowExport(false)} />
-        )}
+        {panel === "export" && <ExportPanel onClose={() => setPanel(null)} onRedact={() => setPanel("redaction")} />}
+        {panel === "redaction" && <RedactionPanel onClose={() => setPanel(null)} onExport={() => setPanel("export")} />}
+        </>}
       </main>
 
       <footer className="px-6 py-2 border-t border-[rgba(55,53,47,0.09)] bg-[#f7f6f3]">

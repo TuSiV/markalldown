@@ -9,6 +9,9 @@ import secrets
 import shutil
 import tempfile
 import hashlib
+import zipfile
+import sqlite3
+from uuid import uuid4
 from pathlib import Path
 from exporter import exporter, ExportOptions
 import re
@@ -16,7 +19,8 @@ from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 from fastapi import APIRouter, HTTPException, Request as FastAPIRequest
 
-from redaction import redact_markdown, encrypt_mapping, restore_markdown
+from redaction import redact_markdown, encrypt_mapping, restore_markdown, identity_header, attach_identity, seal_payload, decrypt_document
+from recovery import RecoveryLibrary, build_pack, preview_recovery, export_record, digest, valid_id, documents_from_vaults
 
 router = APIRouter(prefix="/api", tags=["privacy"])
 MAX_BODY = 10_000_000
@@ -41,11 +45,21 @@ async def read_json(request: FastAPIRequest) -> dict:
 async def redact(request: FastAPIRequest):
     body = await read_json(request)
     try:
-        masked, mapping, summary = await asyncio.to_thread(redact_markdown, body.get("content"), body.get("options", {}))
-        vault = await asyncio.to_thread(encrypt_mapping, mapping, body.get("passphrase"))
-    except (TypeError, ValueError) as e:
-        raise HTTPException(400, str(e)) from e
-    return {"content": masked, "vault": vault, "summary": summary, "sourceHash": hashlib.sha256(body["content"].encode("utf-8")).hexdigest()}
+        content=body.get("content")
+        if not isinstance(content,str) or "<!-- MarkAllDown:" in content:
+            raise ValueError("Source contains a reserved recovery marker; use the original document")
+        document_id=body.get("documentId") or uuid4().hex
+        processing_id=uuid4().hex
+        identity_header(document_id,processing_id)
+        masked,mapping,summary=await asyncio.to_thread(redact_markdown,content,body.get("options",{}),processing_id)
+        masked=attach_identity(masked,document_id,processing_id)
+        source_hash=hashlib.sha256(content.encode("utf-8")).hexdigest()
+        document={"documentId":document_id,"processingId":processing_id,"sourceHash":source_hash,"redactedHash":digest(masked),"mapping":mapping}
+        vault=await asyncio.to_thread(seal_payload,document,body.get("passphrase"),"MAD-R2")
+    except (TypeError,ValueError) as e:
+        raise HTTPException(400,str(e)) from e
+    return {"content":masked,"vault":vault,"summary":summary,"sourceHash":source_hash,"documentId":document_id,"processingId":processing_id}
+
 
 
 @router.post("/restore")
@@ -149,14 +163,22 @@ async def ai_suggest(request: FastAPIRequest):
 
 
 def _save_private_text(path: Path, text: str):
-    # Exclusive creation and private permissions; never follow/overwrite a link.
-    with path.open("x", encoding="utf-8", newline="") as f:
-        os.chmod(path, 0o600)
-        f.write(text)
-        f.flush()
-        os.fsync(f.fileno())
-    if path.read_text(encoding="utf-8") != text:
-        raise ValueError("Saved file verification failed")
+    # Exclusive creation never overwrites input. Remove only our newly created
+    # file if writing or read-back verification fails.
+    created=False
+    try:
+        with path.open("x", encoding="utf-8", newline="") as f:
+            created=True
+            os.chmod(path,0o600)
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+        if path.read_bytes()!=text.encode("utf-8"):
+            raise ValueError("Saved file verification failed")
+    except Exception:
+        if created:
+            path.unlink(missing_ok=True)
+        raise
 
 
 def _export_reviewed(body: dict) -> dict:
@@ -164,20 +186,30 @@ def _export_reviewed(body: dict) -> dict:
     options = body.get("options", {})
     if not isinstance(files, list) or not 1 <= len(files) <= 100 or not isinstance(pack, dict):
         raise ValueError("Provide 1 to 100 reviewed files and a recovery pack")
-    if pack.get("format") != "MarkAllDownEncryptedVaultPack" or pack.get("version") != 1 or len(pack.get("vaults", [])) != len(files):
+    if pack.get("format") != "MarkAllDownEncryptedVaultPack" or pack.get("version") not in (1,2) or not isinstance(pack.get("vaults"),list) or len(pack["vaults"]) != len(files):
         raise ValueError("Invalid recovery pack")
     if not isinstance(options, dict) or options.get("format") not in ("individual", "combined", "zip"):
         raise ValueError("Invalid export format")
     output = options.get("exportPath")
     if not isinstance(output, str) or not os.path.isabs(output) or not Path(output).is_dir():
         raise ValueError("Select an existing absolute export directory")
+    if not isinstance(body.get("saveToLibrary",False),bool):
+        raise ValueError("Invalid recovery library choice")
+    if pack['version']==2:
+        documents_from_vaults(pack['vaults'],body.get('passphrase'))
     resolved = []
     for item, vault in zip(files, pack["vaults"]):
         if not isinstance(item, dict) or item.get("reviewed") is not True:
             raise ValueError("Every file must be reviewed")
+        if not isinstance(vault,dict):
+            raise ValueError("Invalid document vault")
+        if vault.get('version')=='MAD-R2':
+            document=decrypt_document(vault,body.get('passphrase'))
+            if document['sourceHash']!=item.get('sourceHash') or document['redactedHash']!=digest(item.get('content','')):
+                raise ValueError('Reviewed content differs from the encrypted document metadata')
         restored, _ = restore_markdown(item.get("content"), [vault], body.get("passphrase"))
-        digest = hashlib.sha256(restored.encode("utf-8")).hexdigest()
-        if digest != item.get("sourceHash"):
+        restored_hash = hashlib.sha256(restored.encode("utf-8")).hexdigest()
+        if restored_hash != item.get("sourceHash"):
             raise ValueError("Recovery verification failed; review the document again")
         resolved.append({"name": item.get("name"), "relativePath": item.get("relativePath"), "content": item["content"]})
     # Vault is durably saved before any shareable output. Keep it outside the
@@ -185,6 +217,8 @@ def _export_reviewed(body: dict) -> dict:
     root = Path(output).resolve()
     batch_id = secrets.token_hex(8)
     vault_path = root / ("recovery-" + batch_id + ".json")
+    if pack['version']==2:
+        pack=build_pack(pack['vaults'],body['passphrase'])
     _save_private_text(vault_path, json.dumps(pack, ensure_ascii=False, indent=2))
     staging = Path(tempfile.mkdtemp(prefix=".redaction-", dir=root))
     destination = root / ("redacted-" + batch_id)
@@ -193,11 +227,32 @@ def _export_reviewed(body: dict) -> dict:
             format=options["format"], preserve_names=True,
             structure=options.get("structure", "flat")))
         result_relative = Path(result).relative_to(staging)
+        if pack['version']==2:
+            records=[]
+            if options['format']=='zip':
+                with zipfile.ZipFile(result) as archive:
+                    for name in archive.namelist():
+                        records.append(export_record(name,archive.read(name).decode('utf-8')))
+            elif options['format']=='combined':
+                records.append(export_record(Path(result).name,Path(result).read_bytes().decode('utf-8'),kind='combined'))
+            else:
+                for path in sorted(staging.rglob('*.md')):
+                    records.append(export_record(path.relative_to(staging).as_posix(),path.read_bytes().decode('utf-8')))
+            pack=build_pack(pack['vaults'],body['passphrase'],records,pack['packId'])
+            temporary=vault_path.with_name(vault_path.name+'.'+uuid4().hex+'.tmp')
+            try:
+                _save_private_text(temporary,json.dumps(pack,ensure_ascii=False,indent=2))
+                temporary.replace(vault_path)
+            finally:
+                temporary.unlink(missing_ok=True)
+        library_id=None
+        if body.get('saveToLibrary') is True:
+            library_id=RecoveryLibrary().save(pack,body['passphrase'])
         staging.rename(destination)
     except Exception:
         shutil.rmtree(staging, ignore_errors=True)
         raise
-    return {"path": str(destination / result_relative), "vaultPath": str(vault_path), "files": len(files)}
+    return {"path": str(destination / result_relative), "vaultPath": str(vault_path), "files": len(files), "libraryPackId": library_id, "packId":pack.get("packId")}
 
 
 @router.post("/privacy/export")
@@ -207,5 +262,78 @@ async def export_reviewed(request: FastAPIRequest):
         return await asyncio.to_thread(_export_reviewed, body)
     except (ValueError, TypeError, KeyError) as e:
         raise HTTPException(400, str(e)) from e
-    except OSError as e:
+    except (OSError,sqlite3.Error) as e:
         raise HTTPException(500, "Cannot save export or recovery pack") from e
+
+
+def _recovery_pack(body):
+    if body.get('libraryPackId'):
+        return RecoveryLibrary().load(body['libraryPackId'])
+    return body.get('pack')
+
+
+def _preview(body):
+    return preview_recovery(body.get('content'),_recovery_pack(body),body.get('passphrase'))
+
+
+def _save_recovered(body):
+    result=_preview(body)
+    if body.get('reviewed') is not True:
+        raise ValueError('Review the recovered document before saving')
+    if result['integrity']!='exact' and body.get('allowEdited') is not True:
+        raise ValueError('Edited or legacy documents require explicit confirmation')
+    path=body.get('path')
+    if not isinstance(path,str) or not os.path.isabs(path) or Path(path).suffix.lower()!='.md' or not Path(path).parent.is_dir():
+        raise ValueError('Choose an existing folder and a new Markdown filename')
+    # Exclusive creation never overwrites the input, vault or another existing file.
+    _save_private_text(Path(path),result['content'])
+    return {'path':path,'restored':result['restored'],'integrity':result['integrity']}
+
+
+@router.post('/recovery/preview')
+async def recovery_preview(request: FastAPIRequest):
+    body=await read_json(request)
+    try:return await asyncio.to_thread(_preview,body)
+    except (ValueError,TypeError,KeyError) as e:raise HTTPException(400,str(e)) from e
+    except (OSError,sqlite3.Error) as e:raise HTTPException(500,'Cannot read the local recovery library') from e
+
+
+@router.post('/recovery/save')
+async def recovery_save(request: FastAPIRequest):
+    body=await read_json(request)
+    try:return await asyncio.to_thread(_save_recovered,body)
+    except (ValueError,TypeError,KeyError) as e:raise HTTPException(400,str(e)) from e
+    except FileExistsError as e:raise HTTPException(409,'Target already exists; choose a new filename') from e
+    except (OSError,sqlite3.Error) as e:raise HTTPException(500,'Cannot save the recovered file') from e
+
+
+@router.post('/recovery/library/list')
+async def recovery_library_list(request: FastAPIRequest):
+    await read_json(request)
+    try:return {'packs':await asyncio.to_thread(RecoveryLibrary().list)}
+    except (ValueError,OSError,sqlite3.Error) as e:raise HTTPException(500,'Cannot read the local recovery library') from e
+
+
+@router.post('/recovery/library/find')
+async def recovery_library_find(request: FastAPIRequest):
+    body=await read_json(request)
+    try:return {'packs':await asyncio.to_thread(RecoveryLibrary().find,body.get('content'))}
+    except (ValueError,TypeError) as e:raise HTTPException(400,str(e)) from e
+    except (OSError,sqlite3.Error) as e:raise HTTPException(500,'Cannot access the local recovery library') from e
+
+
+@router.post('/recovery/library/save')
+async def recovery_library_save(request: FastAPIRequest):
+    body=await read_json(request)
+    try:return {'packId':await asyncio.to_thread(RecoveryLibrary().save,body.get('pack'),body.get('passphrase'))}
+    except (ValueError,TypeError,KeyError) as e:raise HTTPException(400,str(e)) from e
+    except (OSError,sqlite3.Error) as e:raise HTTPException(500,'Cannot save the recovery pack to the local library') from e
+
+
+@router.post('/recovery/library/delete')
+async def recovery_library_delete(request: FastAPIRequest):
+    body=await read_json(request)
+    try:await asyncio.to_thread(RecoveryLibrary().delete,body.get('packId'))
+    except (ValueError,TypeError) as e:raise HTTPException(400,str(e)) from e
+    except (OSError,sqlite3.Error) as e:raise HTTPException(500,'Cannot update the local recovery library') from e
+    return {'deleted':True}

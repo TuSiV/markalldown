@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { PrivacyPanel } from "./PrivacyPanel";
+import { usePrivacyStore } from "../stores/privacyStore";
+import { exportRedacted, redactionReviewStatus } from "../lib/exportRedacted";
 import { X, FolderOpen, FileDown, Archive, Loader2, Check } from "lucide-react";
 import { useAppStore } from "../stores/appStore";
 import { api, localizeError } from "../lib/api";
@@ -8,10 +9,13 @@ import { useT, useI18n } from "../i18n";
 
 interface ExportPanelProps {
   onClose: () => void;
+  onRedact: () => void;
 }
 
-export function ExportPanel({ onClose }: ExportPanelProps) {
+export function ExportPanel({ onClose, onRedact }: ExportPanelProps) {
   const { files, port, token, exportOptions, setExportOptions, privacyEnabled } = useAppStore();
+  const settings = usePrivacyStore();
+  const { approved } = redactionReviewStatus();
   const t = useT();
   const locale = useI18n((s) => s.locale);
   const [exporting, setExporting] = useState(false);
@@ -37,7 +41,7 @@ export function ExportPanel({ onClose }: ExportPanelProps) {
     }
   };
 
-  const handleExport = async () => {
+  const handleOriginalExport = async () => {
     if (!port) {
       toast.error(t("serviceNotReady"));
       return;
@@ -75,6 +79,18 @@ export function ExportPanel({ onClose }: ExportPanelProps) {
     } finally {
       setExporting(false);
     }
+  };
+
+  const handleExport = async () => {
+    if (!privacyEnabled) return handleOriginalExport();
+    if (!port || !exportPath) return;
+    setExporting(true);
+    try {
+      const result = await exportRedacted({ port, token: token || "" }, exportPath, exportOptions);
+      toast.success(locale === "en-US" ? `Saved redacted files: ${result.path}; recovery pack: ${result.vaultPath}` : `脱敏文件已保存：${result.path}；加密恢复包：${result.vaultPath}`, { duration: 12000 });
+      onClose();
+    } catch (e) { toast.error(e instanceof Error ? e.message : String(e)); }
+    finally { setExporting(false); }
   };
 
   const formatItems = [
@@ -205,13 +221,18 @@ export function ExportPanel({ onClose }: ExportPanelProps) {
             ))}
           </div>
         </div>
-        <PrivacyPanel exportPath={exportPath} />
+        {privacyEnabled && <div className="border rounded p-3 space-y-2 text-xs">
+          <p>{locale === "en-US" ? `Redaction review: ${approved}/${completedFiles.length} approved` : `脱敏审核：${approved}/${completedFiles.length} 个文件已确认`}</p>
+          <p>{locale === "en-US" ? (settings.anonymousNames ? "Anonymous filenames; recovery pack saved separately" : "Preserve filenames; recovery pack saved separately") : (settings.anonymousNames ? "匿名文件名；加密恢复包单独保存" : "保留文件名；加密恢复包单独保存")}</p>
+          {settings.saveToLibrary && <p>{locale === "en-US" ? "Also keep an encrypted local recovery pack" : "另存一份加密恢复包到本机库"}</p>}
+          <button onClick={onRedact} className="border rounded px-3 py-2">{locale === "en-US" ? "Go to redaction review" : "前往脱敏审核"}</button>
+        </div>}
       </div>
 
       <div className="p-4 border-t border-[rgba(55,53,47,0.09)]">
         <button
           onClick={handleExport}
-          disabled={exporting || completedFiles.length === 0 || !exportPath}
+          disabled={exporting || completedFiles.length === 0 || !exportPath || (privacyEnabled && approved !== completedFiles.length)}
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium
                      rounded-lg bg-[#2eaadc] text-white hover:bg-[#2eaadc]/90 disabled:opacity-50
                      disabled:cursor-not-allowed transition-colors"
@@ -224,10 +245,11 @@ export function ExportPanel({ onClose }: ExportPanelProps) {
           ) : (
             <>
               <FileDown className="w-4 h-4" />
-              {privacyEnabled ? (locale === "en-US" ? "Export original (sensitive)" : "导出原文（含敏感信息）") : t("exportCount", { n: completedFiles.length })}
+              {privacyEnabled ? (locale === "en-US" ? "Export reviewed redacted files" : "导出已审核脱敏文件") : t("exportCount", { n: completedFiles.length })}
             </>
           )}
         </button>
+        {privacyEnabled && <button onClick={handleOriginalExport} disabled={exporting || !exportPath || !completedFiles.length} className="w-full mt-2 text-xs text-[#787774] underline">{locale === "en-US" ? "Export originals instead (requires confirmation)" : "改为导出原文（需要确认）"}</button>}
       </div>
     </div>
   );

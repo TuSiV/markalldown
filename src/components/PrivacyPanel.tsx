@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "../lib/api";
-import { privacyApi, EncryptedVault, PrivacySuggestion, PrivacyResult } from "../lib/privacyApi";
+import { privacyApi, PrivacySuggestion, PrivacyResult } from "../lib/privacyApi";
 import { useAppStore } from "../stores/appStore";
 import { useI18n } from "../i18n";
+import { usePrivacyStore, type PrivacySettings, terms } from "../stores/privacyStore";
 
 const CATEGORY_OPTIONS = [
   ["phone", "手机号", "Phone"],
@@ -17,33 +18,21 @@ const CATEGORY_OPTIONS = [
   ["address", "地址", "Address"],
   ["file_code", "合同/文件编号", "Document ID"],
 ];
-const DEFAULT_CATEGORIES = ["phone", "email", "id_card", "bank_account", "credit_code"];
-const terms = (text: string) => [...new Set(text.split(/\r?\n/).map(s => s.trim()).filter(Boolean))];
-
-function downloadText(text: string, name: string, type = "text/markdown;charset=utf-8") {
-  const blob = new Blob([text], { type });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = name;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
-}
-
-export function PrivacyPanel({ exportPath }: { exportPath: string }) {
+export function PrivacyPanel({ onExport }: { onExport: () => void }) {
   const { files, port, token, exportOptions, privacyEnabled: enabled, setPrivacyEnabled: setEnabled } = useAppStore();
   const locale = useI18n(s => s.locale);
   const english = locale === "en-US";
   const tr = (zh: string, en: string) => english ? en : zh;
-  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
-  const [keywords, setKeywords] = useState("");
-  const [whitelist, setWhitelist] = useState("");
-  const [passphrase, setPassphrase] = useState("");
-  const [anonymousNames, setAnonymousNames] = useState(true);
-  type Prepared = { fileId: string; optionsKey: string; passphrase: string; cachePath: string; original: string; value: PrivacyResult; approved: boolean };
-  const [preparedFiles, setPreparedFiles] = useState<Record<string, Prepared>>({});
+  const { categories, keywords, whitelist, passphrase, anonymousNames, saveToLibrary,
+    preparedFiles, setPreparedFiles, updateSettings } = usePrivacyStore();
+  function setter<K extends keyof PrivacySettings>(key: K) {
+    return (value: PrivacySettings[K] | ((old: PrivacySettings[K]) => PrivacySettings[K])) => {
+      const current = usePrivacyStore.getState()[key];
+      updateSettings({ [key]: typeof value === "function" ? (value as (old: PrivacySettings[K]) => PrivacySettings[K])(current) : value });
+    };
+  }
+  const setCategories = setter("categories"), setKeywords = setter("keywords"), setWhitelist = setter("whitelist");
+  const setPassphrase = setter("passphrase"), setAnonymousNames = setter("anonymousNames");
   const [reviewedRedaction, setReviewedRedaction] = useState<PrivacyResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [sourceText, setSourceText] = useState("");
@@ -57,13 +46,10 @@ export function PrivacyPanel({ exportPath }: { exportPath: string }) {
   const [aiModel, setAiModel] = useState("");
   const [aiKey, setAiKey] = useState("");
   const [suggestions, setSuggestions] = useState<PrivacySuggestion[]>([]);
-  const [restoreMarkdown, setRestoreMarkdown] = useState<File | null>(null);
-  const [restoreVault, setRestoreVault] = useState<File | null>(null);
-  const [restorePassphrase, setRestorePassphrase] = useState("");
 
   const policyKey = JSON.stringify({ categories, keywords: terms(keywords), whitelist: terms(whitelist) });
   useEffect(() => {
-    setPreparedFiles({}); setReviewedRedaction(null); setPreviewCount(null);
+    setReviewedRedaction(null); setPreviewCount(null);
     setPreviewText(""); setFindings([]); setSuggestions([]); setAiConsent(false);
   }, [policyKey, passphrase]);
   useEffect(() => { setAiConsent(false); }, [aiBaseUrl, aiModel, reviewFileId, aiEnabled]);
@@ -80,6 +66,7 @@ export function PrivacyPanel({ exportPath }: { exportPath: string }) {
   const validate = () => {
     if (!conn) throw new Error(tr("本地服务未就绪", "Local service not ready"));
     if (passphrase.length < 8) throw new Error(tr("映射加密口令至少 8 个字符", "Vault passphrase requires at least 8 characters"));
+    if (ready.length > 100) throw new Error(tr("每批最多 100 个文件，请拆分批次", "At most 100 documents per batch; split the batch"));
     if (!ready.length) throw new Error(tr("没有已转换文件", "No converted files"));
     return conn;
   };
@@ -90,13 +77,14 @@ export function PrivacyPanel({ exportPath }: { exportPath: string }) {
     const connection = validate();
     const file = ready.find(f => f.id === reviewFileId) || ready[0];
     const optionsKey = JSON.stringify(options());
-    if (prepared && prepared.fileId === file.id && prepared.optionsKey === optionsKey && prepared.passphrase === passphrase && prepared.cachePath === file.cachePath) {
-      setSourceText(prepared.original);
-      return prepared.value;
-    }
     const original = await api.readCachedText(connection, file.cachePath!);
     setSourceText(original);
-    const value = await privacyApi.redact(connection, original, options(), passphrase);
+    if (prepared && prepared.fileId === file.id && prepared.optionsKey === optionsKey &&
+        prepared.passphrase === passphrase && prepared.cachePath === file.cachePath && original === prepared.original) {
+      return prepared.value;
+    }
+    const value = await privacyApi.redact(connection, original, options(), passphrase, file.documentId);
+    if (file.documentId !== value.documentId) useAppStore.getState().patchFile(file.id, { documentId: value.documentId });
     setPreparedFiles(old => ({ ...old, [file.id]: { fileId: file.id, optionsKey, passphrase, cachePath: file.cachePath!, original, value, approved: false } }));
     return value;
   };
@@ -144,70 +132,17 @@ export function PrivacyPanel({ exportPath }: { exportPath: string }) {
     } finally { setBusy(false); }
   };
 
-  const exportRedacted = async () => {
-    setBusy(true);
-    try {
-      const connection = validate();
-      if (!exportPath) throw new Error(tr("请先选择导出目录", "Choose export folder first"));
-      if (approvedCount !== ready.length) throw new Error(tr("须确认整批每个文件的全文", "Approve every document first"));
-      const batchIds = ready.map(f => f.id).join("|");
-      const processedFiles = [];
-      const vaults: EncryptedVault[] = [];
-      for (const [index, file] of ready.entries()) {
-        const p = validPrepared(file)!;
-        // Cache identity alone is insufficient: verify the actual source bytes.
-        const current = await api.readCachedText(connection, file.cachePath!);
-        const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(current));
-        const digest = Array.from(new Uint8Array(bytes)).map(v => v.toString(16).padStart(2, "0")).join("");
-        if (digest !== p.value.sourceHash) throw new Error(tr("原文已改变，请重新审核", "Source changed; review again"));
-        const safeName = `document_${String(index + 1).padStart(4, "0")}.md`;
-        processedFiles.push({ name: anonymousNames ? safeName : file.name,
-          relativePath: anonymousNames ? safeName : (file.relativePath || file.name),
-          content: p.value.content, sourceHash: p.value.sourceHash, reviewed: true });
-        vaults.push(p.value.vault);
-      }
-      if (useAppStore.getState().files.filter(f => f.status === "done" && f.cachePath).map(f => f.id).join("|") !== batchIds) {
-        throw new Error(tr("文件列表已改变，请重新审核", "File list changed; review again"));
-      }
-      const result = await privacyApi.exportReviewed(connection, {
-        files: processedFiles, pack: { format: "MarkAllDownEncryptedVaultPack", version: 1, vaults },
-        passphrase, options: { ...exportOptions, exportPath, structure: anonymousNames ? "flat" : exportOptions.structure },
-      });
-      toast.success(tr(`脱敏文件已保存：${result.path}；加密映射已验证保存：${result.vaultPath}`,
-        `Saved output: ${result.path}; verified vault: ${result.vaultPath}`), { duration: 12000 });
-    } catch (e) {
-      toast.error(String(e instanceof Error ? e.message : e));
-    } finally { setBusy(false); }
-  };
-
-  const restore = async () => {
-    setBusy(true);
-    try {
-      if (!conn || !restoreMarkdown || !restoreVault) throw new Error(tr("请选择 Markdown 和映射文件", "Select Markdown and vault files"));
-      if (restoreMarkdown.size > 10000000 || restoreVault.size > 10000000) throw new Error(tr("恢复文件过大，请拆分", "Recovery files exceed size limit"));
-      const original = await restoreMarkdown.text();
-      const pack = JSON.parse(await restoreVault.text());
-      if (pack.format !== "MarkAllDownEncryptedVaultPack" || pack.version !== 1 || !Array.isArray(pack.vaults)) {
-        throw new Error(tr("无效的映射文件", "Invalid vault pack"));
-      }
-      const result = await privacyApi.restore(conn, original, pack.vaults, restorePassphrase);
-      downloadText(result.content, restoreMarkdown.name.replace(/\.md$/i, "") + "_restored.md");
-      toast.success(tr(`已恢复 ${result.restored} 处占位符`, `Restored ${result.restored} placeholders`));
-    } catch (e) {
-      toast.error(String(e instanceof Error ? e.message : e));
-    } finally { setBusy(false); }
-  };
-
   return (
     <section className="border-t border-gray-200 pt-4 space-y-3 text-xs text-[#37352f]">
       <label className="flex items-center gap-2 font-semibold text-sm cursor-pointer">
         <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />
-        {tr("启用可选脱敏与恢复", "Enable optional redaction and recovery")}
+        {tr("启用脱敏", "Enable redaction")}
       </label>
       <p className="text-[#787774]">
-        {tr("普通导出、预览中的保存和复制仍然使用原文。只有下方“导出脱敏版”会应用这些规则。",
-          "Regular export and preview/save/copy still use originals. Only 'Export redacted' below applies these rules.")}
+        {tr("先完成脱敏与全文审核，再到导出步骤保存已审核的脱敏文件。预览中的复制和保存仍使用原文。",
+          "Complete redaction and full review before exporting. Preview copy/save still use original text.")}
       </p>
+      <p>{tr("每批最多 100 个文件；每批一个恢复包，可从中单独恢复任一文件。", "Up to 100 files per batch; one recovery pack can restore any individual file.")}</p>
       {enabled && <fieldset disabled={busy} className="space-y-3">
         <div className="font-medium">{tr("检测类别", "Detection categories")}</div>
         <div className="grid grid-cols-2 gap-2">
@@ -287,27 +222,18 @@ export function PrivacyPanel({ exportPath }: { exportPath: string }) {
             }}>{tr("加入词表", "Add term")}</button>
           </div>)}
         </div>}
+        <label className="flex gap-2 items-start">
+          <input type="checkbox" checked={saveToLibrary} onChange={e => updateSettings({ saveToLibrary: e.target.checked })} />
+          {tr("导出时将加密恢复包另存到本机恢复库（默认关闭，不保存原文或口令）", "Also keep the encrypted recovery pack in the local library (off by default; no source or password)")}
+        </label>
+        {prepared && <p className="break-all text-[#787774]">{tr("文档编号", "Document ID")}: {prepared.value.documentId}<br />{tr("脱敏版本编号", "Processing ID")}: {prepared.value.processingId}</p>}
         <p className="text-[#787774]">{tr("文件正文中的链接、图片及未识别文字不会被自动脱敏；若取消匿名文件名，原始路径还会暴露。分享前仍须检查。映射文件单独保存并以 AES-256-GCM 加密。",
           "Document content links, image pixels and undetected text are NOT automatically redacted. Filenames are anonymized only if the option above remains enabled. Encrypted recovery mapping is saved separately.")}</p>
-        <button type="button" disabled={busy || !ready.length || !exportPath || approvedCount !== ready.length} onClick={exportRedacted} className="w-full bg-[#0f7b6c] text-white rounded py-2.5 disabled:opacity-50">
-          {busy ? tr("处理中…", "Processing...") : tr(`导出脱敏版（${ready.length} 个文件）`, `Export redacted (${ready.length} files)`)}
+        <button type="button" disabled={busy || !enabled || !ready.length || ready.length > 100 || approvedCount !== ready.length} onClick={onExport} className="w-full bg-[#0f7b6c] text-white rounded py-2.5 disabled:opacity-50">
+          {busy ? tr("处理中…", "Processing...") : tr(`完成审核，前往导出（${ready.length} 个文件）`, `Finish review and export (${ready.length} files)`)}
         </button>
       </fieldset>}
-      <details className="border rounded p-2 space-y-2">
-        <summary className="font-semibold cursor-pointer">{tr("从加密映射恢复 Markdown", "Restore Markdown from encrypted vault")}</summary>
-        <div className="space-y-2 pt-2">
-          <label className="block">{tr("脱敏 Markdown 文件", "Redacted Markdown file")}
-            <input type="file" accept=".md,.txt" className="block w-full" onChange={e => setRestoreMarkdown(e.target.files?.[0] || null)} />
-          </label>
-          <label className="block">{tr("加密映射 JSON 文件", "Encrypted vault JSON file")}
-            <input type="file" accept=".json" className="block w-full" onChange={e => setRestoreVault(e.target.files?.[0] || null)} />
-          </label>
-          <input type="password" value={restorePassphrase} onChange={e => setRestorePassphrase(e.target.value)} placeholder={tr("映射加密口令", "Vault passphrase")} className="border rounded p-2 w-full" />
-          <button type="button" onClick={restore} disabled={busy || !restoreMarkdown || !restoreVault} className="border rounded px-3 py-2 disabled:opacity-50">
-            {tr("恢复并下载 Markdown", "Restore and download Markdown")}
-          </button>
-        </div>
-      </details>
+
     </section>
   );
 }

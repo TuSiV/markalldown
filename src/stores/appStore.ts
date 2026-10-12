@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 export interface FileEntry {
   id: string;
+  documentId?: string;
   name: string;
   size: number;
   type: string;
