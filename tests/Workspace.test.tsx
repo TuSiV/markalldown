@@ -64,3 +64,10 @@ it("exports completed files to the selected folder and shows the backend path",a
  await screen.findByText("/exports/markalldown_1.zip");
  expect(api.exportFiles).toHaveBeenCalledWith({port:1234,token:"token"},[{name:"原文件.pdf",cachePath:"/one",relativePath:"原文件.pdf"}],expect.objectContaining({exportPath:"/exports",preserveNames:true}));
 });
+
+it("disables individual naming and folders for combined output",async()=>{
+ const { ExportPanel }=await import("../src/components/ExportPanel");render(<ExportPanel workspace onClose={vi.fn()}/>);
+ fireEvent.click(screen.getByRole("radio",{name:/合并为/}));
+ expect((screen.getByRole("checkbox",{name:/保留原始文件名/}) as HTMLInputElement).disabled).toBe(true);
+ expect((screen.getByRole("radio",{name:/平铺/}) as HTMLInputElement).disabled).toBe(true);
+});
