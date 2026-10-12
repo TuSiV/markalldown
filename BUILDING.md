@@ -27,3 +27,6 @@ Installed desktop check: `python scripts/smoke_desktop.py /path/to/main/executab
 The installed DMG app must pass codesign deep/strict verification. Quarantined spctl assessments are recorded separately: ad-hoc signing does not imply Gatekeeper approval. Native process smoke alone is not browser/Finder first-launch acceptance.
 
 The frozen-service and installed-desktop smoke checks also exercise version-2 export manifests, independent preview/save, and encrypted recovery library matching/removal. Unit tests verify old-pack compatibility, per-file batch recovery, modified-file acknowledgement, metadata tampering, non-overwrite saves and ciphertext-only persistence.
+
+
+2.2.0 adds workspace/settings/preview interaction tests, bounded frontend conversion-queue coverage and backend concurrency/health plus shared-engine isolation checks. Native build smoke exercises the unchanged conversion/export/recovery endpoints and the rebuilt full application.

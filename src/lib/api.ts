@@ -191,7 +191,7 @@ export const api = {
     conn: ConnectionInfo,
     files: Array<{ name: string; content?: string; relativePath?: string; cachePath?: string }>,
     options: ExtendedExportOptions
-  ): Promise<void> {
+  ): Promise<string> {
     const response = await fetch(`http://127.0.0.1:${conn.port}/api/export`, {
       method: "POST",
       headers: {
@@ -200,6 +200,7 @@ export const api = {
       },
       body: JSON.stringify({
         files,
+        returnPath: true,
         options: {
           format: options.format,
           preserveNames: options.preserveNames,
@@ -214,17 +215,9 @@ export const api = {
       throw new Error(err.detail || `导出失败: ${response.status}`);
     }
 
-    if (options.format === "zip") {
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "markitdown-export.zip";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
+    const result = await response.json();
+    if (!result.success || typeof result.path !== "string") throw new Error("Invalid export result");
+    return result.path;
   },
 
   /** 将单个转换结果写到源文件同目录 */

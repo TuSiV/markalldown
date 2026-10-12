@@ -50,3 +50,23 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background-color: rgba(55, 53, 47, 0.3);
 }
+
+.workspace-page { padding: 28px; }
+.ui-card { border: 1px solid #e2e8f0; background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 6px rgb(15 23 42 / 2%); }
+.ui-secondary, .ui-tab { border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; padding: 9px 14px; color: #334155; font-weight: 500; }
+.ui-tab[aria-pressed="true"] { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; font-size: 14px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; }
+.settings-row select { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; background: #fff; max-width: 50%; }
+button, select, input[type="checkbox"] { cursor: pointer; }
+button:disabled, select:disabled { cursor: not-allowed; opacity: .55; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
+[hidden] { display: none !important; }
+.markdown-view h1 { font-size: 1.8em; font-weight: 650; margin-bottom: 1em; }
+.markdown-view h2 { font-size: 1.35em; font-weight: 600; margin: 1.2em 0 .7em; }
+.markdown-view h3 { font-size: 1.15em; font-weight: 600; margin: 1em 0 .5em; }
+.markdown-view p, .markdown-view ul, .markdown-view ol { margin-bottom: 1em; }
+.markdown-view ul { list-style: disc; padding-left: 1.5em; }
+.markdown-view ol { list-style: decimal; padding-left: 1.5em; }
+.markdown-view pre { background: #f8fafc; padding: 12px; border-radius: 8px; overflow: auto; }
+.markdown-view a { color: #2563eb; }
+@media (max-width: 1023px) { .workspace-page { padding: 18px; } }

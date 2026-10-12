@@ -133,7 +133,7 @@ export function PrivacyPanel({ onExport }: { onExport: () => void }) {
   };
 
   return (
-    <section className="border-t border-gray-200 pt-4 space-y-3 text-xs text-[#37352f]">
+    <section className="privacy-workspace space-y-4 text-sm text-[#37352f]">
       <label className="flex items-center gap-2 font-semibold text-sm cursor-pointer">
         <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />
         {tr("启用脱敏", "Enable redaction")}
@@ -143,7 +143,9 @@ export function PrivacyPanel({ onExport }: { onExport: () => void }) {
           "Complete redaction and full review before exporting. Preview copy/save still use original text.")}
       </p>
       <p>{tr("每批最多 100 个文件；每批一个恢复包，可从中单独恢复任一文件。", "Up to 100 files per batch; one recovery pack can restore any individual file.")}</p>
-      {enabled && <fieldset disabled={busy} className="space-y-3">
+      {enabled && <fieldset disabled={busy} className="grid grid-cols-1 xl:grid-cols-[270px_minmax(0,1fr)] 2xl:grid-cols-[270px_minmax(0,1fr)_300px] gap-5 items-start">
+        <div className="ui-card space-y-3">
+        <h3 className="font-semibold">{tr("检测与规则", "Detection and rules")}</h3>
         <div className="font-medium">{tr("检测类别", "Detection categories")}</div>
         <div className="grid grid-cols-2 gap-2">
           {CATEGORY_OPTIONS.map(([key, zh, en]) => <label key={key} className="flex items-center gap-1">
@@ -167,6 +169,10 @@ export function PrivacyPanel({ onExport }: { onExport: () => void }) {
           <span className="font-medium">{tr("映射文件加密口令（至少8字符，不会保存）", "Vault passphrase (8+ chars, never stored)")}</span>
           <input type="password" value={passphrase} onChange={e => setPassphrase(e.target.value)} autoComplete="new-password" className="border rounded p-2 w-full" />
         </label>
+        </div>
+        <div className="ui-card space-y-3 min-w-0">
+        <h3 className="font-semibold">{tr("文件队列与全文审核", "Files and full review")}</h3>
+        <div className="max-h-40 overflow-auto space-y-1" aria-label={tr("审核文件队列", "Review queue")}>{ready.map(f => <button type="button" key={f.id} aria-pressed={selectedFile?.id === f.id} onClick={() => {setReviewFileId(f.id);setReviewedRedaction(null);setPreviewCount(null);setPreviewText("");setFindings([]);}} className="w-full flex justify-between gap-2 text-left rounded-lg border px-3 py-2 hover:bg-blue-50"><span className="truncate">{f.name}</span><span className={validPrepared(f)?.approved ? "text-emerald-700 shrink-0" : "text-amber-700 shrink-0"}>{validPrepared(f)?.approved ? tr("已审核", "Reviewed") : tr("待审核", "Pending")}</span></button>)}</div>
         <select aria-label={tr("选择要预览的文件", "Select file to review")} value={reviewFileId} onChange={e => { setReviewFileId(e.target.value); setPreviewCount(null); setReviewedRedaction(null); setPreviewText(""); setFindings([]); }} className="border rounded p-2 w-full">
           <option value="">{tr("首个已转换文件", "First completed file")}</option>
           {ready.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
@@ -188,9 +194,9 @@ export function PrivacyPanel({ onExport }: { onExport: () => void }) {
           </div>
           <p className="text-[#787774]">{tr("以下为完整脱敏稿；AI 仅发送前 20,000 字符。", "Full redacted document; AI receives only the first 20,000 characters.")}</p>
           <details><summary>{tr("查看原文全文（仅本地）", "Full original text (local only)")}</summary>
-            <pre className="whitespace-pre-wrap break-all max-h-64 overflow-y-auto">{sourceText}</pre>
+            <pre className="whitespace-pre-wrap break-all max-h-[65vh] overflow-y-auto">{sourceText}</pre>
           </details>
-          <pre className="whitespace-pre-wrap break-all max-h-64 overflow-y-auto">{previewText}</pre>
+          <pre className="whitespace-pre-wrap break-all max-h-[65vh] overflow-y-auto">{previewText}</pre>
         </div>}
         {prepared && reviewedRedaction === prepared.value && <label className="flex gap-2 items-start">
           <input type="checkbox" checked={prepared.approved} onChange={e => {
@@ -199,7 +205,10 @@ export function PrivacyPanel({ onExport }: { onExport: () => void }) {
           }} />
           {tr("我已检查所选文件的全文及替换结果", "I reviewed the entire selected document and replacements")}
         </label>}
+        <button type="button" className="ui-secondary" disabled={!ready.some(f => f.id !== selectedFile?.id && !validPrepared(f)?.approved)} onClick={() => {const f=ready.find(f => f.id !== selectedFile?.id && !validPrepared(f)?.approved);if(f) {setReviewFileId(f.id);setReviewedRedaction(null);setPreviewCount(null);setPreviewText("");setFindings([]);}}}>{tr("下一份待审核", "Next pending file")}</button>
         <p>{tr(`整批审核：${approvedCount}/${ready.length} 个文件已确认`, `Batch review: ${approvedCount}/${ready.length} approved`)}</p>
+        </div>
+        <div className="ui-card space-y-3 xl:col-span-2 2xl:col-span-1">
         <label className="flex items-center gap-2 font-medium cursor-pointer">
           <input type="checkbox" checked={aiEnabled} onChange={e => setAiEnabled(e.target.checked)} />
           {tr("可选 AI 辅助识别（默认关闭）", "Optional AI suggestions (off by default)")}
@@ -232,6 +241,7 @@ export function PrivacyPanel({ onExport }: { onExport: () => void }) {
         <button type="button" disabled={busy || !enabled || !ready.length || ready.length > 100 || approvedCount !== ready.length} onClick={onExport} className="w-full bg-[#0f7b6c] text-white rounded py-2.5 disabled:opacity-50">
           {busy ? tr("处理中…", "Processing...") : tr(`完成审核，前往导出（${ready.length} 个文件）`, `Finish review and export (${ready.length} files)`)}
         </button>
+        </div>
       </fieldset>}
 
     </section>

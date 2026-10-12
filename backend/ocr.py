@@ -1,4 +1,5 @@
 import logging
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -20,6 +21,7 @@ class OcrEngine:
 
     def __init__(self):
         self._ocr = None
+        self._lock = threading.RLock()
 
     @property
     def ocr(self):
@@ -33,7 +35,8 @@ class OcrEngine:
 
     def ocr_image_file(self, image_path: str) -> str:
         try:
-            result, _elapsed = self.ocr(image_path)
+            with self._lock:
+                result, _elapsed = self.ocr(image_path)
         except Exception as e:
             logger.exception("OCR image failed: %s", image_path)
             raise OcrError(f"OCR 识别失败: {e}") from e
@@ -41,7 +44,8 @@ class OcrEngine:
 
     def ocr_image_array(self, image) -> str:
         try:
-            result, _elapsed = self.ocr(image)
+            with self._lock:
+                result, _elapsed = self.ocr(image)
         except Exception as e:
             logger.exception("OCR array failed")
             raise OcrError(f"OCR 识别失败: {e}") from e

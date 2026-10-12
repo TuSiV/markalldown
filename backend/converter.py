@@ -1,4 +1,5 @@
 import os
+import threading
 import tempfile
 from pathlib import Path
 from typing import Optional
@@ -32,13 +33,15 @@ UNSUPPORTED_EXTENSIONS = {
 
 class Converter:
     def __init__(self):
-        self._md: Optional[MarkItDown] = None
+        self._local = threading.local()
+        self._slots = threading.BoundedSemaphore(4)
+        self._pdf_lock = threading.Lock()
 
     @property
     def md(self) -> MarkItDown:
-        if self._md is None:
-            self._md = MarkItDown(enable_plugins=False)
-        return self._md
+        if not hasattr(self._local, "md"):
+            self._local.md = MarkItDown(enable_plugins=False)
+        return self._local.md
 
     def check_format(self, filename: str) -> None:
         suffix = Path(filename).suffix.lower()
@@ -50,6 +53,13 @@ class Converter:
             raise ConversionError(f"不支持的文件格式: {suffix}")
 
     def convert_file(self, file_path: str) -> str:
+        with self._slots:
+            if Path(file_path).suffix.lower() == PDF_EXTENSION:
+                with self._pdf_lock:
+                    return self._convert_file(file_path)
+            return self._convert_file(file_path)
+
+    def _convert_file(self, file_path: str) -> str:
         filename = Path(file_path).name
         self.check_format(filename)
         suffix = Path(file_path).suffix.lower()

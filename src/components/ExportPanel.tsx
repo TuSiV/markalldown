@@ -8,16 +8,18 @@ import { toast } from "sonner";
 import { useT, useI18n } from "../i18n";
 
 interface ExportPanelProps {
+  workspace?: boolean;
   onClose: () => void;
   onRedact: () => void;
 }
 
-export function ExportPanel({ onClose, onRedact }: ExportPanelProps) {
+export function ExportPanel({ onClose, onRedact, workspace = false }: ExportPanelProps) {
   const { files, port, token, exportOptions, setExportOptions, privacyEnabled } = useAppStore();
   const settings = usePrivacyStore();
   const { approved } = redactionReviewStatus();
   const t = useT();
   const locale = useI18n((s) => s.locale);
+  const [delivery, setDelivery] = useState<{ path: string; vaultPath?: string } | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportPath, setExportPath] = useState<string>("");
 
@@ -66,13 +68,14 @@ export function ExportPanel({ onClose, onRedact }: ExportPanelProps) {
         relativePath: f.relativePath || f.name,
       }));
 
-      await api.exportFiles(conn, completedData, {
+      const output = await api.exportFiles(conn, completedData, {
         ...exportOptions,
         exportPath: exportPath,
       });
 
       toast.success(t("exportSuccess", { n: completedFiles.length, path: exportPath }));
-      onClose();
+      setDelivery({ path: typeof output === "string" ? output : exportPath });
+      if (!workspace) onClose();
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       toast.error(t("exportFailed", { msg: localizeError(errorMsg, locale) }));
@@ -88,7 +91,8 @@ export function ExportPanel({ onClose, onRedact }: ExportPanelProps) {
     try {
       const result = await exportRedacted({ port, token: token || "" }, exportPath, exportOptions);
       toast.success(locale === "en-US" ? `Saved redacted files: ${result.path}; recovery pack: ${result.vaultPath}` : `脱敏文件已保存：${result.path}；加密恢复包：${result.vaultPath}`, { duration: 12000 });
-      onClose();
+      setDelivery({path: result.path, vaultPath: result.vaultPath});
+      if (!workspace) onClose();
     } catch (e) { toast.error(e instanceof Error ? e.message : String(e)); }
     finally { setExporting(false); }
   };
@@ -105,9 +109,9 @@ export function ExportPanel({ onClose, onRedact }: ExportPanelProps) {
   ] as const;
 
   return (
-    <div className="w-80 border-l border-[rgba(55,53,47,0.09)] bg-white flex flex-col">
+    <div className={workspace ? "workspace-page h-full overflow-auto flex flex-col" : "w-80 border-l border-[rgba(55,53,47,0.09)] bg-white flex flex-col"}>
       <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(55,53,47,0.09)]">
-        <h2 className="text-sm font-semibold">{t("exportSettings")}</h2>
+        <h2 className="text-2xl font-semibold">{locale === "en-US" ? "Export center" : "导出中心"}</h2>
         <button
           onClick={onClose}
           className="p-1 text-[#9b9a97] hover:text-[#37352f] hover:bg-[#f7f6f3]
@@ -117,7 +121,7 @@ export function ExportPanel({ onClose, onRedact }: ExportPanelProps) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <div className={workspace ? "p-4 grid grid-cols-1 xl:grid-cols-2 gap-5 items-start" : "flex-1 overflow-y-auto p-4 space-y-6"}>
         <div>
           <label className="text-xs font-medium text-[#787774] uppercase tracking-wider">
             {t("exportLocation")}
@@ -125,6 +129,7 @@ export function ExportPanel({ onClose, onRedact }: ExportPanelProps) {
           <div className="mt-2">
             <button
               onClick={handleSelectFolder}
+              disabled={exporting}
               className="w-full flex items-center gap-2 p-3 text-left text-sm border border-[rgba(55,53,47,0.09)]
                          rounded-lg hover:bg-[#f7f6f3] transition-colors"
             >
@@ -136,7 +141,7 @@ export function ExportPanel({ onClose, onRedact }: ExportPanelProps) {
           </div>
         </div>
 
-        <div>
+        <div className="ui-card">
           <label className="text-xs font-medium text-[#787774] uppercase tracking-wider">
             {t("exportOutputFormat")}
           </label>
@@ -153,6 +158,7 @@ export function ExportPanel({ onClose, onRedact }: ExportPanelProps) {
                 <input
                   type="radio"
                   name="format"
+                  disabled={exporting}
                   value={value}
                   checked={exportOptions.format === value}
                   onChange={(e) => setExportOptions({ format: e.target.value as any })}
@@ -176,8 +182,8 @@ export function ExportPanel({ onClose, onRedact }: ExportPanelProps) {
             <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-[#f7f6f3] transition-colors">
               <input
                 type="checkbox"
-                checked={exportOptions.preserveNames}
-                disabled={exporting || (privacyEnabled && settings.anonymousNames)}
+                checked={privacyEnabled ? !settings.anonymousNames : exportOptions.preserveNames}
+                disabled={exporting || privacyEnabled}
                 onChange={(e) => setExportOptions({ preserveNames: e.target.checked })}
                 className="w-4 h-4 rounded border-[rgba(55,53,47,0.09)]"
               />
@@ -237,6 +243,12 @@ export function ExportPanel({ onClose, onRedact }: ExportPanelProps) {
         </div>}
       </div>
 
+      {workspace && <div className="ui-card mx-4 mb-4 text-sm space-y-3">
+        <h3 className="font-semibold">{locale === "en-US" ? "Current batch" : "本次导出批次"} · {completedFiles.length}</h3>
+        <p className="text-slate-500">{privacyEnabled ? (locale === "en-US" ? `Reviewed masked output: ${approved}/${completedFiles.length}` : `已审核脱敏稿：${approved}/${completedFiles.length}`) : (locale === "en-US" ? "Original converted Markdown" : "转换后的原文 Markdown")}</p>
+        <ul className="max-h-48 overflow-auto divide-y">{completedFiles.map(f => <li className="py-2 break-all" key={f.id}>{f.relativePath || f.name}</li>)}</ul>
+        {delivery && <div role="status" className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 space-y-2 break-all"><p className="font-semibold">{locale === "en-US" ? "Export completed" : "导出已完成"}</p><p>{delivery.path}</p>{delivery.vaultPath && <p>{locale === "en-US" ? "Encrypted recovery JSON: " : "加密恢复 JSON："}{delivery.vaultPath}</p>}</div>}
+      </div>}
       <div className="p-4 border-t border-[rgba(55,53,47,0.09)]">
         <button
           onClick={handleExport}

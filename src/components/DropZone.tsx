@@ -1,5 +1,6 @@
 import { useCallback, useState, useRef } from "react";
 import { FolderOpen, FileArchive, FileText, Loader2, AlertCircle } from "lucide-react";
+import { useUIStore } from "../stores/uiStore";
 import { useAppStore, FileEntry } from "../stores/appStore";
 import { api, localizeError } from "../lib/api";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -75,7 +76,7 @@ export function DropZone({ compact = false }: DropZoneProps) {
     let failCount = 0;
     const conn = { port, token: token || "" };
 
-    for (const entry of entries) {
+    const convert = async (entry: FileEntry) => {
       updateFileStatus(entry.id, "converting", 0);
       try {
         const file = entry.file!;
@@ -118,9 +119,12 @@ export function DropZone({ compact = false }: DropZoneProps) {
         updateFileStatus(entry.id, "error", 0, localizeError(raw, locale));
         failCount++;
       }
-    }
-
-    setConverting(false);
+    };
+    let index = 0;
+    await Promise.all(Array.from({ length: Math.min(entries.length, useUIStore.getState().concurrency) }, async () => {
+      while (index < entries.length) await convert(entries[index++]);
+    }));
+    setConverting(useAppStore.getState().files.some(f => f.status === "converting" || f.status === "pending"));
     if (successCount > 0) toast.success(t("convertOk", { n: successCount }));
     if (failCount > 0) toast.error(t("convertFail", { n: failCount }));
   }, [port, token, locale, addFiles, setConverting, updateFileStatus, patchFile, t]);

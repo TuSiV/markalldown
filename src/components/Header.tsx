@@ -3,12 +3,13 @@ import { useAppStore } from "../stores/appStore";
 import { useI18n, useT } from "../i18n";
 
 interface HeaderProps {
+  workspace?: boolean;
   onExport: () => void;
   onRedact: () => void;
   onRecovery: () => void;
 }
 
-export function Header({ onExport, onRedact, onRecovery }: HeaderProps) {
+export function Header({ onExport, onRedact, onRecovery, workspace = false }: HeaderProps) {
   const { files, isReady, isConverting } = useAppStore();
   const t = useT();
   const toggleLocale = useI18n((s) => s.toggleLocale);
@@ -56,6 +57,7 @@ export function Header({ onExport, onRedact, onRecovery }: HeaderProps) {
           {t("langSwitch")}
         </button>
 
+        {!workspace && <>
         <button onClick={onRedact} disabled={!isReady} className="flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg disabled:opacity-50"><ShieldCheck className="w-4 h-4" />{english ? "Redact" : "脱敏审核"}</button>
         <button onClick={onRecovery} disabled={!isReady} className="flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg disabled:opacity-50"><RotateCcw className="w-4 h-4" />{english ? "Restore" : "文件恢复"}</button>
         <button
@@ -68,6 +70,7 @@ export function Header({ onExport, onRedact, onRecovery }: HeaderProps) {
           <FileDown className="w-4 h-4" />
           {t("export")}
         </button>
+        </>}
       </div>
     </header>
   );

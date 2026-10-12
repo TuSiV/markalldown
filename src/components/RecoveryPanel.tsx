@@ -86,10 +86,11 @@ export function RecoveryPanel({ onClose }: { onClose: () => void }) {
       toast.success(tr(`恢复副本已保存：${result.path}`, `Restored copy saved: ${result.path}`));
     } catch (e) { error(e); } finally { setBusy(false); }
   };
-  return <section className="flex-1 overflow-y-auto p-6 bg-[#f7f6f3]">
-    <div className="max-w-5xl mx-auto space-y-4">
-      <div className="flex justify-between items-center"><h2 className="text-lg font-semibold">{tr("文件恢复", "Restore files")}</h2><button onClick={onClose} aria-label={tr("关闭恢复", "Close recovery")}><X className="w-5 h-5" /></button></div>
+  return <section className="workspace-page h-full overflow-y-auto">
+    <div className="max-w-7xl mx-auto space-y-5">
+      <div className="flex justify-between items-center"><h2 className="text-2xl font-semibold text-slate-800">{tr("文件恢复", "Restore files")}</h2><button onClick={onClose} aria-label={tr("关闭恢复", "Close recovery")}><X className="w-5 h-5" /></button></div>
       <p className="text-sm text-[#787774]">{tr("无需先转换文件。选择脱敏 Markdown、加密恢复包和口令，预览后另存恢复副本。恢复的是文本，不会重建原始 Word/PDF。", "No conversion required. Select redacted Markdown, an encrypted pack and its password; preview and save a new copy. Recovery restores text, not the original Word/PDF file.")}</p>
+      <div className="grid grid-cols-1 2xl:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.1fr)] gap-5 items-start">
       <fieldset disabled={busy} className="bg-white border rounded-lg p-4 space-y-4 text-sm">
         <div className="rounded-lg border border-[#2eaadc]/40 bg-[#2eaadc]/5 p-4 space-y-3">
           <label htmlFor="recovery-document" className="block font-semibold text-[#37352f]">{tr("脱敏 Markdown 文件", "Redacted Markdown file")}</label>
@@ -120,7 +121,7 @@ export function RecoveryPanel({ onClose }: { onClose: () => void }) {
         <label className="block space-y-1"><span>{tr("恢复包口令", "Recovery pack password")}</span><input type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete="off" className="border rounded p-2 w-full" /></label>
         <button type="button" disabled={!conn || !document || !password || (mode === "file" ? !mapping : !packId)} onClick={inspect} className="min-h-11 bg-[#167da5] hover:bg-[#116685] text-white font-semibold rounded-lg px-5 py-2.5 shadow-sm disabled:opacity-50">{busy ? tr("处理中…", "Processing...") : tr("预览恢复结果", "Preview recovery")}</button>
       </fieldset>
-      {preview && <div className="bg-white border rounded-lg p-4 space-y-3 text-sm">
+      {preview ? <div className="bg-white border rounded-lg p-4 space-y-3 text-sm">
         <p className={preview.integrity === "exact" ? "text-green-700" : "text-amber-700"}>{preview.integrity === "exact" ? tr("文件与加密导出清单一致", "File matches the authenticated export manifest") : preview.integrity === "legacy" ? tr("旧版恢复包：可恢复占位符，无法认证导出文件完整性", "Legacy pack: placeholders can be restored, but export integrity cannot be authenticated") : tr("文件已编辑或为片段：只能恢复已知占位符，不代表全文与原文一致", "Edited document or excerpt: restores known placeholders; does not prove the full text matches the original")}</p>
         <p>{tr(`已恢复 ${preview.restored} 处占位符`, `Restored ${preview.restored} placeholders`)}</p>
         <pre aria-label={tr("恢复结果全文", "Full recovery preview")} className="whitespace-pre-wrap break-all border rounded p-3 max-h-96 overflow-y-auto">{preview.content}</pre>
@@ -128,7 +129,8 @@ export function RecoveryPanel({ onClose }: { onClose: () => void }) {
         {preview.integrity !== "exact" && <label className="flex gap-2 items-start"><input type="checkbox" checked={allowEdited} onChange={e => setAllowEdited(e.target.checked)} disabled={busy} />{tr("我确认仅恢复已知占位符，不将结果视为原文完整性证明", "I accept placeholder-only recovery without proof of original integrity")}</label>}
         <div className="flex flex-wrap gap-2"><button type="button" onClick={saveResult} disabled={busy || !reviewed || (preview.integrity !== "exact" && !allowEdited)} className="min-h-11 bg-[#0f7b6c] hover:bg-[#0c6256] text-white font-semibold rounded-lg px-5 py-2.5 shadow-sm disabled:opacity-50">{tr("另存恢复副本", "Save restored copy")}</button>
           {preview.request.pack !== undefined && <button type="button" onClick={keepPack} disabled={busy} className="min-h-11 border border-[#787774] rounded-lg px-4 py-2 font-medium hover:bg-gray-100 disabled:opacity-50">{tr("将此加密恢复包保存到本机库", "Keep this encrypted pack locally")}</button>}</div>
-      </div>}
+      </div> : <div className="ui-card min-h-[360px] flex flex-col justify-center text-center text-slate-500"><p className="font-semibold">{tr("恢复结果全文预览", "Full recovery preview")}</p><p className="mt-3 text-sm">{tr("选择 MD 与加密 JSON，输入口令后预览。", "Select Markdown and encrypted JSON, then enter the password to preview.")}</p></div>}
+      </div>
     </div>
   </section>;
 }

@@ -6,7 +6,7 @@ import { api, localizeError } from "../lib/api";
 import { toast } from "sonner";
 import { useT, useI18n } from "../i18n";
 
-export function FileList() {
+export function FileList({ onPreview }: { onPreview?: (id: string) => void }) {
   const { files, removeFile, clearFiles, port, token } = useAppStore();
   const t = useT();
   const locale = useI18n((s) => s.locale);
@@ -19,6 +19,10 @@ export function FileList() {
     if (!file.sourcePath) {
       toast.error(t("noSourceForSave"));
       return;
+    }
+    if (useAppStore.getState().privacyEnabled) {
+      const { confirm } = await import("@tauri-apps/plugin-dialog");
+      if (!await confirm(locale === "en-US" ? "Save original text containing sensitive information?" : "另存含敏感信息的原文？", { title: "MarkAllDown", kind: "warning" })) return;
     }
     setSavingId(id);
     try {
@@ -77,6 +81,7 @@ export function FileList() {
         </h2>
         <button
           onClick={clearFiles}
+          disabled={files.some(f => f.status === "converting" || f.status === "pending")}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#787774]
                      hover:text-[#eb5757] hover:bg-[rgba(235,87,87,0.1)] rounded-md transition-colors"
         >
@@ -132,7 +137,7 @@ export function FileList() {
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {file.status === "done" && file.cachePath && (
                     <button
-                      onClick={() => setPreviewFile(file.id)}
+                      onClick={() => onPreview ? onPreview(file.id) : setPreviewFile(file.id)}
                       className="p-1.5 text-[#9b9a97] hover:text-[#2eaadc] hover:bg-[rgba(46,170,220,0.1)]
                                  rounded-md transition-colors"
                       title={t("preview")}
@@ -157,6 +162,7 @@ export function FileList() {
                   )}
                   <button
                     onClick={() => removeFile(file.id)}
+                    disabled={file.status === "converting" || file.status === "pending"}
                     className="p-1.5 text-[#9b9a97] hover:text-[#eb5757] hover:bg-[rgba(235,87,87,0.1)]
                                rounded-md transition-colors"
                     title={t("remove")}

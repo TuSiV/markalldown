@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useUIStore } from "./uiStore";
 
 export interface FileEntry {
   id: string;
@@ -52,11 +53,7 @@ export const useAppStore = create<AppState>((set) => ({
   privacyEnabled: false,
   setPrivacyEnabled: (privacyEnabled) => set({ privacyEnabled }),
   files: [],
-  exportOptions: {
-    format: "individual",
-    preserveNames: true,
-    structure: "flat",
-  },
+  exportOptions: { ...useUIStore.getState().exportDefaults },
 
   setConnection: (port, token) => set({ port, token }),
   setReady: (ready) => set({ isReady: ready }),
