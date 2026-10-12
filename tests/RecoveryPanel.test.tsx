@@ -35,6 +35,18 @@ async function externalPreview(integrity: "exact" | "edited" | "legacy" = "exact
   await screen.findByText("Restored 13800138000");
 }
 describe("independent recovery workspace", () => {
+  it("offers visible picker buttons for each file and shows their selected names", () => {
+    render(<RecoveryPanel onClose={vi.fn()} />);
+    const mdInput = screen.getByLabelText("脱敏 Markdown 文件") as HTMLInputElement;
+    const jsonInput = screen.getByLabelText("加密恢复包 JSON") as HTMLInputElement;
+    const mdClick = vi.spyOn(mdInput, "click");const jsonClick = vi.spyOn(jsonInput, "click");
+    fireEvent.click(screen.getByRole("button", { name: "选择 MD 文件" }));expect(mdClick).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "选择 JSON 恢复包" }));expect(jsonClick).toHaveBeenCalledOnce();
+    fireEvent.change(mdInput, { target: { files: [textFile("案件报告.md", "redacted")] } });
+    fireEvent.change(jsonInput, { target: { files: [textFile("recovery.json", "{}")] } });
+    expect(screen.getByText("案件报告.md")).toBeTruthy();expect(screen.getByText("recovery.json")).toBeTruthy();
+    expect(screen.queryByText("尚未选择 MD 文件")).toBeNull();expect(screen.queryByText("尚未选择 JSON 恢复包")).toBeNull();
+  });
   it("opens from the header without converted files", () => {
     const open = vi.fn();render(<Header onRecovery={open} onRedact={vi.fn()} onExport={vi.fn()} />);
     const button = screen.getByRole("button", { name: "文件恢复" });
