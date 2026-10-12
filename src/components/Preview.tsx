@@ -2,6 +2,7 @@ import { X, Copy, Download, FileText, FolderOpen, Loader2 } from "lucide-react";
 import { useAppStore } from "../stores/appStore";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
+import { useUIStore } from "../stores/uiStore";
 import { useState, useEffect } from "react";
 import { api, localizeError } from "../lib/api";
 import { useT, useI18n } from "../i18n";
@@ -9,12 +10,15 @@ import { useT, useI18n } from "../i18n";
 interface PreviewProps {
   fileId: string;
   onClose: () => void;
+  inline?: boolean;
 }
 
-export function Preview({ fileId, onClose }: PreviewProps) {
+export function Preview({ fileId, onClose, inline = false }: PreviewProps) {
   const { files, port, token } = useAppStore();
   const t = useT();
   const locale = useI18n((s) => s.locale);
+  const { previewMode, fontSize, update } = useUIStore();
+  const [failed, setFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,6 +26,7 @@ export function Preview({ fileId, onClose }: PreviewProps) {
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true); setContent(null); setFailed(false);
     const load = async () => {
       if (!file) return;
       if (!file.cachePath) {
@@ -31,6 +36,7 @@ export function Preview({ fileId, onClose }: PreviewProps) {
       }
       if (!port) {
         setContent(file.preview || file.result || "");
+        setFailed(true);
         setLoading(false);
         return;
       }
@@ -38,7 +44,7 @@ export function Preview({ fileId, onClose }: PreviewProps) {
         const text = await api.readCachedText({ port, token: token || "" }, file.cachePath);
         if (!cancelled) setContent(text);
       } catch {
-        if (!cancelled) setContent(file.preview || file.result || "");
+        if (!cancelled) { setContent(file.preview || file.result || ""); setFailed(true); }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -53,12 +59,11 @@ export function Preview({ fileId, onClose }: PreviewProps) {
 
   const markdown = content ?? file.preview ?? file.result ?? "";
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(markdown);
-    toast.success(t("copied"));
+  const handleCopy = async () => {
+    try { await navigator.clipboard.writeText(markdown); toast.success(t("copied")); } catch (e) { toast.error(String(e)); }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const blob = new Blob([markdown], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -101,17 +106,17 @@ export function Preview({ fileId, onClose }: PreviewProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+    <div className={inline ? "flex min-h-0 h-full flex-col" : "fixed inset-0 z-50 flex items-center justify-center bg-black/50"} onClick={inline ? undefined : onClose}>
       <div
-        className="flex flex-col w-full max-w-4xl h-[80vh] bg-white rounded-xl shadow-2xl overflow-hidden"
+        className={inline ? "flex flex-col h-full min-h-0 bg-white rounded-xl border overflow-hidden" : "flex flex-col w-full max-w-4xl h-[80vh] bg-white rounded-xl shadow-2xl overflow-hidden"}
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(55,53,47,0.09)]">
+        <div className="flex flex-wrap gap-2 items-center justify-between px-4 py-3 border-b border-[rgba(55,53,47,0.09)]">
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-[#9b9a97]" />
             <span className="text-sm font-medium">{file.name}</span>
             <span className="text-xs text-[#9b9a97]">→</span>
-            <span className="text-sm text-[#2eaadc]">
+            <span className="text-sm text-[#2563eb]">
               {file.name.replace(/\.[^/.]+$/, "")}.md
             </span>
           </div>
@@ -119,7 +124,7 @@ export function Preview({ fileId, onClose }: PreviewProps) {
           <div className="flex items-center gap-1">
             <button
               onClick={handleSaveBeside}
-              disabled={saving || !file.sourcePath}
+              disabled={saving || loading || failed || !file.sourcePath}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#787774]
                          hover:bg-[#f7f6f3] rounded-md transition-colors disabled:opacity-50"
               title={file.sourcePath ? t("saveBesideTitle") : t("noSourcePath")}
@@ -128,6 +133,7 @@ export function Preview({ fileId, onClose }: PreviewProps) {
               {t("saveBeside")}
             </button>
             <button
+              disabled={loading || failed}
               onClick={handleCopy}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#787774]
                          hover:bg-[#f7f6f3] rounded-md transition-colors"
@@ -136,6 +142,7 @@ export function Preview({ fileId, onClose }: PreviewProps) {
               {t("copy")}
             </button>
             <button
+              disabled={loading || failed}
               onClick={handleDownload}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#787774]
                          hover:bg-[#f7f6f3] rounded-md transition-colors"
@@ -153,14 +160,20 @@ export function Preview({ fileId, onClose }: PreviewProps) {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 prose prose-sm max-w-none">
+        <div className="preview-toolbar flex gap-2 px-4 py-3 border-b text-xs">
+          <button className="ui-tab" aria-pressed={previewMode === "rendered"} onClick={() => update({ previewMode: "rendered" })}>{locale === "en-US" ? "Rendered" : "阅读预览"}</button>
+          <button className="ui-tab" aria-pressed={previewMode === "source"} onClick={() => update({ previewMode: "source" })}>{locale === "en-US" ? "Markdown source" : "Markdown 源文"}</button>
+          <span className="ml-auto text-slate-500 self-center">{markdown.length.toLocaleString()} {locale === "en-US" ? "characters" : "字符"}</span>
+          {failed && <span className="text-red-700">{locale === "en-US" ? "Full text unavailable; excerpt only" : "全文读取失败，仅显示片段；请重新打开"}</span>}
+        </div>
+        <div style={{ fontSize }} className="flex-1 overflow-y-auto p-7 markdown-view document-paper">
           {loading ? (
             <div className="flex items-center gap-2 text-[#9b9a97] text-sm">
               <Loader2 className="w-4 h-4 animate-spin" />
               {t("loadingFull")}
             </div>
           ) : (
-            <ReactMarkdown>{markdown}</ReactMarkdown>
+            previewMode === "source" ? <pre className="whitespace-pre-wrap break-all">{markdown}</pre> : <ReactMarkdown>{markdown}</ReactMarkdown>
           )}
         </div>
       </div>

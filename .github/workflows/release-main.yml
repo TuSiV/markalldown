@@ -39,9 +39,11 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          python -m pip install -r backend/requirements.txt pyinstaller psutil
+          python -m pip install -r backend/requirements.txt -r backend/requirements-dev.txt pyinstaller psutil
       - name: Tests and frontend build
         run: |
+          python -m unittest discover -s tests -v
+          npm test
           python scripts/smoke_service.py --source
           npm run build
       - name: Inspect previous macOS release signature and Gatekeeper
@@ -50,7 +52,7 @@ jobs:
         run: |
           arch=x64
           if [ "${{ matrix.label }}" = "macos-arm64" ]; then arch=aarch64; fi
-          curl --fail --location --retry 3 "https://github.com/TuSiV/markalldown/releases/download/v1.1.1/MarkAllDown_1.1.1_${arch}.dmg" -o "$RUNNER_TEMP/previous.dmg"
+          curl --fail --location --retry 3 "https://github.com/TuSiV/markalldown/releases/download/v1.1.2/MarkAllDown_1.1.2_${arch}.dmg" -o "$RUNNER_TEMP/previous.dmg"
           hdiutil verify "$RUNNER_TEMP/previous.dmg"
           mount="$RUNNER_TEMP/previous-dmg"
           mkdir -p "$mount" macos-evidence
@@ -87,9 +89,9 @@ jobs:
           hdiutil attach "$dmg" -nobrowse -mountpoint "$mount"
           ditto "$mount/MarkAllDown.app" "$RUNNER_TEMP/MarkAllDown.app"
           hdiutil detach "$mount"
-          python scripts/check_macos_bundle.py "$RUNNER_TEMP/MarkAllDown.app" --version 1.1.2 --report "macos-evidence/current-${{ matrix.label }}.json"
+          python scripts/check_macos_bundle.py "$RUNNER_TEMP/MarkAllDown.app" --version 1.2.0 --report "macos-evidence/current-${{ matrix.label }}.json"
           python scripts/smoke_desktop.py "$RUNNER_TEMP/MarkAllDown.app/Contents/MacOS/markalldown"
-          python scripts/check_macos_bundle.py "$RUNNER_TEMP/MarkAllDown.app" --version 1.1.2 --quarantine --report "macos-evidence/quarantined-${{ matrix.label }}.json"
+          python scripts/check_macos_bundle.py "$RUNNER_TEMP/MarkAllDown.app" --version 1.2.0 --quarantine --report "macos-evidence/quarantined-${{ matrix.label }}.json"
       - name: Upload macOS signature and Gatekeeper evidence
         if: always() && runner.os == 'macOS'
         uses: actions/upload-artifact@v4
@@ -106,8 +108,34 @@ jobs:
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/dmg/*.dmg
           if-no-files-found: error
+  ui-visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Prepare UI rendering
+        run: |
+          npm ci
+          npm run build
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Render all workspaces and verify interactions
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+          UI_SCREENSHOT_DIR: ui-screenshots
+        run: npm run test:ui
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: UI-render-evidence
+          path: ui-screenshots/*.png
+          if-no-files-found: error
   release:
-    needs: native
+    needs: [native, ui-visual]
     runs-on: ubuntu-latest
     permissions:
       contents: write

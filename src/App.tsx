@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { Toaster } from "sonner";
-import { DropZone } from "./components/DropZone";
-import { FileList } from "./components/FileList";
+import { ConversionWorkspace } from "./components/ConversionWorkspace";
+import { SettingsPanel } from "./components/SettingsPanel";
+import { Sidebar } from "./components/WorkspaceShell";
+import type { Workspace } from "./stores/uiStore";
+
 import { ExportPanel } from "./components/ExportPanel";
 import { Header } from "./components/Header";
 import { useAppStore } from "./stores/appStore";
@@ -10,10 +13,10 @@ import { useT, useI18n } from "./i18n";
 import { RefreshCw } from "lucide-react";
 
 function App() {
-  const { files, setConnection, setReady } = useAppStore();
+  const { setConnection, setReady } = useAppStore();
   const t = useT();
   const locale = useI18n((s) => s.locale);
-  const [showExport, setShowExport] = useState(false);
+  const [panel, setPanel] = useState<Workspace>("convert");
   const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,7 +37,7 @@ function App() {
     init();
   }, [setConnection, setReady]);
 
-  const hasFiles = files.length > 0;
+
 
   if (initError) {
     return (
@@ -61,25 +64,15 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen bg-white">
-      <Header onExport={() => setShowExport(!showExport)} />
+      <Header workspace onSettings={() => setPanel("settings")} onExport={() => setPanel("export")} />
 
-      <main className="flex-1 flex overflow-hidden">
-        <div className="flex-1 flex flex-col overflow-hidden p-6">
-          {!hasFiles ? (
-            <div className="flex-1 flex items-center justify-center">
-              <DropZone />
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <DropZone compact />
-              <FileList />
-            </div>
-          )}
+      <main className="flex-1 flex overflow-hidden bg-[#f3f6fa]">
+        <Sidebar page={panel} onNavigate={setPanel} />
+        <div className="flex-1 min-w-0 min-h-0">
+          <div hidden={panel !== "convert"} className="h-full"><ConversionWorkspace /></div>
+          <div hidden={panel !== "export"} className="h-full"><ExportPanel workspace onClose={() => setPanel("convert")} /></div>
+          <div hidden={panel !== "settings"} className="h-full"><SettingsPanel /></div>
         </div>
-
-        {showExport && (
-          <ExportPanel onClose={() => setShowExport(false)} />
-        )}
       </main>
 
       <footer className="px-6 py-2 border-t border-[rgba(55,53,47,0.09)] bg-[#f7f6f3]">

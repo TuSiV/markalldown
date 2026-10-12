@@ -1,5 +1,6 @@
 import { useCallback, useState, useRef } from "react";
 import { FolderOpen, FileArchive, FileText, Loader2, AlertCircle } from "lucide-react";
+import { useUIStore } from "../stores/uiStore";
 import { useAppStore, FileEntry } from "../stores/appStore";
 import { api, localizeError } from "../lib/api";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -75,7 +76,7 @@ export function DropZone({ compact = false }: DropZoneProps) {
     let failCount = 0;
     const conn = { port, token: token || "" };
 
-    for (const entry of entries) {
+    const convert = async (entry: FileEntry) => {
       updateFileStatus(entry.id, "converting", 0);
       try {
         const file = entry.file!;
@@ -118,9 +119,12 @@ export function DropZone({ compact = false }: DropZoneProps) {
         updateFileStatus(entry.id, "error", 0, localizeError(raw, locale));
         failCount++;
       }
-    }
-
-    setConverting(false);
+    };
+    let index = 0;
+    await Promise.all(Array.from({ length: Math.min(entries.length, useUIStore.getState().concurrency) }, async () => {
+      while (index < entries.length) await convert(entries[index++]);
+    }));
+    setConverting(useAppStore.getState().files.some(f => f.status === "converting" || f.status === "pending"));
     if (successCount > 0) toast.success(t("convertOk", { n: successCount }));
     if (failCount > 0) toast.error(t("convertFail", { n: failCount }));
   }, [port, token, locale, addFiles, setConverting, updateFileStatus, patchFile, t]);
@@ -251,7 +255,7 @@ export function DropZone({ compact = false }: DropZoneProps) {
     return (
       <div className="w-full max-w-2xl p-12 border-2 border-dashed rounded-xl border-[rgba(55,53,47,0.09)] bg-[#f7f6f3]">
         <div className="flex flex-col items-center gap-4 text-center">
-          <Loader2 className="w-8 h-8 text-[#2eaadc] animate-spin" />
+          <Loader2 className="w-8 h-8 text-[#2563eb] animate-spin" />
           <div>
             <p className="text-lg font-medium text-[#37352f]">{t("serviceStarting")}</p>
             <p className="mt-1 text-sm text-[#787774]">{t("serviceStartHint")}</p>
@@ -270,14 +274,14 @@ export function DropZone({ compact = false }: DropZoneProps) {
 
   if (compact) {
     return (
-      <div className="mb-4 p-4 border-2 border-dashed rounded-lg border-[rgba(55,53,47,0.09)]">
+      <div className="import-strip">
         {fileInput}
         {folderInput}
         <div className="flex items-center justify-center gap-4">
           <button
             onClick={pickFiles}
             disabled={picking}
-            className="flex items-center gap-2 px-4 py-2 text-sm bg-[#f7f6f3] hover:bg-[#e8e7e4] rounded-lg transition-colors disabled:opacity-50"
+            className="ui-primary"
           >
             {picking ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
             {t("selectFiles")}
@@ -285,7 +289,7 @@ export function DropZone({ compact = false }: DropZoneProps) {
           <button
             onClick={pickFolder}
             disabled={picking}
-            className="flex items-center gap-2 px-4 py-2 text-sm bg-[#f7f6f3] hover:bg-[#e8e7e4] rounded-lg transition-colors disabled:opacity-50"
+            className="ui-secondary"
           >
             <FolderOpen className="w-4 h-4" />
             {t("selectFolder")}
@@ -296,7 +300,7 @@ export function DropZone({ compact = false }: DropZoneProps) {
   }
 
   return (
-    <div className="w-full max-w-2xl p-12 border-2 border-dashed rounded-xl border-[rgba(55,53,47,0.09)] hover:border-[#9b9a97] hover:bg-[#f7f6f3] transition-all duration-200">
+    <div className="import-zone">
       {fileInput}
       {folderInput}
 
@@ -314,7 +318,7 @@ export function DropZone({ compact = false }: DropZoneProps) {
           <button
             onClick={pickFiles}
             disabled={picking}
-            className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-[#2eaadc] text-white rounded-lg hover:bg-[#2eaadc]/90 transition-colors disabled:opacity-50"
+            className="ui-primary"
           >
             {picking ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
             {t("selectFiles")}
@@ -322,7 +326,7 @@ export function DropZone({ compact = false }: DropZoneProps) {
           <button
             onClick={pickFolder}
             disabled={picking}
-            className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-[#f7f6f3] text-[#37352f] rounded-lg hover:bg-[#e8e7e4] transition-colors disabled:opacity-50"
+            className="ui-secondary"
           >
             <FolderOpen className="w-4 h-4" />
             {t("selectFolder")}

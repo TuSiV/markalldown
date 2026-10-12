@@ -1,7 +1,13 @@
-# MarkAllDown 1.1.2
+# MarkAllDown 1.2.0
 
-Fixes the missing outer macOS application signature shared by 1.1.1. macOS bundles now use Tauri ad-hoc signing, with mandatory deep/strict signature verification for the app and explicit verification of the main executable and conversion sidecar after DMG installation. CI also inspects the previous released DMG and records quarantine/Gatekeeper assessments separately from runtime tests.
+main 分支的详细界面更新。
 
-Includes Windows NSIS/MSI, Apple Silicon DMG and Intel DMG, with SHA256SUMS.txt. Conversion/OCR/export runtime tests remain required; this release retains the main-branch conversion features.
+- 转换、导出、设置独立工作区；统一导航、卡片、按钮、文件图标、状态和选择反馈。
+- 转换队列支持 1–4 个并发，完整 Markdown 阅读/源文预览及字号设置。全文读取失败时禁用复制和保存。
+- 导出中心提供独立 MD、合并 MD、ZIP，原文件名和目录结构设置，并显示真实保存路径。
+- 设置提供语言、自动预览、显示和导出默认值，偏好持久化与重置均生效。
+- Windows、Apple Silicon 和 Intel Mac 安装包由测试通过后的流水线生成。
 
-Ad-hoc signing verifies bundle integrity but is not an Apple Developer ID signature or notarization. macOS may still require explicit approval in System Settings > Privacy & Security > Open Anyway. Successful direct executable startup does not establish browser/Finder first-launch acceptance. No system-wide Gatekeeper disablement is required or recommended.
+main 保留转换、OCR、导出功能；脱敏审核与文件恢复继续由 feature/redaction-ai 提供。
+
+macOS 使用 ad-hoc 签名并验证资源封印，尚未使用 Apple Developer ID 公证；首次打开可能需要在系统设置中允许打开。

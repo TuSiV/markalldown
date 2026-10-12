@@ -1,4 +1,5 @@
 import os
+import asyncio
 import sys
 import json
 import shutil
@@ -111,7 +112,7 @@ async def convert_file(
         if archive_handler.is_archive(safe_name):
             return await _convert_archive(content, safe_name)
 
-        markdown = converter.convert_bytes(content, safe_name)
+        markdown = await asyncio.to_thread(converter.convert_bytes, content, safe_name)
         cache_path = result_cache.write(safe_name, markdown)
 
         return JSONResponse({
@@ -140,14 +141,14 @@ async def _convert_archive(content: bytes, filename: str) -> JSONResponse:
         with open(archive_path, 'wb') as f:
             f.write(content)
 
-        extracted_files = archive_handler.extract(archive_path, extract_dir)
+        extracted_files = await asyncio.to_thread(archive_handler.extract, archive_path, extract_dir)
 
         results = []
         for file_path in extracted_files:
             if os.path.isfile(file_path):
                 rel_path = os.path.relpath(file_path, extract_dir)
                 try:
-                    markdown = converter.convert_file(file_path)
+                    markdown = await asyncio.to_thread(converter.convert_file, file_path)
                     cache_path = result_cache.write(rel_path, markdown)
                     results.append({
                         "filename": rel_path,
@@ -229,6 +230,9 @@ async def export_files(request: Request, locale: str = Depends(request_locale), 
 
         logger.info(f"Exporting {len(resolved)} files to {export_path}")
         result_path = exporter.export(resolved, export_path, options)
+
+        if data.get("returnPath") is True:
+            return JSONResponse({"success": True, "path": result_path})
 
         if options.format == "zip" and os.path.isfile(result_path):
             return FileResponse(

@@ -2,7 +2,7 @@
 
 MarkAllDown 是一款本地桌面应用，可将 PDF / Office / 图片 / 压缩包等多种文件批量转换为 Markdown。转换引擎基于 [Microsoft MarkItDown](https://github.com/microsoft/markitdown)，并内置中文优先 OCR（扫描件与图片）。
 
-> 产品名：**MarkAllDown** · 版本 **1.1.2** · 纯本地运行，不上传文件到外部服务（OCR 亦在本地）
+> 产品名：**MarkAllDown** · 版本 **1.2.0** · 纯本地运行，不上传文件到外部服务（OCR 亦在本地）
 
 ## 功能
 
@@ -84,7 +84,7 @@ npm run tauri build
 
 ### macOS 安装包
 
-1.1.2 同时提供 Apple Silicon（aarch64）与 Intel（x64）DMG。转换服务与 OCR 模型随应用内置，无需另装 Python。请在 [1.1.1 发布页](https://github.com/TuSiV/markalldown/releases/tag/v1.1.2) 选择对应架构；Windows EXE/MSI 位于同一发布页，并附 SHA256SUMS.txt。
+1.2.0 同时提供 Apple Silicon（aarch64）与 Intel（x64）DMG。转换服务与 OCR 模型随应用内置，无需另装 Python。请在 [1.1.1 发布页](https://github.com/TuSiV/markalldown/releases/tag/v1.2.0) 选择对应架构；Windows EXE/MSI 位于同一发布页，并附 SHA256SUMS.txt。
 
 macOS 包使用 ad-hoc 临时签名，未获 Developer ID 签名及公证。CI 已验证 DMG 复制安装、实际桌面启动及内置服务转换/OCR/导出；未逐控件做人工界面验收。主分支保留文件转换功能，2.0.0 脱敏/AI 功能在独立功能分支。
 
@@ -116,6 +116,10 @@ MIT（转换能力依赖 Microsoft MarkItDown，详见其仓库许可）
 
 ### Mac 下载后显示“损坏”
 
-1.1.1 / 2.0.0 缺少完整应用包签名；此前直接启动验收没有覆盖浏览器下载后的 Gatekeeper 检查。请改用 1.1.2 / 2.0.1。新版本对应用包、主程序和内置转换服务验证签名，并记录下载隔离状态下的系统评估。
+1.1.1 / 2.0.0 缺少完整应用包签名；此前直接启动验收没有覆盖浏览器下载后的 Gatekeeper 检查。请改用 1.2.0 / 2.0.1。新版本对应用包、主程序和内置转换服务验证签名，并记录下载隔离状态下的系统评估。
 
 临时签名不是 Apple Developer ID 签名或公证，首次启动仍可能被拦截。确认下载来源与 SHA256SUMS.txt 一致后，按 macOS 的“系统设置 → 隐私与安全性 → 仍要打开”处理。不要关闭系统整体 Gatekeeper。若仍显示损坏，检查 `codesign --verify --deep --strict --verbose=2 /Applications/MarkAllDown.app`，保留输出以区分签名失效与信任策略拦截。
+
+## main 1.2.0 界面更新
+
+转换、导出、设置使用独立工作区，细化文件图标、状态、选中反馈、按钮、表单和预览排版。语言、全文预览方式、字号、自动预览、并发转换和导出默认值均实际生效。导出显示后端返回的真实保存路径。main 保留转换、OCR 和导出功能；脱敏审核与恢复在 feature/redaction-ai 分支。

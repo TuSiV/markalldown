@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "MarkAllDown",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "identifier": "com.markitdown.app",
   "build": {
     "frontendDist": "../dist",
@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "MarkAllDown",
-        "width": 1200,
-        "height": 800,
+        "width": 1440,
+        "height": 900,
         "minWidth": 800,
         "minHeight": 600,
         "resizable": true,
