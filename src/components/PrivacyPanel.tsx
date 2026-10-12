@@ -161,7 +161,7 @@ export function PrivacyPanel({ onExport }: { onExport: () => void }) {
         </label>
         <label className="flex gap-2 items-start cursor-pointer">
           <input type="checkbox" checked={anonymousNames} onChange={e => setAnonymousNames(e.target.checked)} />
-          <span>{tr("匿名化脱敏版文件名和目录（默认开启；原始名称不写入导出文件）", "Anonymize redacted output filenames and folders (default on)")}</span>
+          <span>{tr("匿名化脱敏版文件名和目录（可选，默认保留原文件名）", "Anonymize redacted output filenames and folders (optional; keep original names by default)")}</span>
         </label>
         <label className="block space-y-1">
           <span className="font-medium">{tr("映射文件加密口令（至少8字符，不会保存）", "Vault passphrase (8+ chars, never stored)")}</span>

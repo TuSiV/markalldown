@@ -24,7 +24,7 @@ afterEach(() => vi.unstubAllGlobals());
 it("exports the approved snapshot using a version-2 batch pack, without retaining a library entry by default", async () => {
   await exportRedacted(conn, "/output", useAppStore.getState().exportOptions);
   const body = vi.mocked(privacyApi.exportReviewed).mock.calls[0][1] as any;
-  expect(body.files[0].content).toBe("Reviewed redacted text");expect(body.files[0].name).toBe("document_0001.md");
+  expect(body.files[0].content).toBe("Reviewed redacted text");expect(body.files[0].name).toBe("private.md");expect(body.files[0].relativePath).toBe("private.md");
   expect(body.pack.version).toBe(2);expect(body.pack.vaults).toHaveLength(1);expect(body.saveToLibrary).toBe(false);
 });
 it("blocks export when cached source no longer matches the reviewed text", async () => {
@@ -37,4 +37,19 @@ it("blocks stale retention consent if the library choice changes during source v
   vi.mocked(api.readCachedText).mockImplementation(async () => { usePrivacyStore.getState().updateSettings({ saveToLibrary: true }); return source; });
   await expect(exportRedacted(conn, "/output", useAppStore.getState().exportOptions)).rejects.toThrow(/Review state changed/);
   expect(privacyApi.exportReviewed).not.toHaveBeenCalled();
+});
+
+it("keeps original Chinese names and paths for ZIP export unless anonymization is selected", async () => {
+  useAppStore.setState({ files: [{ ...useAppStore.getState().files[0], name: "案件报告.md", relativePath: "资料/案件报告.md" }] });
+  await exportRedacted(conn, "/output", { ...useAppStore.getState().exportOptions, format: "zip", structure: "preserve" });
+  const body = vi.mocked(privacyApi.exportReviewed).mock.calls[0][1] as any;
+  expect(body.files[0].name).toBe("案件报告.md");expect(body.files[0].relativePath).toBe("资料/案件报告.md");
+  expect(body.options.structure).toBe("preserve");
+});
+it("uses anonymous sequential names and flat folders only when explicitly selected", async () => {
+  usePrivacyStore.getState().updateSettings({ anonymousNames: true });
+  await exportRedacted(conn, "/output", { ...useAppStore.getState().exportOptions, format: "zip", structure: "preserve" });
+  const body = vi.mocked(privacyApi.exportReviewed).mock.calls[0][1] as any;
+  expect(body.files[0].name).toBe("document_0001.md");expect(body.files[0].relativePath).toBe("document_0001.md");
+  expect(body.options.structure).toBe("flat");
 });

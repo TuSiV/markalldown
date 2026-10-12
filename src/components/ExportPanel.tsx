@@ -177,6 +177,7 @@ export function ExportPanel({ onClose, onRedact }: ExportPanelProps) {
               <input
                 type="checkbox"
                 checked={exportOptions.preserveNames}
+                disabled={exporting || (privacyEnabled && settings.anonymousNames)}
                 onChange={(e) => setExportOptions({ preserveNames: e.target.checked })}
                 className="w-4 h-4 rounded border-[rgba(55,53,47,0.09)]"
               />
@@ -208,6 +209,7 @@ export function ExportPanel({ onClose, onRedact }: ExportPanelProps) {
                   type="radio"
                   name="structure"
                   value={value}
+                  disabled={exporting || (privacyEnabled && settings.anonymousNames)}
                   checked={exportOptions.structure === value}
                   onChange={(e) => setExportOptions({ structure: e.target.value as any })}
                   className="sr-only"
@@ -222,6 +224,12 @@ export function ExportPanel({ onClose, onRedact }: ExportPanelProps) {
           </div>
         </div>
         {privacyEnabled && <div className="border rounded p-3 space-y-2 text-xs">
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input type="checkbox" checked={settings.anonymousNames} disabled={exporting}
+              onChange={e => settings.updateSettings({ anonymousNames: e.target.checked })} />
+            {locale === "en-US" ? "Anonymize filenames and folders (optional)" : "匿名化文件名和目录（可选）"}
+          </label>
+          <p className="text-[#787774]">{locale === "en-US" ? "Off: keep source names using the naming options above. On: document_0001.md, document_0002.md, in a flat folder." : "关闭时按上方命名设置保留原名称；开启时使用 document_0001.md、document_0002.md，并采用平铺目录。"}</p>
           <p>{locale === "en-US" ? `Redaction review: ${approved}/${completedFiles.length} approved` : `脱敏审核：${approved}/${completedFiles.length} 个文件已确认`}</p>
           <p>{locale === "en-US" ? (settings.anonymousNames ? "Anonymous filenames; recovery pack saved separately" : "Preserve filenames; recovery pack saved separately") : (settings.anonymousNames ? "匿名文件名；加密恢复包单独保存" : "保留文件名；加密恢复包单独保存")}</p>
           {settings.saveToLibrary && <p>{locale === "en-US" ? "Also keep an encrypted local recovery pack" : "另存一份加密恢复包到本机库"}</p>}

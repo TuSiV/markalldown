@@ -52,7 +52,7 @@ jobs:
         run: |
           arch=x64
           if [ "${{ matrix.label }}" = "macos-arm64" ]; then arch=aarch64; fi
-          curl --fail --location --retry 3 "https://github.com/TuSiV/markalldown/releases/download/v2.0.1/MarkAllDown_2.0.1_${arch}.dmg" -o "$RUNNER_TEMP/previous.dmg"
+          curl --fail --location --retry 3 "https://github.com/TuSiV/markalldown/releases/download/v2.1.0/MarkAllDown_2.1.0_${arch}.dmg" -o "$RUNNER_TEMP/previous.dmg"
           hdiutil verify "$RUNNER_TEMP/previous.dmg"
           mount="$RUNNER_TEMP/previous-dmg"
           mkdir -p "$mount" macos-evidence
@@ -89,9 +89,9 @@ jobs:
           hdiutil attach "$dmg" -nobrowse -mountpoint "$mount"
           ditto "$mount/MarkAllDown.app" "$RUNNER_TEMP/MarkAllDown.app"
           hdiutil detach "$mount"
-          python scripts/check_macos_bundle.py "$RUNNER_TEMP/MarkAllDown.app" --version 2.1.0 --report "macos-evidence/current-${{ matrix.label }}.json"
+          python scripts/check_macos_bundle.py "$RUNNER_TEMP/MarkAllDown.app" --version 2.1.1 --report "macos-evidence/current-${{ matrix.label }}.json"
           python scripts/smoke_desktop.py "$RUNNER_TEMP/MarkAllDown.app/Contents/MacOS/markalldown"
-          python scripts/check_macos_bundle.py "$RUNNER_TEMP/MarkAllDown.app" --version 2.1.0 --quarantine --report "macos-evidence/quarantined-${{ matrix.label }}.json"
+          python scripts/check_macos_bundle.py "$RUNNER_TEMP/MarkAllDown.app" --version 2.1.1 --quarantine --report "macos-evidence/quarantined-${{ matrix.label }}.json"
       - name: Upload macOS signature and Gatekeeper evidence
         if: always() && runner.os == 'macOS'
         uses: actions/upload-artifact@v4

@@ -16,7 +16,7 @@ interface PrivacyState extends PrivacySettings {
 }
 export const defaultPrivacySettings: PrivacySettings = {
   categories: ["phone", "email", "id_card", "bank_account", "credit_code"],
-  keywords: "", whitelist: "", passphrase: "", anonymousNames: true, saveToLibrary: false,
+  keywords: "", whitelist: "", passphrase: "", anonymousNames: false, saveToLibrary: false,
 };
 // Session memory only: no persist middleware, passwords or plaintext on disk.
 export const usePrivacyStore = create<PrivacyState>((set) => ({

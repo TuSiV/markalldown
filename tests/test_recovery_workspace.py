@@ -45,6 +45,22 @@ class RecoveryWorkspaceTests(unittest.TestCase):
         return content,pack,out,results
     def preview(self,content,pack,**extra):
         return self.post('recovery/preview',{'content':content,'pack':pack,'passphrase':self.password,**extra})
+    def test_original_names_preserved_in_individual_and_zip_exports(self):
+        source='报告 13800138000'
+        for fmt in ('individual','zip'):
+            with self.subTest(fmt=fmt):
+                r=self.redact(source)
+                body={'files':[{'name':'案件报告.md','relativePath':'资料/案件报告.md','content':r['content'],'sourceHash':r['sourceHash'],'reviewed':True}],
+                      'pack':{'format':'MarkAllDownEncryptedVaultPack','version':2,'vaults':[r['vault']]},'passphrase':self.password,
+                      'options':{'exportPath':str(self.root),'format':fmt,'structure':'preserve'}}
+                response=self.post('privacy/export',body);self.assertEqual(response.status_code,200,response.text)
+                out=response.json();pack=json.loads(Path(out['vaultPath']).read_bytes())
+                if fmt=='individual':content=(Path(out['path'])/'资料'/'案件报告.md').read_bytes().decode('utf-8')
+                else:
+                    with zipfile.ZipFile(out['path']) as z:
+                        self.assertEqual(z.namelist(),['资料/案件报告.md']);content=z.read('资料/案件报告.md').decode('utf-8')
+                restored=self.preview(content,pack);self.assertEqual(restored.status_code,200,restored.text)
+                self.assertEqual(restored.json()['content'],source);self.assertEqual(restored.json()['integrity'],'exact')
     def test_doc_identity_stable_and_processing_changes(self):
         identity=uuid4().hex
         a=self.redact('13800138000',identity);b=self.redact('13800138000',identity)
