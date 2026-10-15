@@ -51,7 +51,7 @@ await page.getByRole('button',{name:'标记原文',exact:true}).click();if(await
 await page.getByRole('button',{name:'左右对照',exact:true}).click();await page.getByRole('checkbox',{name:'我已检查所选文件的全文及替换结果',exact:true}).check();
 await nav.getByRole('button',{name:'导出中心',exact:true}).click();await shot('export');
 await nav.getByRole('button',{name:'文件恢复',exact:true}).click();await shot('recovery');
-await nav.getByRole('button',{name:'设置',exact:true}).click();await shot('settings');await page.getByRole('tab',{name:'转换',exact:true}).click();await page.getByRole('combobox',{name:'并发转换数量（下一批生效）',exact:true}).selectOption('2');
+await nav.getByRole('button',{name:'设置',exact:true}).click();await shot('settings');await page.getByRole('tab',{name:'转换',exact:true}).click();await page.getByRole('combobox',{name:'同时转换数量（运行中的任务不会被中断）',exact:true}).selectOption('2');
 for(const name of ['文件转换','脱敏审核','文件恢复','导出中心','设置']){await page.setViewportSize({width:800,height:750});await nav.getByRole('button',{name,exact:true}).click();await shot(`narrow-${name}`);}
 // The same real desktop components under a synthetic native Mac preference bridge.
 await page.setViewportSize({width:1440,height:1000});

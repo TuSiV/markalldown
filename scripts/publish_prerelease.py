@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import time
 import zipfile
 
 
@@ -107,7 +108,10 @@ def main():
     else:
         gh('release', 'create', tag, '--target', commit, '--draft', '--prerelease', '--latest=false',
            '--title', f'MarkAllDown {tag} · 桌面视觉优化预发布', '--notes-file', 'RELEASE_NOTES.md')
-    release = find_release(repository, tag)
+    for attempt in range(8):
+        release = find_release(repository, tag)
+        if release: break
+        time.sleep(2)
     assert release and release['draft'] and release['prerelease'] and release['target_commitish'] == commit
     endpoint = f'repos/{repository}/releases/{release["id"]}'
     # Resume the same draft and reuse intact uploads; public assets never reach this path.

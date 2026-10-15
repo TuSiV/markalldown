@@ -22,3 +22,9 @@ class PdfApiTests(unittest.TestCase):
                 self.assertEqual(client.get('/api/conversions/fixture', headers={'X-API-Token':server.API_TOKEN}).json(), {'state':'queued'})
                 self.assertEqual(client.get('/api/conversions/missing', headers={'X-API-Token':server.API_TOKEN}).status_code, 404)
         finally: server.pdf_jobs.states.clear()
+
+    def test_pause_resume_discard_all_require_local_authentication(self):
+        with TestClient(server.app) as client:
+            for action in ('pause','resume','discard'):
+                with self.subTest(action=action):
+                    self.assertEqual(client.post('/api/conversions/unknown/'+action,json={'concurrency':2}).status_code,401)

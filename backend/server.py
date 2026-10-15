@@ -30,7 +30,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from converter import converter, ConversionError
-from pdf_jobs import pdf_jobs, PdfError, PdfTimeout, PdfDisconnected
+from pdf_jobs import pdf_jobs, PdfError, PdfTimeout, PdfDisconnected, PdfPaused, JobMissing
 from compression import archive_handler, ArchiveError
 from exporter import exporter, ExportOptions
 from cache import result_cache, CacheError
@@ -86,6 +86,7 @@ app.include_router(privacy_router, dependencies=[Depends(require_token)])
 
 @app.on_event("shutdown")
 async def shutdown():
+    await pdf_jobs.close()
     try:
         shutil.rmtree(temp_dir, ignore_errors=True)
     except Exception:
@@ -112,58 +113,73 @@ async def read_cached_text(path: str, _: None = Depends(require_token)):
 
 @app.get("/api/conversions/{job_id}")
 async def conversion_status(job_id: str, _: None = Depends(require_token)):
-    state = pdf_jobs.states.get(job_id)
-    if state is None:
-        raise HTTPException(status_code=404, detail='Conversion job not found')
-    return {"state": state}
+    try: return pdf_jobs.status(job_id)
+    except JobMissing: raise HTTPException(status_code=404, detail='job_missing')
+
+
+@app.post("/api/conversions/{job_id}/pause")
+async def pause_conversion(job_id: str, _: None = Depends(require_token)):
+    try: return await pdf_jobs.pause(job_id)
+    except JobMissing: raise HTTPException(status_code=404, detail='job_missing')
+
+
+@app.post("/api/conversions/{job_id}/discard")
+async def discard_conversion(job_id: str, _: None = Depends(require_token)):
+    await pdf_jobs.discard(job_id)
+    return {"success": True}
+
+
+async def conversion_response(operation, filename, locale):
+    try:
+        markdown, report = await operation
+        if 'archive' in report:
+            files = []
+            for item in report['archive']:
+                if item['success']:
+                    text = item['text']; name = item['filename']
+                    files.append({'filename':name, 'success':True, 'cachePath':result_cache.write(name, text), 'preview':result_cache.preview_of(text), 'charCount':len(text), **item['report']})
+                else: files.append({'filename':item['filename'], 'success':False, 'error':item['error']})
+            return JSONResponse({'success':True, 'filename':filename, 'is_archive':True, 'files':files})
+        cache_path = result_cache.write(filename, markdown)
+        return JSONResponse({'success':True, 'filename':filename, 'cachePath':cache_path, 'preview':result_cache.preview_of(markdown), 'charCount':len(markdown), **report})
+    except PdfPaused:
+        raise HTTPException(status_code=409, detail='conversion_paused')
+    except PdfTimeout:
+        raise HTTPException(status_code=408, detail=tr('实际转换超过 5 分钟，任务已停止；可重试，PDF 将复用已完成页。', 'Processing exceeded 5 minutes. The worker was stopped; retry reuses completed PDF pages.', locale))
+    except PdfDisconnected:
+        raise HTTPException(status_code=499, detail='Conversion client disconnected')
+    except JobMissing:
+        raise HTTPException(status_code=404, detail='job_missing')
+    except (ConversionError, PdfError, ArchiveError) as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    except Exception:
+        logger.exception('Conversion error')
+        raise HTTPException(status_code=500, detail=tr('转换失败，请查看日志', 'Conversion failed, see logs', locale))
+
+
+@app.post("/api/conversions/{job_id}/resume")
+async def resume_conversion(job_id: str, request: Request, locale: str = Depends(request_locale), _: None = Depends(require_token)):
+    job = pdf_jobs.jobs.get(job_id)
+    if not job: raise HTTPException(status_code=404, detail='job_missing')
+    data = await request.json()
+    concurrency = data.get('concurrency', 1)
+    if not isinstance(concurrency, int) or not 1 <= concurrency <= 4: raise HTTPException(status_code=400, detail='Invalid concurrency')
+    return await conversion_response(pdf_jobs.resume(job_id, request, concurrency), job.filename, locale)
 
 
 @app.post("/api/convert")
-async def convert_file(
-    request: Request,
-    file: UploadFile = File(...),
-    relativePath: str = Form(default=""),
-    jobId: str = Form(default=""),
-    locale: str = Depends(request_locale),
-    _: None = Depends(require_token),
-):
+async def convert_file(request: Request, file: UploadFile = File(...), relativePath: str = Form(default=""), jobId: str = Form(default=""), concurrency: int = Form(default=1), locale: str = Depends(request_locale), _: None = Depends(require_token)):
+    if not 1 <= concurrency <= 4: raise HTTPException(status_code=400, detail='Invalid concurrency')
+    if jobId and (len(jobId) > 64 or not all(c.isascii() and (c.isalnum() or c == '-') for c in jobId)):
+        raise HTTPException(status_code=400, detail='Invalid conversion job ID')
+    content = await file.read()
+    filename = relativePath or file.filename or 'unknown'
+    job_id = jobId or secrets.token_hex(16)
     try:
-        content = await file.read()
-        filename = relativePath if relativePath else (file.filename or "unknown")
-        safe_name = Path(filename).name or file.filename or "unknown"
-
-        if archive_handler.is_archive(safe_name):
-            return await _convert_archive(content, safe_name)
-
-        if Path(safe_name).suffix.lower() == '.pdf':
-            # IDs are opaque tokens; never paths or document names.
-            if jobId and (len(jobId) > 64 or not all(c.isascii() and (c.isalnum() or c == '-') for c in jobId)):
-                raise HTTPException(status_code=400, detail='Invalid conversion job ID')
-            markdown, report = await pdf_jobs.convert(content, request, jobId or secrets.token_hex(16))
-        else:
-            markdown, report = await asyncio.to_thread(converter.convert_report, content, safe_name)
-        cache_path = result_cache.write(safe_name, markdown)
-
-        return JSONResponse({
-            "success": True,
-            "filename": filename,
-            "cachePath": cache_path,
-            "preview": result_cache.preview_of(markdown),
-            "charCount": len(markdown),
-            **report,
-        })
-
-    except PdfTimeout:
-        raise HTTPException(status_code=408, detail=tr('PDF 实际转换超过 5 分钟，任务已停止，后续文件可继续处理；请拆分文件后重试。', 'PDF processing exceeded 5 minutes. The task was stopped; subsequent files can proceed. Split the file and retry.', locale))
-    except PdfDisconnected:
-        raise HTTPException(status_code=499, detail='Conversion client disconnected')
-    except HTTPException:
-        raise
-    except (ConversionError, PdfError, ArchiveError) as e:
-        raise HTTPException(status_code=422, detail=str(e))
-    except Exception as e:
-        logger.exception("Conversion error")
-        raise HTTPException(status_code=500, detail=tr("转换失败，请查看日志", "Conversion failed, see logs", locale))
+        return await conversion_response(pdf_jobs.convert(content, request, job_id, filename, concurrency), filename, locale)
+    finally:
+        # Legacy clients do not retain a job token and cannot resume a checkpoint.
+        if not jobId: await pdf_jobs.discard(job_id)
 
 
 async def _convert_archive(content: bytes, filename: str) -> JSONResponse:
@@ -296,9 +312,12 @@ def main():
     parser = argparse.ArgumentParser(description="MarkAllDown Server")
     parser.add_argument("--port", type=int, default=18765, help="Port to listen on")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind to")
+    parser.add_argument("--session-dir", default="", help="Desktop-owned temporary session folder")
     parser.add_argument("--token", type=str, default="", help="API token for local clients")
     args = parser.parse_args()
 
+    if args.session_dir:
+        pdf_jobs.configure_root(args.session_dir)
     if args.token:
         API_TOKEN = args.token
     logger.info(f"Starting MarkAllDown server on {args.host}:{args.port}")

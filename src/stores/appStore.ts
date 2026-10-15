@@ -7,8 +7,12 @@ export interface FileEntry {
   name: string;
   size: number;
   type: string;
-  status: "pending" | "converting" | "done" | "error";
+  status: "pending" | "converting" | "pausing" | "paused" | "done" | "error";
   progress: number;
+  jobId?: string;
+  completedPages?: number;
+  totalPages?: number;
+  queueNote?: string;
   conversionPhase?: "uploading" | "queued" | "running";
   result?: string;
   file?: File;

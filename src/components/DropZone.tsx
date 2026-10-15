@@ -1,12 +1,12 @@
 import brandMark from "../assets/brand.svg";
 import { useCallback, useState, useRef } from "react";
 import { FolderOpen, FileArchive, FileText, Loader2, AlertCircle, ArrowRight } from "lucide-react";
-import { useUIStore } from "../stores/uiStore";
 import { useAppStore, FileEntry } from "../stores/appStore";
-import { api, localizeError } from "../lib/api";
+import { localizeError } from "../lib/api";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readFile, readDir } from "@tauri-apps/plugin-fs";
 import { join, basename } from "@tauri-apps/api/path";
+import { enqueueConversions } from "../lib/desktopQueue";
 import { toast } from "sonner";
 import { useT, useI18n } from "../i18n";
 
@@ -44,7 +44,7 @@ async function collectFilesFromDir(dir: string, root: string, out: PickedFile[])
 }
 
 export function DropZone({ compact = false }: DropZoneProps) {
-  const { addFiles, setConverting, updateFileStatus, patchFile, port, token, isReady } = useAppStore();
+  const { port, isReady } = useAppStore();
   const t = useT();
   const locale = useI18n((s) => s.locale);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,71 +52,8 @@ export function DropZone({ compact = false }: DropZoneProps) {
   const [picking, setPicking] = useState(false);
 
   const runConvert = useCallback(async (entries: FileEntry[]) => {
-    if (!port) return;
-    addFiles(entries);
-    setConverting(true);
-
-    let successCount = 0;
-    let failCount = 0;
-    const conn = { port, token: token || "" };
-
-    const convert = async (entry: FileEntry) => {
-      updateFileStatus(entry.id, "converting", 0);
-      patchFile(entry.id, {conversionPhase: /\.pdf$/i.test(entry.name) ? "uploading" : "running"});
-      try {
-        const file = entry.file!;
-        const result = await api.convertFile(conn, file, entry.relativePath, (progress) => {
-          updateFileStatus(entry.id, "converting", progress);
-        }, conversionPhase => patchFile(entry.id, {conversionPhase}));
-
-        if (result.kind === "archive") {
-          const ok = result.files.filter(f => f.success).length;
-          const failed = result.files.length - ok;
-          updateFileStatus(entry.id, "done", 100, t("archiveSummary", { ok, failed }));
-          addFiles(result.files.map(f => ({
-            id: crypto.randomUUID(),
-            name: f.filename,
-            size: f.charCount || 0,
-            type: "text/markdown",
-            status: f.success ? ("done" as const) : ("error" as const),
-            progress: f.success ? 100 : 0,
-            result: f.success ? f.preview : f.error,
-            preview: f.preview,
-            cachePath: f.cachePath,
-            charCount: f.charCount,
-            warnings: f.warnings,
-            engine: f.engine,
-            relativePath: f.filename,
-          })));
-          successCount += ok;
-          failCount += failed;
-        } else {
-          patchFile(entry.id, {
-            status: "done",
-            progress: 100,
-            result: result.preview,
-            preview: result.preview,
-            cachePath: result.cachePath,
-            charCount: result.charCount,
-            warnings: result.warnings,
-            engine: result.engine,
-          });
-          successCount++;
-        }
-      } catch (error) {
-        const raw = error instanceof Error ? error.message : String(error);
-        updateFileStatus(entry.id, "error", 0, localizeError(raw, locale));
-        failCount++;
-      }
-    };
-    let index = 0;
-    await Promise.all(Array.from({ length: Math.min(entries.length, useUIStore.getState().concurrency) }, async () => {
-      while (index < entries.length) await convert(entries[index++]);
-    }));
-    setConverting(useAppStore.getState().files.some(f => f.status === "converting" || f.status === "pending"));
-    if (successCount > 0) toast.success(t("convertOk", { n: successCount }));
-    if (failCount > 0) toast.error(t("convertFail", { n: failCount }));
-  }, [port, token, locale, addFiles, setConverting, updateFileStatus, patchFile, t]);
+    enqueueConversions(entries);
+  }, []);
 
   const buildEntries = useCallback(async (picked: PickedFile[]): Promise<FileEntry[]> => {
     const entries: FileEntry[] = [];

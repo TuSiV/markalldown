@@ -48,6 +48,12 @@ jobs:
           npm test
           npm run build
           npm audit --audit-level=high
+      - name: Measure fresh 1/2/4-worker conversion throughput
+        run: python scripts/benchmark_queue.py --output queue-benchmark.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Queue-benchmark-${{ matrix.label }}
+          path: queue-benchmark.json
       - name: Inspect previous macOS release signature and Gatekeeper
         if: runner.os == 'macOS'
         shell: bash

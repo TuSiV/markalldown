@@ -28,16 +28,16 @@ class ConversionResponsiveness(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(path.name.endswith('_1.zip'))
     async def test_two_conversions_do_not_block_health_or_each_other(self):
         lock=threading.Lock();started=threading.Event();release=threading.Event();active=0
-        def convert(content,name):
+        async def convert(content,request,job_id,filename,concurrency):
             nonlocal active
             with lock:
                 active+=1
                 if active==2:started.set()
-            release.wait(3)
-            return content.decode()
+            await asyncio.to_thread(release.wait, 3)
+            return content.decode(), {'engine':'fixture', 'warnings':[]}
         transport=httpx.ASGITransport(app=server.app)
         async with httpx.AsyncClient(transport=transport,base_url='http://test') as client:
-            with patch.object(server.converter,'convert_bytes',side_effect=convert):
+            with patch.object(server.pdf_jobs,'convert',side_effect=convert):
                 tasks=[asyncio.create_task(client.post('/api/convert',headers={'X-API-Token':server.API_TOKEN},files={'file':(name,b'# Synthetic text')})) for name in ('one.md','two.md')]
                 try:
                     self.assertTrue(await asyncio.to_thread(started.wait,2),'Conversions must overlap')

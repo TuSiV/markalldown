@@ -5,7 +5,7 @@ import subprocess
 import sys
 import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'backend'))
-from pdf_jobs import PdfJobs, PdfTimeout, PdfDisconnected
+from pdf_jobs import PdfJobs, PdfTimeout, PdfDisconnected, PdfPaused
 
 
 class Client:
@@ -15,6 +15,12 @@ class Client:
 
 
 class PdfProcessTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.managers = []
+
+    async def asyncTearDown(self):
+        for jobs in self.managers: await jobs.close()
+
     def jobs(self, timeout, delay):
         self.processes = []
         self.paths = []
@@ -24,7 +30,9 @@ class PdfProcessTests(unittest.IsolatedAsyncioTestCase):
             script = ('import pathlib,time,json,sys; time.sleep(float(sys.argv[1])); '
                       'pathlib.Path(sys.argv[2]).write_text(json.dumps({"text":"# recovered", "report":{"engine":"fixture"}}))')
             return [sys.executable, '-c', script, str(delay(source.read_bytes())), str(result)]
-        return PdfJobs(timeout=timeout, command=command)
+        jobs = PdfJobs(timeout=timeout, command=command)
+        self.managers.append(jobs)
+        return jobs
 
     async def wait_running(self, jobs, job_id):
         for _ in range(100):
@@ -38,6 +46,8 @@ class PdfProcessTests(unittest.IsolatedAsyncioTestCase):
         from unittest.mock import patch
         original = subprocess.Popen
         def launch(*args, **kw):
+            self.assertGreaterEqual(int(kw['env']['MAD_OCR_THREADS']), 1)
+            self.assertLessEqual(int(kw['env']['MAD_OCR_THREADS']), 4)
             child = original(*args, **kw); self.processes.append(child); return child
         with patch('pdf_jobs.subprocess.Popen', side_effect=launch):
             slow = asyncio.create_task(jobs.convert(b'slow', Client(), 'slow'))
@@ -48,6 +58,7 @@ class PdfProcessTests(unittest.IsolatedAsyncioTestCase):
             self.assertIsNotNone(self.processes[0].poll(), 'Timed-out process must be dead before returning')
             self.assertEqual((await next_pdf)[0], '# recovered')
         self.assertFalse(jobs.states)
+        await jobs.close()
         self.assertTrue(all(not path.exists() for path in self.paths))
 
     async def test_waiting_time_does_not_consume_the_processing_deadline(self):
@@ -63,6 +74,7 @@ class PdfProcessTests(unittest.IsolatedAsyncioTestCase):
         await self.wait_running(jobs, 'gone'); client.disconnected = True
         with self.assertRaises(PdfDisconnected): await request
         self.assertEqual((await jobs.convert(b'fast', Client(), 'next'))[0], '# recovered')
+        await jobs.close()
         self.assertTrue(all(not path.exists() for path in self.paths))
 
     async def test_disconnected_queued_client_never_launches_a_process(self):
@@ -75,6 +87,7 @@ class PdfProcessTests(unittest.IsolatedAsyncioTestCase):
         first.cancel()
         with self.assertRaises(asyncio.CancelledError): await first
         self.assertFalse(jobs.states)
+        await jobs.close()
         self.assertTrue(all(not path.exists() for path in self.paths))
 
     async def test_crashed_worker_does_not_block_the_next_file(self):
@@ -83,6 +96,49 @@ class PdfProcessTests(unittest.IsolatedAsyncioTestCase):
         from pdf_jobs import PdfError
         with self.assertRaises(PdfError): await jobs.convert(b'pdf', Client(), 'bad')
         self.assertFalse(jobs.states)
+
+    async def test_two_real_workers_overlap_but_never_exceed_configured_limit(self):
+        from unittest.mock import patch
+        jobs = self.jobs(4, lambda data: .4)
+        original = subprocess.Popen; children = []; peak = 0
+        def launch(*args, **kwargs):
+            nonlocal peak
+            process = original(*args, **kwargs); children.append(process)
+            peak = max(peak, sum(child.poll() is None for child in children))
+            return process
+        with patch('pdf_jobs.subprocess.Popen', side_effect=launch):
+            await asyncio.gather(*(jobs.convert(b'pdf', Client(), str(i), concurrency=2) for i in range(4)))
+        self.assertEqual(peak, 2)
+
+    async def test_pause_preserves_checkpoint_releases_worker_and_resume_reuses_it(self):
+        import json
+        from unittest.mock import patch
+        jobs = self.jobs(30, lambda data: 0)
+        def command(source, result):
+            self.paths.append(source.parent)
+            script = ("import pathlib,json,sys,time; root=pathlib.Path(sys.argv[1]).parent; marker=root/'progress.json'; "
+                      "saved=marker.exists(); marker.write_text(json.dumps({'completed':1,'total':2})); "
+                      "time.sleep(0 if saved else 60); pathlib.Path(sys.argv[1]).write_text(json.dumps({'text':'resumed cached page','report':{}}))")
+            return [sys.executable, '-c', script, str(result)]
+        jobs.command = command
+        original = subprocess.Popen; children = []
+        def launch(*args, **kwargs):
+            child = original(*args, **kwargs); children.append(child); return child
+        with patch('pdf_jobs.subprocess.Popen', side_effect=launch):
+            attempt = asyncio.create_task(jobs.convert(b'pdf', Client(), 'paused'))
+            for _ in range(200):
+                if 'paused' in jobs.jobs and jobs.status('paused').get('completed') == 1: break
+                await asyncio.sleep(.01)
+            status = await jobs.pause('paused')
+            self.assertEqual(status['state'], 'paused'); self.assertEqual(status['completed'], 1)
+            self.assertIsNotNone(children[0].poll(), 'Paused process must have exited')
+            with self.assertRaises(PdfPaused): await attempt
+            jobs.command = lambda source,result: [sys.executable,'-c',"import pathlib,json,sys;pathlib.Path(sys.argv[1]).write_text(json.dumps({'text':'next file','report':{}}))",str(result)]
+            self.assertEqual((await jobs.convert(b'next', Client(), 'other'))[0], 'next file')
+            jobs.command = command
+            self.assertEqual((await jobs.resume('paused', Client()))[0], 'resumed cached page')
+        self.assertEqual(jobs.status('paused')['state'], 'done')
+        self.assertFalse(jobs.jobs['paused'].source.exists())
 
 class PdfFrozenEntryTests(unittest.TestCase):
     def test_frozen_worker_uses_bundled_executable_not_system_python(self):

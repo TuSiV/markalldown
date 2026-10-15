@@ -1,6 +1,6 @@
 [package]
 name = "markalldown"
-version = "2.3.0-rc.2"
+version = "2.3.0-rc.3"
 description = "MarkAllDown Desktop - Convert files to Markdown"
 authors = ["MarkAllDown"]
 license = "MIT"
@@ -31,3 +31,6 @@ tauri-plugin-fs = "2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSWorkspace", "NSAccessibility"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

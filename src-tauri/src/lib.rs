@@ -10,6 +10,7 @@ struct AppState {
     sidecar_port: Mutex<u16>,
     api_token: Mutex<String>,
     sidecar_child: Mutex<Option<Child>>,
+    session_dir: Mutex<Option<PathBuf>>,
 }
 
 #[derive(serde::Serialize, Clone)]
@@ -79,11 +80,26 @@ fn start_sidecar(app: &AppHandle) -> Result<(u16, String), String> {
     let token = generate_token();
     let sidecar_path = find_sidecar(app)?;
 
-    let child = Command::new(&sidecar_path)
-        .args(["--port", &port.to_string(), "--token", &token])
-        .current_dir(sidecar_path.parent().unwrap_or(std::path::Path::new(".")))
-        .spawn()
-        .map_err(|e| format!("Failed to spawn sidecar: {}", e))?;
+    let session_dir = std::env::temp_dir().join(format!("markalldown-session-{}", generate_token()));
+    std::fs::create_dir(&session_dir).map_err(|error| error.to_string())?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&session_dir, std::fs::Permissions::from_mode(0o700)).map_err(|error| error.to_string())?;
+    }
+    let mut command = Command::new(&sidecar_path);
+    command.args(["--port", &port.to_string(), "--token", &token, "--session-dir", &session_dir.to_string_lossy()])
+        .current_dir(sidecar_path.parent().unwrap_or(std::path::Path::new(".")));
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        command.process_group(0);
+    }
+    let child = command.spawn().map_err(|error| {
+        let _ = std::fs::remove_dir_all(&session_dir);
+        format!("Failed to spawn sidecar: {}", error)
+    })?;
+    *app.state::<AppState>().session_dir.lock().unwrap() = Some(session_dir);
 
     log::info!("Sidecar started, PID: {}, port: {}", child.id(), port);
 
@@ -120,9 +136,25 @@ fn kill_sidecar(app: &AppHandle) {
                 .status();
         }
 
+        #[cfg(unix)]
+        {
+            // The dedicated group includes the frozen sidecar and every conversion worker.
+            unsafe { libc::kill(-(pid as i32), libc::SIGTERM); }
+            for _ in 0..30 {
+                if matches!(child.try_wait(), Ok(Some(_))) { break; }
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+            unsafe { libc::kill(-(pid as i32), libc::SIGKILL); }
+        }
         let _ = child.kill();
         let _ = child.wait();
         log::info!("Sidecar stopped");
+    }
+    let session = app.state::<AppState>().session_dir.lock().ok().and_then(|mut folder| folder.take());
+    if let Some(directory) = session {
+        if let Err(error) = std::fs::remove_dir_all(&directory) {
+            if error.kind() != std::io::ErrorKind::NotFound { log::error!("Session cleanup failed: {}", error); }
+        }
     }
 }
 
@@ -135,6 +167,7 @@ pub fn run() {
             sidecar_port: Mutex::new(18765),
             api_token: Mutex::new(String::new()),
             sidecar_child: Mutex::new(None),
+            session_dir: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![get_connection_info, appearance::get_desktop_appearance])
         .setup(|app| {

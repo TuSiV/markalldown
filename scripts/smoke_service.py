@@ -25,9 +25,10 @@ def exercise(port,token):
     from urllib.error import HTTPError
     # Real conversion through the frozen API, including bundled OCR models.
     from PIL import Image, ImageDraw, ImageFont
-    def convert(name, raw):
+    def convert(name, raw, job_id=None):
         boundary = "smoke" + secrets.token_hex(12)
-        payload = (f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="{name}"\r\nContent-Type: application/octet-stream\r\n\r\n'.encode()
+        fields = (f'--{boundary}\r\nContent-Disposition: form-data; name="jobId"\r\n\r\n{job_id}\r\n--{boundary}\r\nContent-Disposition: form-data; name="concurrency"\r\n\r\n2\r\n'.encode()) if job_id else b''
+        payload = fields + (f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="{name}"\r\nContent-Type: application/octet-stream\r\n\r\n'.encode()
                    + raw + f'\r\n--{boundary}--\r\n'.encode())
         with urlopen(Request(f'http://127.0.0.1:{port}/api/convert', data=payload, headers={
             'X-API-Token':token,'Content-Type':f'multipart/form-data; boundary={boundary}'}), timeout=120) as r:
@@ -58,6 +59,42 @@ def exercise(port,token):
     from urllib.parse import urlencode
     text=request(port,token,'text?'+urlencode({'path':scan['cachePath']}))['content']
     assert '13800138000' in text, 'Packaged OCR failed to read synthetic phone'
+
+    # Real pause/resume against the frozen worker: completed scan pages must be reused.
+    from concurrent.futures import ThreadPoolExecutor
+    from reportlab.lib.utils import ImageReader
+    scanned = io.BytesIO(); canvas = Canvas(scanned)
+    for _ in range(12):
+        canvas.drawImage(ImageReader(image),30,400,width=540,height=169);canvas.showPage()
+    canvas.save(); job_id = secrets.token_hex(16)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        attempt = pool.submit(convert, 'checkpoint-scan.pdf', scanned.getvalue(), job_id)
+        deadline = time.monotonic() + 90
+        while time.monotonic() < deadline:
+            try: status = request(port,token,'conversions/'+job_id)
+            except HTTPError as error:
+                if error.code != 404: raise
+                time.sleep(.1);continue
+            if status.get('completed',0) >= 1 and status['state']=='running': break
+            if attempt.done(): raise AssertionError('Scan finished before pause could be exercised')
+            time.sleep(.1)
+        else: raise AssertionError('PDF did not produce its first page checkpoint')
+        paused = request(port,token,'conversions/'+job_id+'/pause',{})
+        assert paused['state']=='paused' and 0 < paused['completed'] < 12
+        try: attempt.result(timeout=10)
+        except HTTPError as error: assert error.code==409
+        else: raise AssertionError('Paused request returned success')
+    # Another task must work before resuming the paused PDF.
+    assert convert('after-pause.md',b'# Next task works')['cachePath']
+    resumed = request(port,token,'conversions/'+job_id+'/resume',{'concurrency':2})
+    assert resumed['resumedPages'] >= paused['completed'] and resumed['totalPages']==12
+    full = request(port,token,'text?'+urlencode({'path':resumed['cachePath']}))['content']
+    assert full.count('<!-- page ')==12 and '13800138000' in full
+    request(port,token,'conversions/'+job_id+'/discard',{})
+    try: request(port,token,'conversions/'+job_id)
+    except HTTPError as error: assert error.code==404
+    else: raise AssertionError('Discarded checkpoint remains accessible')
+
     with tempfile.TemporaryDirectory() as directory:
         source='# Synthetic contract\nPhone 13800138000. Email abc@example.com.\n'
         result=request(port,token,'redact',{'content':source,'options':{},'passphrase':'smoke-test-password'})

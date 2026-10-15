@@ -205,3 +205,5 @@
   .desktop-app .conversion-empty { padding-top: 28px; }
   .desktop-hero h2 { font-size: 32px; }
 }
+
+.queue-checkpoint-hint{font-size:11px;line-height:1.7;color:#71839b;margin:0;padding:0 16px 12px}.queue-control{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #d8e3f3;border-radius:7px;color:#326db8;background:#f4f8ff}.queue-control:disabled{opacity:.5}.status-paused{color:#886525;background:#fff6df}.status-pausing{color:#526a8a;background:#edf2f8}.queue-heading{flex-wrap:wrap;gap:8px}

@@ -1,4 +1,5 @@
-import { FileText, CheckCircle2, XCircle, Loader2, Trash2, Eye, AlertCircle, FolderOpen } from "lucide-react";
+import { FileText, CheckCircle2, XCircle, Loader2, Trash2, Eye, AlertCircle, FolderOpen, Pause, Play, RotateCcw } from "lucide-react";
+import { pauseConversion, resumeConversion, retryFailedConversions, removeConversion, clearConversions } from "../lib/desktopQueue";
 import { useAppStore } from "../stores/appStore";
 import { useState } from "react";
 import { FileGlyph } from "./Visual";
@@ -53,6 +54,9 @@ export function FileList({ onPreview, selectedId }: { onPreview?: (id: string) =
 
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case "paused":
+        return <Pause className="w-4 h-4" />;
+      case "pausing":
       case "converting":
         return <Loader2 className="w-4 h-4 text-[#2563eb] animate-spin" />;
       case "done":
@@ -66,6 +70,8 @@ export function FileList({ onPreview, selectedId }: { onPreview?: (id: string) =
 
   const getStatusText = (status: string) => {
     switch (status) {
+      case "paused": return locale === "en-US" ? "Paused" : "已暂缓";
+      case "pausing": return locale === "en-US" ? "Stopping" : "正在暂缓";
       case "pending": return t("statusPending");
       case "converting": return t("statusConverting");
       case "done": return t("statusDone");
@@ -80,9 +86,10 @@ export function FileList({ onPreview, selectedId }: { onPreview?: (id: string) =
         <h2 className="font-semibold text-slate-700">
           {t("fileList", { n: files.length })}
         </h2>
+        <button className="ui-secondary" disabled={!files.some(file => file.status === 'error' && file.file)} onClick={retryFailedConversions}>{locale === 'en-US' ? 'Retry failed' : '重试失败项'}</button>
         <button
-          onClick={clearFiles}
-          disabled={files.some(f => f.status === "converting" || f.status === "pending")}
+          onClick={() => void clearConversions().catch(error => toast.error(String(error)))}
+          disabled={files.some(f => ["converting", "pending", "pausing"].includes(f.status))}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#787774]
                      hover:text-[#eb5757] hover:bg-[rgba(235,87,87,0.1)] rounded-md transition-colors"
         >
@@ -91,6 +98,7 @@ export function FileList({ onPreview, selectedId }: { onPreview?: (id: string) =
         </button>
       </div>
 
+      {files.length > 0 && <p className="queue-checkpoint-hint">{locale === 'en-US' ? 'PDFs resume from completed pages; an unfinished page is redone. Other formats restart. Checkpoints are cleared when the task is removed or the app exits.' : 'PDF 保留已完成页，未完成页会重做；其他格式重新开始。移除任务或退出应用会清理检查点。'}</p>}
       <div className="file-queue flex-1 overflow-y-auto">
         {files.length === 0 ? (
           <div className="flex items-center justify-center py-12 text-[#9b9a97]">
@@ -123,8 +131,11 @@ export function FileList({ onPreview, selectedId }: { onPreview?: (id: string) =
                     </div>
                   )}
 
-                  {file.status === 'converting' && file.conversionPhase === 'queued' && <p className="text-xs text-slate-500 mt-1">{locale === 'en-US' ? 'Waiting for the PDF worker; processing time has not started.' : '等待前一份 PDF 完成，尚未开始计算转换时限。'}</p>}
+                  {file.status === 'converting' && file.conversionPhase === 'queued' && <p className="text-xs text-slate-500 mt-1">{locale === 'en-US' ? 'Waiting for an available worker; processing time has not started.' : '等待空闲转换进程，尚未开始计算转换时限。'}</p>}
 
+                  {!!file.totalPages && <p className="text-xs text-slate-500 mt-1">{locale === 'en-US' ? `Completed ${file.completedPages || 0} / ${file.totalPages} pages` : `已完成 ${file.completedPages || 0} / ${file.totalPages} 页`}</p>}
+                  {file.status === 'error' && !file.file && <p className="text-xs text-slate-500 mt-1">{locale === 'en-US' ? 'Reimport the original archive to retry this extracted file.' : '请重新导入源压缩包后重试此内部文件。'}</p>}
+                  {file.queueNote && <p className="text-xs text-slate-500 mt-1">{file.queueNote}</p>}
                   {file.status === "error" && file.result && (
                     <div className="flex items-center gap-1 mt-1">
                       <AlertCircle className="w-3 h-3 text-[#eb5757]" />
@@ -138,6 +149,9 @@ export function FileList({ onPreview, selectedId }: { onPreview?: (id: string) =
                 </span>
 
                 <div className="flex items-center gap-1 flex-shrink-0">
+                  {['pending','converting','pausing'].includes(file.status) && <button className="queue-control" disabled={file.status === 'pausing'} title={locale === 'en-US' ? 'Pause and release worker' : '暂缓并让其他文件先转换'} aria-label={`${locale === 'en-US' ? 'Pause' : '暂缓'} ${file.name}`} onClick={() => void pauseConversion(file.id)}><Pause size={16}/></button>}
+                  {file.file && ['paused','error'].includes(file.status) && <button className="queue-control" title={file.status === 'paused' ? (locale === 'en-US' ? 'Resume at queue end' : '恢复并排到队尾') : (locale === 'en-US' ? 'Retry at queue end' : '重试并排到队尾')} aria-label={`${file.status === 'paused' ? (locale === 'en-US' ? 'Resume' : '继续') : (locale === 'en-US' ? 'Retry' : '重试')} ${file.name}`} onClick={() => resumeConversion(file.id)}>{file.status === 'paused' ? <Play size={16}/> : <RotateCcw size={16}/>}</button>}
+
                   {file.status === "done" && file.cachePath && (
                     <button
                       onClick={() => onPreview ? onPreview(file.id) : setPreviewFile(file.id)}
@@ -165,8 +179,8 @@ export function FileList({ onPreview, selectedId }: { onPreview?: (id: string) =
                     </button>
                   )}
                   <button
-                    onClick={() => removeFile(file.id)}
-                    disabled={file.status === "converting" || file.status === "pending"}
+                    onClick={() => void removeConversion(file.id).catch(error => toast.error(String(error)))}
+                    disabled={["converting", "pending", "pausing"].includes(file.status)}
                     className="p-1.5 text-[#9b9a97] hover:text-[#eb5757] hover:bg-[rgba(235,87,87,0.1)]
                                rounded-md transition-colors"
                     aria-label={`${t("remove")} ${file.name}`}

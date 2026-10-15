@@ -4,6 +4,9 @@ import { ExportOptions } from "../stores/appStore";
 const MAX_RETRIES = 60;
 const RETRY_INTERVAL = 1000;
 
+export interface ConversionCheckpoint {completed?: number; total?: number; current?: number | null; resumed?: number; checkpoint?: boolean}
+export interface ConversionControl {signal?: AbortSignal; jobId?: string; concurrency?: number; resume?: boolean}
+
 export interface ExtendedExportOptions extends ExportOptions {
   exportPath?: string;
 }
@@ -122,7 +125,8 @@ export const api = {
     file: File,
     relativePath?: string,
     onProgress?: (progress: number) => void,
-    onState?: (state: "queued" | "running") => void
+    onState?: (state: "queued" | "running", checkpoint?: ConversionCheckpoint) => void,
+    options: ConversionControl = {}
   ): Promise<ConvertResult> {
     const formData = new FormData();
     formData.append("file", file);
@@ -130,9 +134,9 @@ export const api = {
       formData.append("relativePath", relativePath);
     }
 
-    const isPdf = /\.pdf$/i.test(file.name);
-    const jobId = isPdf ? crypto.randomUUID() : '';
-    if (jobId) formData.append('jobId', jobId);
+    const jobId = options.jobId || crypto.randomUUID();
+    formData.append('jobId', jobId);
+    formData.append('concurrency', String(options.concurrency || 1));
     const xhr = new XMLHttpRequest();
 
     return new Promise((resolve, reject) => {
@@ -147,14 +151,15 @@ export const api = {
           const response = await fetch(`http://127.0.0.1:${conn.port}/api/conversions/${jobId}`, {headers: authHeaders(conn.token), signal: controller.signal});
           if (response.ok) {
             const data = await response.json();
-            if (!finished && (data.state === 'queued' || data.state === 'running')) onState?.(data.state);
+            if (!finished && (data.state === 'queued' || data.state === 'running')) onState?.(data.state, data);
           }
         } catch { /* The conversion response remains authoritative. */ }
         finally { clearTimeout(timer); pending = null; }
       };
-      const cleanup = () => { finished = true; clearInterval(polling); pending?.abort(); };
+      const cancel = () => { xhr.abort(); cleanup(); reject(new DOMException('已暂缓', 'AbortError')); };
+      const cleanup = () => { finished = true; clearInterval(polling); pending?.abort(); options.signal?.removeEventListener('abort', cancel); };
       xhr.addEventListener('loadend', cleanup);
-      if (isPdf) {
+      {
         xhr.upload.addEventListener('load', () => { if (!finished) onState?.('queued'); });
         polling = setInterval(() => { void poll(); }, 500);
       }
@@ -189,6 +194,8 @@ export const api = {
           } catch {
             reject(new Error("parse_error"));
           }
+        } else if (options.resume && xhr.status === 404) {
+          reject(new Error("job_missing"));
         } else if (xhr.status === 401) {
           reject(new Error("auth_error"));
         } else {
@@ -209,18 +216,31 @@ export const api = {
         reject(new Error("timeout_error"));
       });
 
-      // PDF's server-side deadline starts after the queue slot is acquired.
-      // A transport deadline here would count waiting and abandon a live worker.
-      xhr.timeout = isPdf ? 0 : 300000;
+      // All workers enforce their active-processing deadline on the server.
+      xhr.timeout = 0;
       try {
-        xhr.open("POST", `http://127.0.0.1:${conn.port}/api/convert`);
+        xhr.open("POST", options.resume ? `http://127.0.0.1:${conn.port}/api/conversions/${jobId}/resume` : `http://127.0.0.1:${conn.port}/api/convert`);
         const tokenHeader = authHeaders(conn.token);
         for (const [key, value] of Object.entries(tokenHeader)) {
           xhr.setRequestHeader(key, value);
         }
-        xhr.send(formData);
+        xhr.addEventListener('abort', () => { cleanup(); reject(new DOMException('已暂缓', 'AbortError')); });
+        options.signal?.addEventListener('abort', cancel, {once: true});
+        if (options.signal?.aborted) { cancel(); return; }
+        if (options.resume) xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(options.resume ? JSON.stringify({concurrency: options.concurrency || 1}) : formData);
       } catch (error) { cleanup(); reject(error); }
     });
+  },
+
+  async controlConversion(conn: ConnectionInfo, jobId: string, action: 'pause' | 'discard'): Promise<ConversionCheckpoint & {state: string}> {
+    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch(`http://127.0.0.1:${conn.port}/api/conversions/${jobId}/${action}`, {method: 'POST', headers: authHeaders(conn.token), signal: controller.signal});
+      if (response.status === 404) return {state: 'missing'};
+      if (!response.ok) throw Error('任务操作失败，请重试');
+      return await response.json();
+    } finally { clearTimeout(timer); }
   },
 
   async exportFiles(

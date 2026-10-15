@@ -28,7 +28,7 @@ it("navigates all five workspaces without requiring converted documents for reco
 it("settings persist only working non-sensitive preferences and reset actual export options",()=>{
  usePrivacyStore.setState({passphrase:"never persist this",keywords:"private organization"});render(<SettingsPanel/>);
  fireEvent.click(screen.getByRole("tab",{name:"转换"}));
- fireEvent.change(screen.getByLabelText("并发转换数量（下一批生效）"),{target:{value:"3"}});
+ fireEvent.change(screen.getByLabelText("同时转换数量（运行中的任务不会被中断）"),{target:{value:"3"}});
  fireEvent.click(screen.getByRole("tab",{name:"导出"}));
  fireEvent.change(screen.getByLabelText("默认格式"),{target:{value:"zip"}});
  fireEvent.click(screen.getByRole("tab",{name:"通用与预览"}));

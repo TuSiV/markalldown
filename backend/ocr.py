@@ -1,4 +1,5 @@
 import logging
+import os
 import threading
 from pathlib import Path
 from typing import Optional
@@ -32,7 +33,8 @@ class OcrEngine:
                 from rapidocr_onnxruntime import RapidOCR
             except ImportError as e:
                 raise OcrError(f"OCR 引擎未安装: {e}") from e
-            self._ocr = RapidOCR()
+            threads = max(1, min(4, int(os.environ.get('MAD_OCR_THREADS', '2'))))
+            self._ocr = RapidOCR(intra_op_num_threads=threads, inter_op_num_threads=1)
         return self._ocr
 
     def ocr_image_file(self, image_path: str) -> str:
