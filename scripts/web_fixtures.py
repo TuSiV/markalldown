@@ -17,8 +17,16 @@ source='# 中文合同\n\n甲方：测试单位\n电话：13800138000\n邮箱：
 image=Image.new('RGB',(1000,280),'white');draw=ImageDraw.Draw(image)
 font=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',38) if Path('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf').exists() else ImageFont.load_default(size=38)
 draw.text((40,40),'Local OCR sample',fill='black',font=font);draw.text((40,110),'Phone 13800138000',fill='black',font=font);image.save(ROOT/'scan.png')
-cjk_paths=['/root/.local/share/fonts/NotoSansCJKsc-Regular.otf','/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc','C:/Windows/Fonts/msyh.ttc','/System/Library/Fonts/PingFang.ttc']
-cjk=next((p for p in cjk_paths if Path(p).exists()),None)
+cjk_paths=[str(Path.home()/'.local/share/fonts/NotoSansCJKsc-Regular.otf'),'/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc','C:/Windows/Fonts/msyh.ttc','/System/Library/Fonts/PingFang.ttc']
+cjk=None
+for candidate in cjk_paths:
+ try:
+  if Path(candidate).is_file():
+   cjk=candidate
+   break
+ except OSError:
+  # An inaccessible optional font must not fail protocol or CI fixtures.
+  continue
 if cjk:
  chinese_image=Image.new('RGB',(1000,280),'white');chinese_draw=ImageDraw.Draw(chinese_image);chinese_font=ImageFont.truetype(cjk,42)
  chinese_draw.text((40,35),'中文合同 金额 125000.50 元',fill='black',font=chinese_font)
