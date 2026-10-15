@@ -10,6 +10,7 @@ import {ArrowUpRight,ArrowRight,FileText,FileCheck2,ShieldCheck,Layers,LockKeyho
 import brandMark from '../assets/brand.svg';
 import './web.css';
 import {prepareOfflineResources,type OfflineProgress} from './offlinePreparation';
+import {ensureOfflineService,offlineUnavailableReason} from './offlineService';
 interface Task {id:string;file:File;status:'pending'|'running'|'done'|'error'|'cancelled';message:string;result?:Converted}
 type Page='convert'|'redact'|'recovery'|'settings';
 type Recovery={content:string;restored:number;missing:number;integrity:string;originalMatch:boolean|null};
@@ -27,7 +28,7 @@ export default function WebApp(){
  const input=useRef<HTMLInputElement>(null),active=useRef<{id:string;controller:AbortController}|null>(null),job=useRef<AbortController|null>(null),tasksRef=useRef(tasks),alive=useRef(true);
  const [dragging,setDragging]=useState(false);
  const [offlineProgress,setOfflineProgress]=useState<OfflineProgress|null>(null),[preparingOffline,setPreparingOffline]=useState(false);
- const [offline,setOffline]=useState(false),[swReady,setSwReady]=useState(false),[online,setOnline]=useState(navigator.onLine);
+ const [offline,setOffline]=useState(false),[offlineService,setOfflineService]=useState('正在检查离线服务…'),[offlineUnavailable,setOfflineUnavailable]=useState<string|null>(null),[online,setOnline]=useState(navigator.onLine);
  const task=tasks.find(t=>t.id===selected);
  const hasTasks=tasks.length>0;
  const navigation=[{id:'convert' as Page,label:'文件转换',icon:FileText},{id:'redact' as Page,label:'脱敏审核',icon:ShieldCheck},{id:'recovery' as Page,label:'文件恢复',icon:RotateCcw},{id:'settings' as Page,label:'设置',icon:Settings2}];
@@ -58,11 +59,23 @@ export default function WebApp(){
   try{if(file.size>(kind==='pack'?10_000_000:32_000_000))throw Error('文件超过恢复大小限制');const text=await file.text();if(kind==='pack'){setRecoveryPack(JSON.parse(text));setRecoveryPackName(file.name);}else{setRecoveryText(text);setRecoveryName(file.name);}}catch(e){setError((e as Error).message);}
  }
  const prepareOffline=()=>run(async()=>{
-  setPreparingOffline(true);setOfflineProgress(null);
-  try{await prepareOfflineResources(job.current!.signal,setOfflineProgress);setOffline(true);}
+  setPreparingOffline(true);setOfflineProgress(null);setOfflineService('正在启动离线服务…');
+  try{await prepareOfflineResources(job.current!.signal,setOfflineProgress);setOffline(true);setOfflineService('离线资源已准备完成。');}
+  catch(error){setOfflineService((error as Error).message);throw error;}
   finally{setPreparingOffline(false);}
  });
- useEffect(()=>{if('serviceWorker' in navigator)navigator.serviceWorker.ready.then(r=>{setSwReady(true);return caches.open('mad-ocr-v1').then(c=>c.match(new URL('offline-ready',r.scope)));}).then(r=>setOffline(!!r)).catch(()=>{});},[]);
+ useEffect(()=>{
+  const controller=new AbortController();
+  const unavailable=offlineUnavailableReason();setOfflineUnavailable(unavailable);
+  if(unavailable){setOfflineService(unavailable);return;}
+  ensureOfflineService(controller.signal).then(async registration=>{
+   if(controller.signal.aborted)return;
+   setOfflineService('离线服务已就绪。');
+   try{const cache=await caches.open('mad-ocr-v1');const ready=await cache.match(new URL('offline-ready',registration.scope));if(!controller.signal.aborted)setOffline(!!ready);}
+   catch{if(!controller.signal.aborted)setOfflineService('离线缓存无法读取，请检查浏览器的网站数据权限后重试。');}
+  }).catch(error=>{if(!controller.signal.aborted)setOfflineService(error.message);});
+  return()=>controller.abort();
+ },[]);
  return <div className={'web-app '+(page==='convert'&&!hasTasks?'web-landing':'')}>
   <header className="web-header"><div className="web-header-inner">
    <button className="web-brand" aria-label="MarkAllDown 首页" disabled={busy} onClick={()=>setPage('convert')}><span className="web-brand-mark" aria-hidden="true"><img src={brandMark} alt=""/></span><strong>MarkAll<span>Down</span></strong></button>
@@ -109,7 +122,7 @@ export default function WebApp(){
    {page==='recovery'&&<>
     <div className="web-page-heading"><p className="web-eyebrow">BRING YOUR WORDS BACK</p><h1>文件恢复<span>找回原来的文字。</span></h1><p>选择脱敏文件与对应恢复包，校验、预览，再另存。</p></div><div className="web-grid"><section className="web-card"><div className="web-file" role="group"><span className="web-step-number">01</span><strong>选择脱敏文件</strong><span className="web-file-hint">导入需要恢复的 Markdown</span><div className="web-file-choice"><button type="button" disabled={busy} onClick={e=>{e.preventDefault();recoveryInput.current?.click();}}>选择脱敏文件<ArrowUpRight size={14} aria-hidden="true"/></button><span>{recoveryText?recoveryName:'尚未选择文件'}</span></div><input hidden ref={recoveryInput} aria-label="选择脱敏文件" type="file" accept=".md,.txt" disabled={busy} onChange={e=>void readRecovery(e.target.files?.[0],'text')}/></div><div className="web-file" role="group"><span className="web-step-number">02</span><strong>选择恢复 JSON</strong><span className="web-file-hint">导入对应的加密恢复包</span><div className="web-file-choice"><button type="button" disabled={busy} onClick={e=>{e.preventDefault();packInput.current?.click();}}>选择恢复 JSON<ArrowUpRight size={14} aria-hidden="true"/></button><span>{recoveryPackName||'尚未选择恢复包'}</span></div><input hidden ref={packInput} aria-label="选择恢复 JSON" type="file" accept=".json" disabled={busy} onChange={e=>void readRecovery(e.target.files?.[0],'pack')}/></div><label>恢复口令<input type="password" autoComplete="off" value={password} disabled={busy} onChange={e=>{setPassword(e.target.value);setRecovered(null);setRecoveryReviewed(false);}}/></label><button className="web-primary" disabled={busy||!recoveryText||!recoveryPack} onClick={performRecovery}>校验并预览恢复</button></section><section className="web-card"><h2>恢复预览</h2>{recovered?<><p>已恢复 {recovered.restored} 处。{recovered.integrity==='exact'?'完整导出文件校验通过':recovered.integrity==='legacy'?'旧版恢复包，缺少导出文件校验':'文件已编辑，请检查缺失或修改内容'}。</p>{recovered.missing>0&&<p className="web-warning">有 {recovered.missing} 个原占位符未出现在文件中。</p>}<pre className="web-source">{recovered.content}</pre><label className="web-check"><input type="checkbox" checked={recoveryReviewed} onChange={e=>setRecoveryReviewed(e.target.checked)}/>{recovered.integrity==='exact'?'我已审核恢复结果':'我确认文件可能已编辑，并已审核恢复结果'}</label><button className="web-primary" disabled={!recoveryReviewed} onClick={()=>download(markdownName(recoveryName).replace(/\.md$/,'.restored.md'),recovered.content)}>另存恢复文件</button></>:<p className="web-empty">通过校验后显示恢复结果。</p>}</section></div>
    </>}
-   {page==='settings'&&<section className="web-card web-settings"><p className="web-eyebrow">MAKE IT YOURS</p><h1>设置与离线准备</h1><label>单文件大小上限（MB）<input type="number" min="1" max="100" value={limits.maxFileMB} onChange={e=>setLimits(l=>({...l,maxFileMB:Math.max(1,Math.min(100,Number(e.target.value)||1))}))}/></label><label>处理时间上限（秒）<input type="number" min="30" max="600" value={limits.timeoutSeconds} onChange={e=>setLimits(l=>({...l,timeoutSeconds:Math.max(30,Math.min(600,Number(e.target.value)||30))}))}/></label><p>上述设置从下一份文件开始生效。OCR 最多100页，图片最多2000万像素。</p><button className="web-primary" disabled={busy||!swReady} onClick={prepareOffline}>准备全部离线资源</button><p>{offline?'离线资源已缓存，仍可能被浏览器清理。':'基础页面与转换引擎会自动缓存；此按钮另外缓存 OCR 模型和 PDF 资源。'}</p><p>文档、映射明文与口令只保存在当前页面内存。所有模型从本站加载，不发送文档给外部服务。</p><button disabled={busy} onClick={()=>{active.current?.controller.abort();setTasks([]);setSelected('');setPassword('');setKeywords('');setWhitelist('');setRecoveryText('');setRecoveryPack(null);setRecoveryPackName('');setRecovered(null);resetRedaction();}}>清除当前文档与口令</button></section>}
+   {page==='settings'&&<section className="web-card web-settings"><p className="web-eyebrow">MAKE IT YOURS</p><h1>设置与离线准备</h1><label>单文件大小上限（MB）<input type="number" min="1" max="100" value={limits.maxFileMB} onChange={e=>setLimits(l=>({...l,maxFileMB:Math.max(1,Math.min(100,Number(e.target.value)||1))}))}/></label><label>处理时间上限（秒）<input type="number" min="30" max="600" value={limits.timeoutSeconds} onChange={e=>setLimits(l=>({...l,timeoutSeconds:Math.max(30,Math.min(600,Number(e.target.value)||30))}))}/></label><p>上述设置从下一份文件开始生效。OCR 最多100页，图片最多2000万像素。</p><button className="web-primary" disabled={busy||!!offlineUnavailable} onClick={prepareOffline} aria-describedby="offline-service-status">{preparingOffline?'正在准备…':'准备全部离线资源'}</button><p id="offline-service-status" role="status">{offlineService}</p><p>{offline?'离线资源已缓存，仍可能被浏览器清理。':'基础页面与转换引擎会自动缓存；此按钮另外缓存 OCR 模型和 PDF 资源。'}</p><p>文档、映射明文与口令只保存在当前页面内存。所有模型从本站加载，不发送文档给外部服务。</p><button disabled={busy} onClick={()=>{active.current?.controller.abort();setTasks([]);setSelected('');setPassword('');setKeywords('');setWhitelist('');setRecoveryText('');setRecoveryPack(null);setRecoveryPackName('');setRecovered(null);resetRedaction();}}>清除当前文档与口令</button></section>}
   </main><footer className="web-footer"><strong>MarkAllDown</strong><span>把内容留下，把格式放下。</span><span><ShieldCheck size={13} aria-hidden="true"/>本地转换 · 人工审核 · 独立恢复</span></footer>
  </div>;
 }

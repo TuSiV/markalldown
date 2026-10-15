@@ -1,3 +1,4 @@
+import {ensureOfflineService} from './offlineService';
 export interface OfflineProgress {completed:number;total:number;current:string}
 
 export function prepareOfflineResources(signal:AbortSignal,onProgress:(progress:OfflineProgress)=>void):Promise<void>{
@@ -21,7 +22,7 @@ export function prepareOfflineResources(signal:AbortSignal,onProgress:(progress:
    if(data?.ok===true)finish();
    else finish(Error('离线资源下载失败，已缓存资源会保留，请重试'));
   };
-  navigator.serviceWorker.ready.then(registration=>{
+  ensureOfflineService(signal).then(registration=>{
    if(settled)return;
    worker=registration.active??undefined;
    if(!worker){finish(Error('离线服务尚未就绪，请刷新后重试'));return;}

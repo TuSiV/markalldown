@@ -1,5 +1,6 @@
 import {afterEach,describe,it,expect,vi} from 'vitest';
 import {prepareOfflineResources} from '../src/web/offlinePreparation';
+vi.mock('../src/web/offlineService',()=>({ensureOfflineService:()=>navigator.serviceWorker.ready}));
 let receive:(event:{data:unknown})=>void;
 const close=vi.fn();
 function setup(ready:Promise<unknown>){
