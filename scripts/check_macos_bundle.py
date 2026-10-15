@@ -17,7 +17,9 @@ def main():
     identity=command(['codesign','--display','--verbose=4',str(app)])
     sidecar=app/'Contents/MacOS/markalldown-server'
     sidecar_identity=command(['codesign','--display','--verbose=4',str(sidecar)])
-    sidecar_entitlements=command(['codesign','--display','--entitlements','-',str(sidecar)])
+    sidecar_entitlements=command(['codesign','--display','--entitlements','-','--xml',str(sidecar)])
+    if sidecar_entitlements['status'] != 0:
+        sidecar_entitlements=command(['codesign','--display','--entitlements',':-',str(sidecar)])
     # Signature integrity alone does not prove that a hardened onefile loader can
     # load its extracted ad-hoc signed Python libraries on a user's Mac.
     entitlement_xml=sidecar_entitlements['output']
