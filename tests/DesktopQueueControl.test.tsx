@@ -16,7 +16,7 @@ const result=(name:string)=>({kind:'single' as const,filename:name,preview:'Conv
 it('pauses a slow PDF, runs the next file, then resumes from the same server checkpoint',async()=>{
  vi.mocked(api.convertFile).mockImplementation(async(_connection,file,_path,_progress,onState,options)=>{
   if(file.name==='slow.pdf'&&!options?.resume){onState?.('running',{completed:2,total:5});return await new Promise((_resolve,reject)=>options!.signal!.addEventListener('abort',()=>reject(new DOMException('paused','AbortError'))));}
-  return result(file.name);
+  return {...result(file.name), totalPages: 5};
  });
  vi.mocked(api.controlConversion).mockResolvedValue({state:'paused',completed:2,total:5});
  render(<FileList/>);enqueueConversions([entry('slow'),entry('next')]);
@@ -25,6 +25,7 @@ it('pauses a slow PDF, runs the next file, then resumes from the same server che
  expect(api.convertFile).toHaveBeenCalledTimes(2);fireEvent.click(screen.getByRole('button',{name:'继续 slow.pdf'}));
  await waitFor(()=>expect(useAppStore.getState().files.every(f=>f.status==='done')).toBe(true));
  expect(vi.mocked(api.convertFile).mock.calls[2][5]).toMatchObject({resume:true,jobId:'slow'});
+ expect(useAppStore.getState().files.find(file=>file.id==='slow')).toMatchObject({completedPages:5,totalPages:5});
 });
 it('retries a failed task without reselecting the original file and preserves successful tasks',async()=>{
  vi.mocked(api.convertFile).mockRejectedValueOnce(Error('failed once')).mockResolvedValueOnce(result('ok.pdf')).mockResolvedValueOnce(result('bad.pdf'));

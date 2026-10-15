@@ -20,6 +20,8 @@ export type ConvertResult =
       charCount: number;
       warnings?: string[];
       engine?: string;
+      totalPages?: number;
+      resumedPages?: number;
     }
   | {
       kind: "archive";
@@ -189,6 +191,8 @@ export const api = {
                 charCount: Number(response.charCount) || 0,
                 warnings: response.warnings || [],
                 engine: response.engine,
+                totalPages: typeof response.totalPages === "number" ? response.totalPages : undefined,
+                resumedPages: typeof response.resumedPages === "number" ? response.resumedPages : undefined,
               });
             }
           } catch {

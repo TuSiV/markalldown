@@ -62,7 +62,7 @@ async function execute(entry: FileEntry, worker: {controller: AbortController; p
       store.patchFile(id, {status: 'done', progress: 100, result: text('压缩包处理完成','Archive processed')});
       store.addFiles(result.files.map(file => ({id: crypto.randomUUID(), name: file.filename, size: file.charCount || 0, type: 'text/markdown', status: file.success ? 'done' : 'error', progress: file.success ? 100 : 0, result: file.success ? file.preview : file.error, preview: file.preview, cachePath: file.cachePath, charCount: file.charCount, warnings: file.warnings, engine: file.engine, relativePath: file.filename})));
     } else {
-      store.patchFile(id, {status: 'done', progress: 100, result: result.preview, preview: result.preview, cachePath: result.cachePath, charCount: result.charCount, warnings: result.warnings, engine: result.engine});
+      store.patchFile(id, {status: 'done', progress: 100, result: result.preview, preview: result.preview, cachePath: result.cachePath, charCount: result.charCount, warnings: result.warnings, engine: result.engine, completedPages: result.totalPages, totalPages: result.totalPages});
     }
   } catch (error) {
     const raw = (error as Error).message;
