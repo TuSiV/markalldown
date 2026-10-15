@@ -1,10 +1,10 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
+const App = React.lazy(() => import.meta.env.MODE === "web" ? import("./web/WebApp") : import("./App"));
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <React.Suspense fallback={<p>正在加载 MarkAllDown…</p>}><App /></React.Suspense>
   </React.StrictMode>,
 );

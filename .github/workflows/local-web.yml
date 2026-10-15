@@ -1,0 +1,51 @@
+name: Local browser conversion
+on:
+  push:
+    branches: [feature/local-web-conversion]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MAD_PYTHON: python
+      CHROME_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+          npm ci
+          python -m pip install -r backend/requirements.txt -r backend/requirements-dev.txt
+      - name: Check local protocol, conversion and build
+        run: |
+          npm test
+          python -m unittest discover -s tests -v
+          npm run build:web
+          npm audit --audit-level=high
+      - name: Actual WASM, offline OCR and recovery checks
+        run: npm run test:web
+      - name: Measure both local engines
+        run: python scripts/benchmark_engines.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Browser-verification
+          path: |
+            web-evidence/*.png
+            web-evidence/checks.json
+            benchmark-results/report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MarkAllDown-Web
+          path: dist-web/

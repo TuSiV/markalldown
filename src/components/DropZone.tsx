@@ -13,24 +13,7 @@ interface DropZoneProps {
   compact?: boolean;
 }
 
-const UNSUPPORTED_FORMATS: Record<string, Record<string, string>> = {
-  ".doc": {
-    "zh-CN": "旧版 .doc 格式不支持，请转换为 .docx",
-    "en-US": "Legacy .doc is not supported. Convert to .docx",
-  },
-  ".ppt": {
-    "zh-CN": "旧版 .ppt 格式不支持，请转换为 .pptx",
-    "en-US": "Legacy .ppt is not supported. Convert to .pptx",
-  },
-  ".rtf": {
-    "zh-CN": "RTF 格式暂不支持",
-    "en-US": "RTF is not supported yet",
-  },
-  ".odt": {
-    "zh-CN": "OpenDocument 格式暂不支持",
-    "en-US": "OpenDocument is not supported yet",
-  },
-};
+const UNSUPPORTED_FORMATS: Record<string, Record<string, string>> = {};
 
 type PickedFile = {
   path: string;
@@ -99,6 +82,8 @@ export function DropZone({ compact = false }: DropZoneProps) {
             preview: f.preview,
             cachePath: f.cachePath,
             charCount: f.charCount,
+            warnings: f.warnings,
+            engine: f.engine,
             relativePath: f.filename,
           })));
           successCount += ok;
@@ -111,6 +96,8 @@ export function DropZone({ compact = false }: DropZoneProps) {
             preview: result.preview,
             cachePath: result.cachePath,
             charCount: result.charCount,
+            warnings: result.warnings,
+            engine: result.engine,
           });
           successCount++;
         }

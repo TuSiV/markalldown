@@ -1,7 +1,7 @@
 name: Desktop builds
 on:
   push:
-    branches: [feature/redaction-ai]
+    branches: [feature/redaction-ai, feature/local-web-conversion]
   workflow_dispatch:
 permissions:
   contents: read
@@ -41,6 +41,8 @@ jobs:
           npm ci
           python -m pip install -r backend/requirements.txt -r backend/requirements-dev.txt pyinstaller psutil
       - name: Tests and frontend build
+        env:
+          MAD_PYTHON: python
         run: |
           python -m unittest discover -s tests -v
           npm test
@@ -135,6 +137,7 @@ jobs:
           path: ui-screenshots/*.png
           if-no-files-found: error
   candidate-release:
+    if: github.ref == 'refs/heads/feature/redaction-ai'
     needs: [native, ui-visual]
     runs-on: ubuntu-latest
     permissions:

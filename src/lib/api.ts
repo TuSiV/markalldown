@@ -15,6 +15,8 @@ export type ConvertResult =
       cachePath: string;
       preview: string;
       charCount: number;
+      warnings?: string[];
+      engine?: string;
     }
   | {
       kind: "archive";
@@ -26,6 +28,8 @@ export type ConvertResult =
         charCount?: number;
         error?: string;
         success: boolean;
+        warnings?: string[];
+        engine?: string;
       }>;
     };
 
@@ -152,6 +156,8 @@ export const api = {
                 cachePath: response.cachePath || "",
                 preview: response.preview || "",
                 charCount: Number(response.charCount) || 0,
+                warnings: response.warnings || [],
+                engine: response.engine,
               });
             }
           } catch {

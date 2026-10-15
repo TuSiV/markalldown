@@ -1,9 +1,15 @@
 import os
 import threading
 import tempfile
+import time
 from pathlib import Path
 from typing import Optional
 from markitdown import MarkItDown
+import anydoc
+
+# Modern formats keep their established MarkItDown path until corpus testing
+# justifies switching. No hosted OCR option is ever passed to anydoc.
+ANYDOC_EXTENSIONS = {'.doc', '.ppt', '.pps', '.pot', '.rtf', '.odt', '.ods', '.odp', '.xlsb'}
 
 from ocr import (
     ocr_engine,
@@ -22,12 +28,9 @@ SUPPORTED_EXTENSIONS = {
     '.zip', '.epub',
     '.ipynb',
 }
+SUPPORTED_EXTENSIONS |= ANYDOC_EXTENSIONS
 
 UNSUPPORTED_EXTENSIONS = {
-    '.doc': '旧版 Word 格式(.doc)不支持，请转换为 .docx 格式后重试',
-    '.ppt': '旧版 PowerPoint 格式(.ppt)不支持，请转换为 .pptx 格式后重试',
-    '.rtf': 'RTF 格式暂不支持',
-    '.odt': 'OpenDocument 格式暂不支持',
     '.pages': 'Apple Pages 格式暂不支持',
 }
 
@@ -59,12 +62,31 @@ class Converter:
                     return self._convert_file(file_path)
             return self._convert_file(file_path)
 
+    def convert_report(self, value, filename=None):
+        """Keep metadata in the same executor thread as the conversion."""
+        start = time.perf_counter()
+        self._local.report = {"engine": "markitdown", "warnings": []}
+        text = self.convert_bytes(value, filename) if filename else self.convert_file(value)
+        if not text.strip():
+            raise ConversionError('未提取到正文，请检查原文件')
+        report = dict(self._local.report)
+        report['elapsedMs'] = round((time.perf_counter() - start) * 1000, 2)
+        return text, report
+
     def _convert_file(self, file_path: str) -> str:
         filename = Path(file_path).name
         self.check_format(filename)
         suffix = Path(file_path).suffix.lower()
 
         try:
+            if suffix in ANYDOC_EXTENSIONS:
+                self._local.report = {"engine": "anydoc", "warnings": [
+                    "旧格式正文已提取；复杂表格、图片和嵌入对象请对照原件检查。桌面此路径未导出图片资源，可使用浏览器版资源打包。"
+                ]}
+                text = anydoc.to_markdown(file_path)
+                if not text.strip():
+                    raise ConversionError('转换未提取到正文，请检查原文件')
+                return text
             if suffix in IMAGE_EXTENSIONS:
                 return self._convert_image(file_path, filename)
 
@@ -78,11 +100,10 @@ class Converter:
             raise
         except Exception as e:
             error_msg = str(e)
-            if "doc" in error_msg.lower() or "word" in error_msg.lower():
-                raise ConversionError("转换失败: 该文件可能是旧版 .doc 格式，请转换为 .docx 后重试")
             raise ConversionError(f"转换失败: {error_msg}")
 
     def _convert_image(self, file_path: str, filename: str) -> str:
+        self._local.report = {"engine": "rapidocr", "warnings": ["OCR 文字、金额及表格请对照原件检查。"]}
         try:
             ocr_text = ocr_engine.ocr_image_file(file_path)
         except OcrError as e:
@@ -99,9 +120,11 @@ class Converter:
             ocr_text = ocr_engine.ocr_pdf_file(file_path)
         except OcrError as e:
             if extracted and extracted.strip():
+                self._local.report = {"engine": "markitdown", "warnings": ["扫描页 OCR 失败，当前只保留可提取的文字；请检查原件。"]}
                 return extracted
             raise ConversionError(str(e))
 
+        self._local.report = {"engine": "markitdown+rapidocr", "warnings": ["PDF 已补充 OCR，阅读顺序及重复内容请对照原件检查。"]}
         if extracted and extracted.strip():
             return f"{extracted}\n\n---\n\n<!-- OCR 补充 -->\n\n{ocr_text}"
         return ocr_text

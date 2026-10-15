@@ -14,6 +14,7 @@ magika_models = str(magika_path / "models")
 
 hidden_imports = []
 hidden_imports += collect_submodules('markitdown')
+hidden_imports += collect_submodules('anydoc')
 hidden_imports += collect_submodules('pdfminer')
 hidden_imports += collect_submodules('pdfplumber')
 hidden_imports += collect_submodules('pandas')

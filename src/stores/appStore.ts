@@ -16,6 +16,8 @@ export interface FileEntry {
   cachePath?: string;
   preview?: string;
   charCount?: number;
+  warnings?: string[];
+  engine?: string;
 }
 
 export interface ExportOptions {

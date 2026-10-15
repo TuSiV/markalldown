@@ -8,3 +8,4 @@ aiofiles
 rapidocr_onnxruntime
 pypdfium2
 cryptography>=42,<48
+firecrawl-anydoc==0.2.4

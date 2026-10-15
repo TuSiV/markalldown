@@ -32,6 +32,13 @@ def exercise(port,token):
         with urlopen(Request(f'http://127.0.0.1:{port}/api/convert', data=payload, headers={
             'X-API-Token':token,'Content-Type':f'multipart/form-data; boundary={boundary}'}), timeout=120) as r:
             return json.load(r)
+    for name,expected in [('sample.doc','Fixture Document'),('sample.ppt','Deck Title'),('chinese.doc','中文合同'),('chinese.ppt','中文合同汇报')]:
+        fixture=Path(__file__).resolve().parents[1]/'tests/fixtures/local-engines'/name
+        response=convert(name,fixture.read_bytes())
+        from urllib.parse import urlencode
+        content=request(port,token,'text?'+urlencode({'path':response['cachePath']}))['content']
+        assert expected in content, 'Packaged anydoc lost expected text: '+name
+        assert response['engine']=='anydoc' and response['warnings']
     plain = convert('synthetic.md', b'# Synthetic contract\nPhone 13800138000')
     assert plain.get('cachePath')
     image = Image.new('RGB',(1600,500),'white')

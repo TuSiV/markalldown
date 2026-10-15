@@ -1,0 +1,276 @@
+{
+  "method": "5 in-process conversions, median including first cold conversion. Each engine/file in fresh process. RSS delta sampled at 1ms; initialization/process launch excluded. Not a fidelity score or mobile benchmark.",
+  "platform": "linux",
+  "versions": {
+    "firecrawl-anydoc": "0.2.4",
+    "markitdown": "0.1.8"
+  },
+  "pythonModuleBytes": 8262021,
+  "sizes": {
+    "webTotalMB": 35.82,
+    "wasmBytes": 6691779,
+    "ocrResourcesMB": 23.9
+  },
+  "results": [
+    {
+      "engine": "anydoc",
+      "filename": "sample.doc",
+      "medianMs": 0.3,
+      "rssIncreaseMB": 2.02,
+      "characters": 1225,
+      "keyText": {
+        "中文": false,
+        "13800138000": false,
+        "125000.50": false
+      },
+      "error": null
+    },
+    {
+      "engine": "markitdown",
+      "filename": "sample.doc",
+      "medianMs": null,
+      "rssIncreaseMB": 1.48,
+      "characters": 0,
+      "keyText": {
+        "中文": false,
+        "13800138000": false,
+        "125000.50": false
+      },
+      "error": "UnsupportedFormatException: Could not convert stream to Markdown. No converter attempted a conversion, suggesting that the filetype is simply not supported."
+    },
+    {
+      "engine": "anydoc",
+      "filename": "sample.ppt",
+      "medianMs": 0.11,
+      "rssIncreaseMB": 1.04,
+      "characters": 250,
+      "keyText": {
+        "中文": false,
+        "13800138000": false,
+        "125000.50": false
+      },
+      "error": null
+    },
+    {
+      "engine": "markitdown",
+      "filename": "sample.ppt",
+      "medianMs": null,
+      "rssIncreaseMB": 1.48,
+      "characters": 0,
+      "keyText": {
+        "中文": false,
+        "13800138000": false,
+        "125000.50": false
+      },
+      "error": "UnsupportedFormatException: Could not convert stream to Markdown. No converter attempted a conversion, suggesting that the filetype is simply not supported."
+    },
+    {
+      "engine": "anydoc",
+      "filename": "sample.xls",
+      "medianMs": 0.112,
+      "rssIncreaseMB": 0.49,
+      "characters": 396,
+      "keyText": {
+        "中文": false,
+        "13800138000": false,
+        "125000.50": false
+      },
+      "error": null
+    },
+    {
+      "engine": "markitdown",
+      "filename": "sample.xls",
+      "medianMs": 11.005,
+      "rssIncreaseMB": 2.95,
+      "characters": 401,
+      "keyText": {
+        "中文": false,
+        "13800138000": false,
+        "125000.50": false
+      },
+      "error": null
+    },
+    {
+      "engine": "anydoc",
+      "filename": "sample.xlsb",
+      "medianMs": 0.095,
+      "rssIncreaseMB": 0.62,
+      "characters": 369,
+      "keyText": {
+        "中文": false,
+        "13800138000": false,
+        "125000.50": false
+      },
+      "error": null
+    },
+    {
+      "engine": "markitdown",
+      "filename": "sample.xlsb",
+      "medianMs": null,
+      "rssIncreaseMB": 0.0,
+      "characters": 0,
+      "keyText": {
+        "中文": false,
+        "13800138000": false,
+        "125000.50": false
+      },
+      "error": "FileConversionException: File conversion failed after 1 attempts:\n - XlsxConverter threw KeyError with message: \"There is no item named '[Content_Types].xml' in the archive\"\n"
+    },
+    {
+      "engine": "anydoc",
+      "filename": "chinese.doc",
+      "medianMs": 0.023,
+      "rssIncreaseMB": 0.37,
+      "characters": 41,
+      "keyText": {
+        "中文": true,
+        "13800138000": true,
+        "125000.50": true
+      },
+      "error": null
+    },
+    {
+      "engine": "markitdown",
+      "filename": "chinese.doc",
+      "medianMs": null,
+      "rssIncreaseMB": 1.47,
+      "characters": 0,
+      "keyText": {
+        "中文": false,
+        "13800138000": false,
+        "125000.50": false
+      },
+      "error": "UnsupportedFormatException: Could not convert stream to Markdown. No converter attempted a conversion, suggesting that the filetype is simply not supported."
+    },
+    {
+      "engine": "anydoc",
+      "filename": "chinese.ppt",
+      "medianMs": 0.123,
+      "rssIncreaseMB": 0.61,
+      "characters": 240,
+      "keyText": {
+        "中文": true,
+        "13800138000": false,
+        "125000.50": false
+      },
+      "error": null
+    },
+    {
+      "engine": "markitdown",
+      "filename": "chinese.ppt",
+      "medianMs": null,
+      "rssIncreaseMB": 1.12,
+      "characters": 0,
+      "keyText": {
+        "中文": false,
+        "13800138000": false,
+        "125000.50": false
+      },
+      "error": "UnsupportedFormatException: Could not convert stream to Markdown. No converter attempted a conversion, suggesting that the filetype is simply not supported."
+    },
+    {
+      "engine": "anydoc",
+      "filename": "中文合同.docx",
+      "medianMs": 6.322,
+      "rssIncreaseMB": 4.73,
+      "characters": 298,
+      "keyText": {
+        "中文": true,
+        "13800138000": true,
+        "125000.50": true
+      },
+      "error": null
+    },
+    {
+      "engine": "markitdown",
+      "filename": "中文合同.docx",
+      "medianMs": 183.511,
+      "rssIncreaseMB": 22.5,
+      "characters": 321,
+      "keyText": {
+        "中文": true,
+        "13800138000": true,
+        "125000.50": true
+      },
+      "error": null
+    },
+    {
+      "engine": "anydoc",
+      "filename": "中文表格.xlsx",
+      "medianMs": 0.185,
+      "rssIncreaseMB": 2.17,
+      "characters": 103,
+      "keyText": {
+        "中文": false,
+        "13800138000": true,
+        "125000.50": false
+      },
+      "error": null
+    },
+    {
+      "engine": "markitdown",
+      "filename": "中文表格.xlsx",
+      "medianMs": 9.604,
+      "rssIncreaseMB": 2.93,
+      "characters": 92,
+      "keyText": {
+        "中文": false,
+        "13800138000": true,
+        "125000.50": false
+      },
+      "error": null
+    },
+    {
+      "engine": "anydoc",
+      "filename": "中文汇报.pptx",
+      "medianMs": 0.619,
+      "rssIncreaseMB": 0.53,
+      "characters": 41,
+      "keyText": {
+        "中文": true,
+        "13800138000": true,
+        "125000.50": true
+      },
+      "error": null
+    },
+    {
+      "engine": "markitdown",
+      "filename": "中文汇报.pptx",
+      "medianMs": 11.594,
+      "rssIncreaseMB": 1.65,
+      "characters": 59,
+      "keyText": {
+        "中文": true,
+        "13800138000": true,
+        "125000.50": true
+      },
+      "error": null
+    },
+    {
+      "engine": "anydoc",
+      "filename": "中文合同.rtf",
+      "medianMs": 0.007,
+      "rssIncreaseMB": 0.22,
+      "characters": 17,
+      "keyText": {
+        "中文": true,
+        "13800138000": true,
+        "125000.50": false
+      },
+      "error": null
+    },
+    {
+      "engine": "markitdown",
+      "filename": "中文合同.rtf",
+      "medianMs": 4.038,
+      "rssIncreaseMB": 1.6,
+      "characters": 68,
+      "keyText": {
+        "中文": false,
+        "13800138000": true,
+        "125000.50": false
+      },
+      "error": null
+    }
+  ]
+}

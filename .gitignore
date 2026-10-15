@@ -70,3 +70,10 @@ Thumbs.db
 
 # Local app cache (runtime)
 .cache/
+
+# Reproducible browser assets and reports
+public-web/
+dist-web/
+.venv/
+web-evidence/
+benchmark-results/

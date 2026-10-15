@@ -176,6 +176,7 @@ export function Preview({ fileId, onClose, inline = false }: PreviewProps) {
           {failed && <span className="text-red-700">{locale === "en-US" ? "Full text unavailable; excerpt only" : "全文读取失败，仅显示片段；请重新打开"}</span>}
         </div>
         <div style={{ fontSize }} className="flex-1 overflow-y-auto p-7 markdown-view document-paper">
+          {file.warnings?.map(w => <p key={w} className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 mb-3">{w}</p>)}
           {loading ? (
             <div className="flex items-center gap-2 text-[#9b9a97] text-sm">
               <Loader2 className="w-4 h-4 animate-spin" />

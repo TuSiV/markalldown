@@ -116,7 +116,7 @@ async def convert_file(
         if archive_handler.is_archive(safe_name):
             return await _convert_archive(content, safe_name)
 
-        markdown = await asyncio.to_thread(converter.convert_bytes, content, safe_name)
+        markdown, report = await asyncio.to_thread(converter.convert_report, content, safe_name)
         cache_path = result_cache.write(safe_name, markdown)
 
         return JSONResponse({
@@ -125,6 +125,7 @@ async def convert_file(
             "cachePath": cache_path,
             "preview": result_cache.preview_of(markdown),
             "charCount": len(markdown),
+            **report,
         })
 
     except (ConversionError, ArchiveError) as e:
@@ -152,14 +153,15 @@ async def _convert_archive(content: bytes, filename: str) -> JSONResponse:
             if os.path.isfile(file_path):
                 rel_path = os.path.relpath(file_path, extract_dir)
                 try:
-                    markdown = await asyncio.to_thread(converter.convert_file, file_path)
+                    markdown, report = await asyncio.to_thread(converter.convert_report, file_path)
                     cache_path = result_cache.write(rel_path, markdown)
                     results.append({
                         "filename": rel_path,
                         "cachePath": cache_path,
                         "preview": result_cache.preview_of(markdown),
                         "charCount": len(markdown),
-                        "success": True
+                        "success": True,
+                        **report,
                     })
                 except ConversionError as e:
                     results.append({
