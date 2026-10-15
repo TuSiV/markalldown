@@ -39,6 +39,14 @@ def exercise(port,token):
         content=request(port,token,'text?'+urlencode({'path':response['cachePath']}))['content']
         assert expected in content, 'Packaged anydoc lost expected text: '+name
         assert response['engine']=='anydoc' and response['warnings']
+    # Exercise the frozen executable's worker entry point, without Python on PATH.
+    from reportlab.pdfgen.canvas import Canvas
+    pdf = io.BytesIO(); canvas = Canvas(pdf)
+    canvas.drawString(50, 800, 'PDF worker 13800138000'); canvas.save()
+    pdf_result = convert('synthetic-worker.pdf', pdf.getvalue())
+    from urllib.parse import urlencode
+    pdf_text = request(port, token, 'text?' + urlencode({'path': pdf_result['cachePath']}))['content']
+    assert '13800138000' in pdf_text, 'Packaged PDF worker did not return real content'
     plain = convert('synthetic.md', b'# Synthetic contract\nPhone 13800138000')
     assert plain.get('cachePath')
     image = Image.new('RGB',(1600,500),'white')

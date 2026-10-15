@@ -121,7 +121,8 @@ export const api = {
     conn: ConnectionInfo,
     file: File,
     relativePath?: string,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    onState?: (state: "queued" | "running") => void
   ): Promise<ConvertResult> {
     const formData = new FormData();
     formData.append("file", file);
@@ -129,9 +130,34 @@ export const api = {
       formData.append("relativePath", relativePath);
     }
 
+    const isPdf = /\.pdf$/i.test(file.name);
+    const jobId = isPdf ? crypto.randomUUID() : '';
+    if (jobId) formData.append('jobId', jobId);
     const xhr = new XMLHttpRequest();
 
     return new Promise((resolve, reject) => {
+      let polling: ReturnType<typeof setInterval> | undefined;
+      let pending: AbortController | null = null;
+      let finished = false;
+      const poll = async () => {
+        if (finished || pending) return;
+        const controller = new AbortController(); pending = controller;
+        const timer = setTimeout(() => controller.abort(), 2000);
+        try {
+          const response = await fetch(`http://127.0.0.1:${conn.port}/api/conversions/${jobId}`, {headers: authHeaders(conn.token), signal: controller.signal});
+          if (response.ok) {
+            const data = await response.json();
+            if (!finished && (data.state === 'queued' || data.state === 'running')) onState?.(data.state);
+          }
+        } catch { /* The conversion response remains authoritative. */ }
+        finally { clearTimeout(timer); pending = null; }
+      };
+      const cleanup = () => { finished = true; clearInterval(polling); pending?.abort(); };
+      xhr.addEventListener('loadend', cleanup);
+      if (isPdf) {
+        xhr.upload.addEventListener('load', () => { if (!finished) onState?.('queued'); });
+        polling = setInterval(() => { void poll(); }, 500);
+      }
       xhr.upload.addEventListener("progress", (e) => {
         if (e.lengthComputable && onProgress) {
           onProgress(Math.round((e.loaded / e.total) * 50));
@@ -183,13 +209,17 @@ export const api = {
         reject(new Error("timeout_error"));
       });
 
-      xhr.timeout = 300000;
-      xhr.open("POST", `http://127.0.0.1:${conn.port}/api/convert`);
-      const tokenHeader = authHeaders(conn.token);
-      for (const [key, value] of Object.entries(tokenHeader)) {
-        xhr.setRequestHeader(key, value);
-      }
-      xhr.send(formData);
+      // PDF's server-side deadline starts after the queue slot is acquired.
+      // A transport deadline here would count waiting and abandon a live worker.
+      xhr.timeout = isPdf ? 0 : 300000;
+      try {
+        xhr.open("POST", `http://127.0.0.1:${conn.port}/api/convert`);
+        const tokenHeader = authHeaders(conn.token);
+        for (const [key, value] of Object.entries(tokenHeader)) {
+          xhr.setRequestHeader(key, value);
+        }
+        xhr.send(formData);
+      } catch (error) { cleanup(); reject(error); }
     });
   },
 

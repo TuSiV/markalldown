@@ -62,11 +62,12 @@ export function DropZone({ compact = false }: DropZoneProps) {
 
     const convert = async (entry: FileEntry) => {
       updateFileStatus(entry.id, "converting", 0);
+      patchFile(entry.id, {conversionPhase: /\.pdf$/i.test(entry.name) ? "uploading" : "running"});
       try {
         const file = entry.file!;
         const result = await api.convertFile(conn, file, entry.relativePath, (progress) => {
           updateFileStatus(entry.id, "converting", progress);
-        });
+        }, conversionPhase => patchFile(entry.id, {conversionPhase}));
 
         if (result.kind === "archive") {
           const ok = result.files.filter(f => f.success).length;

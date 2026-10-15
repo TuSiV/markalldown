@@ -9,6 +9,7 @@ export interface FileEntry {
   type: string;
   status: "pending" | "converting" | "done" | "error";
   progress: number;
+  conversionPhase?: "uploading" | "queued" | "running";
   result?: string;
   file?: File;
   relativePath?: string;

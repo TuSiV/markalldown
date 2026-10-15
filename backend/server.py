@@ -2,11 +2,23 @@ import os
 import asyncio
 import sys
 import json
+import io
+
+if sys.stdout is None:
+    sys.stdout = io.TextIOWrapper(open(os.devnull, 'wb'), encoding='utf-8')
+if sys.stderr is None:
+    sys.stderr = io.TextIOWrapper(open(os.devnull, 'wb'), encoding='utf-8')
+
+# Frozen and development subprocesses enter here before importing the HTTP server.
+if len(sys.argv) == 4 and sys.argv[1] == "--pdf-worker":
+    from pdf_jobs import worker_main
+    worker_main(sys.argv[2], sys.argv[3])
+    raise SystemExit(0)
+
 import shutil
 import tempfile
 import argparse
 import logging
-import io
 import secrets
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -18,14 +30,11 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from converter import converter, ConversionError
+from pdf_jobs import pdf_jobs, PdfError, PdfTimeout, PdfDisconnected
 from compression import archive_handler, ArchiveError
 from exporter import exporter, ExportOptions
 from cache import result_cache, CacheError
 
-if sys.stdout is None:
-    sys.stdout = io.TextIOWrapper(open(os.devnull, 'wb'), encoding='utf-8')
-if sys.stderr is None:
-    sys.stderr = io.TextIOWrapper(open(os.devnull, 'wb'), encoding='utf-8')
 
 log_dir = Path(os.environ.get("LOCALAPPDATA", os.path.expanduser("~"))) / "com.markalldown.app" / "logs"
 log_dir.mkdir(parents=True, exist_ok=True)
@@ -101,10 +110,20 @@ async def read_cached_text(path: str, _: None = Depends(require_token)):
         raise HTTPException(status_code=404, detail=str(e))
 
 
+@app.get("/api/conversions/{job_id}")
+async def conversion_status(job_id: str, _: None = Depends(require_token)):
+    state = pdf_jobs.states.get(job_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail='Conversion job not found')
+    return {"state": state}
+
+
 @app.post("/api/convert")
 async def convert_file(
+    request: Request,
     file: UploadFile = File(...),
     relativePath: str = Form(default=""),
+    jobId: str = Form(default=""),
     locale: str = Depends(request_locale),
     _: None = Depends(require_token),
 ):
@@ -116,7 +135,13 @@ async def convert_file(
         if archive_handler.is_archive(safe_name):
             return await _convert_archive(content, safe_name)
 
-        markdown, report = await asyncio.to_thread(converter.convert_report, content, safe_name)
+        if Path(safe_name).suffix.lower() == '.pdf':
+            # IDs are opaque tokens; never paths or document names.
+            if jobId and (len(jobId) > 64 or not all(c.isascii() and (c.isalnum() or c == '-') for c in jobId)):
+                raise HTTPException(status_code=400, detail='Invalid conversion job ID')
+            markdown, report = await pdf_jobs.convert(content, request, jobId or secrets.token_hex(16))
+        else:
+            markdown, report = await asyncio.to_thread(converter.convert_report, content, safe_name)
         cache_path = result_cache.write(safe_name, markdown)
 
         return JSONResponse({
@@ -128,7 +153,13 @@ async def convert_file(
             **report,
         })
 
-    except (ConversionError, ArchiveError) as e:
+    except PdfTimeout:
+        raise HTTPException(status_code=408, detail=tr('PDF 实际转换超过 5 分钟，任务已停止，后续文件可继续处理；请拆分文件后重试。', 'PDF processing exceeded 5 minutes. The task was stopped; subsequent files can proceed. Split the file and retry.', locale))
+    except PdfDisconnected:
+        raise HTTPException(status_code=499, detail='Conversion client disconnected')
+    except HTTPException:
+        raise
+    except (ConversionError, PdfError, ArchiveError) as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         logger.exception("Conversion error")

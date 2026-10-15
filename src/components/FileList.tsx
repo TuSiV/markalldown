@@ -111,7 +111,7 @@ export function FileList({ onPreview, selectedId }: { onPreview?: (id: string) =
                   <div className="flex flex-wrap items-center gap-2">
 
                     <button disabled={file.status !== "done" || !file.cachePath} onClick={() => onPreview ? onPreview(file.id) : setPreviewFile(file.id)} className="file-name truncate">{file.name}</button>
-                    <span className={`status-badge status-${file.status}`}>{getStatusIcon(file.status)}{getStatusText(file.status)}</span>
+                    <span className={`status-badge status-${file.status}`}>{getStatusIcon(file.status)}{file.status === 'converting' && file.conversionPhase === 'queued' ? (locale === 'en-US' ? 'Queued' : '排队中') : file.status === 'converting' && file.conversionPhase === 'uploading' ? (locale === 'en-US' ? 'Reading file' : '正在读取文件') : getStatusText(file.status)}</span>
                   </div>
 
                   {file.status === "converting" && (
@@ -122,6 +122,8 @@ export function FileList({ onPreview, selectedId }: { onPreview?: (id: string) =
                       />
                     </div>
                   )}
+
+                  {file.status === 'converting' && file.conversionPhase === 'queued' && <p className="text-xs text-slate-500 mt-1">{locale === 'en-US' ? 'Waiting for the PDF worker; processing time has not started.' : '等待前一份 PDF 完成，尚未开始计算转换时限。'}</p>}
 
                   {file.status === "error" && file.result && (
                     <div className="flex items-center gap-1 mt-1">

@@ -27,6 +27,8 @@ class OcrEngine:
     def ocr(self):
         if self._ocr is None:
             try:
+                import onnxruntime
+                onnxruntime.disable_telemetry_events()
                 from rapidocr_onnxruntime import RapidOCR
             except ImportError as e:
                 raise OcrError(f"OCR 引擎未安装: {e}") from e

@@ -4,6 +4,10 @@ import tempfile
 import time
 from pathlib import Path
 from typing import Optional
+# ONNX is used by both file-type detection and OCR. Disable its runtime
+# telemetry before any model session is created (including in PDF workers).
+import onnxruntime
+onnxruntime.disable_telemetry_events()
 from markitdown import MarkItDown
 import anydoc
 
