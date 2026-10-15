@@ -24,6 +24,14 @@ def optional_api(endpoint):
     raise RuntimeError(result.stderr)
 
 
+def find_release(repository, tag):
+    # Draft tags are not available through /releases/tags/:tag until publication.
+    pages = json.loads(gh('api', f'repos/{repository}/releases?per_page=100', '--paginate', '--slurp'))
+    matches = [release for page in pages for release in page if release['tag_name'] == tag]
+    assert len(matches) <= 1, 'Multiple releases share this tag'
+    return matches[0] if matches else None
+
+
 def digest(path):
     with path.open('rb') as stream:
         return hashlib.file_digest(stream, 'sha256').hexdigest()
@@ -71,6 +79,7 @@ def verify_assets(release, files):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--prepare-only', action='store_true')
+    parser.add_argument('--source-commit', help='Exact previously verified application commit')
     parser.add_argument('--installers', type=Path, default=Path('installers'))
     parser.add_argument('--screenshots', type=Path, default=Path('ui-screenshots'))
     parser.add_argument('--output', type=Path, default=Path('release-assets'))
@@ -80,13 +89,14 @@ def main():
     if args.prepare_only:
         print('Prepared and checksummed:', ', '.join(p.name for p in files))
         return
-    repository, commit = os.environ['GITHUB_REPOSITORY'], os.environ['GITHUB_SHA']
+    repository = os.environ['GITHUB_REPOSITORY']
+    commit = args.source_commit or os.environ['GITHUB_SHA']
+    assert re.fullmatch(r'[0-9a-f]{40}', commit), 'Expected a complete source SHA'
     tag = 'v' + version
-    endpoint = f'repos/{repository}/releases/tags/{tag}'
     existing_tag = optional_api(f'repos/{repository}/git/ref/tags/{tag}')
     if existing_tag:
         assert existing_tag['object']['type'] == 'commit' and existing_tag['object']['sha'] == commit, 'Tag belongs to another commit'
-    release = optional_api(endpoint)
+    release = find_release(repository, tag)
     if release:
         assert release['target_commitish'] == commit, 'Existing release belongs to another commit'
         if not release['draft']:
@@ -97,10 +107,16 @@ def main():
     else:
         gh('release', 'create', tag, '--target', commit, '--draft', '--prerelease', '--latest=false',
            '--title', f'MarkAllDown {tag} · 桌面视觉优化预发布', '--notes-file', 'RELEASE_NOTES.md')
-    # Resume only a draft owned by this same commit. Never overwrite a public asset.
-    gh('release', 'upload', tag, *(str(path) for path in files), '--clobber')
+    release = find_release(repository, tag)
+    assert release and release['draft'] and release['prerelease'] and release['target_commitish'] == commit
+    endpoint = f'repos/{repository}/releases/{release["id"]}'
+    # Resume the same draft and reuse intact uploads; public assets never reach this path.
+    try:
+        verify_assets(release, files)
+    except AssertionError:
+        gh('release', 'upload', tag, *(str(path) for path in files), '--clobber')
     verify_assets(json.loads(gh('api', endpoint)), files)
-    gh('release', 'edit', tag, '--draft=false', '--prerelease', '--latest=false')
+    gh('api', endpoint, '--method', 'PATCH', '-F', 'draft=false', '-F', 'prerelease=true', '-f', 'make_latest=false')
     release = json.loads(gh('api', endpoint))
     assert release['prerelease'] and not release['draft'], 'Publication did not finish as a prerelease'
     verify_assets(release, files)
