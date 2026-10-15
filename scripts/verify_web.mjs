@@ -18,7 +18,7 @@ context.on('request',r=>{if(!r.url().startsWith('http://127.0.0.1:')&&!r.url().s
 const base=`http://127.0.0.1:${server.address().port}`;
 const checks=[];checks.push=(...items)=>{console.log(...items);return Array.prototype.push.apply(checks,items);};
 const monitor=setInterval(()=>{void page.locator('body').innerText().then(t=>console.log('Browser status:',t.slice(-280))).catch(()=>{});},15000);
-async function shot(name){await page.screenshot({path:resolve(out,name+'.png'),fullPage:true});if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Horizontal overflow '+name);}
+async function shot(name){await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await page.screenshot({path:resolve(out,name+'.png'),fullPage:true});if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Horizontal overflow '+name);}
 async function upload(path){await page.locator('input[type=file]').first().setInputFiles(path);}
 async function downloaded(button,path){const event=page.waitForEvent('download');await button.click();const d=await event;await d.saveAs(path);return readFileSync(path);}
 try{
