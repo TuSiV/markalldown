@@ -1,9 +1,30 @@
-# MarkAllDown 2.2.1
+# MarkAllDown 2.3.0-rc.1 · 桌面视觉优化预发布
 
-Completes the detailed A+B UI treatment beyond the workspace layout: file-type icons, status badges, import surfaces, button hierarchy, shared form controls and switch/segmented states, document typography, review highlights and original/masked comparison, recovery progress indicators, export option cards and persistent action area, and working settings tabs.
+本版本来自 `feature/local-web-conversion`，供正式发布前体验与反馈。
 
-Redaction review has a three-column queue/document/summary workspace with detected-term highlights. All existing rule changes, full-document review gates, optional AI consent, encrypted recovery and per-file recovery remain intact. Detected terms are rendered as escaped text, never executable markup.
+## 本次更新
 
-Adds browser rendering checks and screenshots for all five workspaces at 1440 and 800 pixels, including tab switching, sensitive highlights and review acknowledgement. Rendering uses explicitly synthetic service/dialog fixtures; backend and native smoke checks separately validate real service operations. Release requires UI rendering plus all three native platforms to pass.
+- 统一桌面与网页的品牌图标、蓝色配色、字体层级和控件样式。
+- 转换首页突出文件/文件夹导入；单文件采用通栏阅读，批量任务保留文件队列。
+- 统一脱敏审核、文件恢复、导出中心和设置的布局、表单与状态反馈。
+- 修正窄窗口下队列与预览重叠，保留旧版 WKWebView 的窗口高度回退。
+- Mac 采用独立的导航材质和控件样式，保留系统原生标题栏及窗口按钮；读取系统的减少透明度、增强对比度、减少动态效果偏好。
+- 保留本分支已有的本地转换、OCR、脱敏审核、加密恢复及旧 DOC/PPT 正文提取能力。
 
-Includes Windows NSIS/MSI and both macOS architectures. macOS bundles are ad-hoc signed and integrity-checked, without Apple Developer ID signing or notarization; first launch may require Privacy & Security > Open Anyway.
+## 下载
+
+- Windows x64：`*_x64-setup.exe`。本候选版不提供 MSI。
+- Mac Apple Silicon（M 系列）：`*_aarch64.dmg`。
+- Mac Intel：`*_x64.dmg`。
+- `*_UI-screenshots.zip`：实际 React 界面渲染证据，使用模拟服务、文件选择器和 Mac 系统偏好，不是原生 Mac 窗口截图。
+- `SHA256SUMS.txt`：安装包与截图压缩包的 SHA-256 校验值。
+
+## 验证与边界
+
+发布须通过前端/后端测试、五个工作区的渲染与交互检查，以及 Windows、Mac 双架构的打包、安装后启动和内置服务检查。Mac 另验证应用包与内置程序签名。
+
+Mac 当前使用按 Liquid Glass 分层原则设计的 WebKit 自定义材质，尚未接入原生 `NSGlassEffectView`，未实现原生折射/形变。渲染检查中的 Mac 偏好为模拟输入，不能替代真实系统设置与原生材质的人工验收。
+
+Mac 安装包采用 ad-hoc 签名，未做 Apple Developer ID 公证，首次启动可能需要在“系统设置 → 隐私与安全性”中选择“仍要打开”。
+
+恢复的是转换后的 Markdown 文本，不是原始 Word/PDF 二进制文件。分享脱敏文件时应单独保管恢复包和口令。

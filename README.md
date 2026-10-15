@@ -2,7 +2,7 @@
 
 MarkAllDown 是一款本地桌面应用，可将 PDF / Office / 图片 / 压缩包等多种文件批量转换为 Markdown。转换引擎基于 [Microsoft MarkItDown](https://github.com/microsoft/markitdown)，并内置中文优先 OCR（扫描件与图片）。
 
-> 产品名：**MarkAllDown** · 版本 **2.1.0** · 默认纯本地运行；仅启用可选 AI 且明确同意后，会向所选 AI 服务发送脱敏稿（OCR 始终在本地）
+> 产品名：**MarkAllDown** · 版本 **2.3.0-rc.1（预发布）** · 默认纯本地运行；仅启用可选 AI 且明确同意后，会向所选 AI 服务发送脱敏稿（OCR 始终在本地）
 
 ## 功能
 
@@ -200,3 +200,10 @@ macOS 遵循 Apple 对导航层与内容层的区分：侧栏使用克制的自�
 `npm run test:ui` 覆盖空状态、单文件、批量、五个工作区、800×600 最小窗口，以及模拟 Mac 系统偏好变化与高对比度。截图是实际 React 组件配合模拟原生接口的渲染证据，不能替代 macOS 原生材质和系统设置的人工验收。原生安装包构建及启动检查由 Windows / Apple Silicon / Intel 的 CI 完成。
 
 参考：[Apple Materials](https://developer.apple.com/design/human-interface-guidelines/materials)、[Adopting Liquid Glass](https://developer.apple.com/documentation/technologyoverviews/adopting-liquid-glass)。
+
+
+### 2.3.0-rc.1 预发布
+
+视觉优化后的桌面候选版本从本分支发布，Windows 提供 NSIS EXE，Mac 提供 Apple Silicon 与 Intel DMG。此候选版本不提供 MSI；正式版与候选版在同一应用标识下安装，安装前退出正在运行的应用。安装包版本、设置页和页脚统一读取/对应 2.3.0-rc.1。
+
+预发布仅在提交消息含 `[prerelease]` 时运行发布任务，且须三个原生平台和界面检查成功；先建立草稿、上传安装包/截图与 SHA256，再核对附件名称、长度和可用的服务端摘要，最后公开为 prerelease，不改变最新正式版。Mac 材质实现边界和未公证状态见发布说明。

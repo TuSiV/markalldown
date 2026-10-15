@@ -91,9 +91,10 @@ jobs:
           hdiutil attach "$dmg" -nobrowse -mountpoint "$mount"
           ditto "$mount/MarkAllDown.app" "$RUNNER_TEMP/MarkAllDown.app"
           hdiutil detach "$mount"
-          python scripts/check_macos_bundle.py "$RUNNER_TEMP/MarkAllDown.app" --version 2.2.1 --report "macos-evidence/current-${{ matrix.label }}.json"
+          version=$(node -p "require('./package.json').version")
+          python scripts/check_macos_bundle.py "$RUNNER_TEMP/MarkAllDown.app" --version "$version" --report "macos-evidence/current-${{ matrix.label }}.json"
           python scripts/smoke_desktop.py "$RUNNER_TEMP/MarkAllDown.app/Contents/MacOS/markalldown"
-          python scripts/check_macos_bundle.py "$RUNNER_TEMP/MarkAllDown.app" --version 2.2.1 --quarantine --report "macos-evidence/quarantined-${{ matrix.label }}.json"
+          python scripts/check_macos_bundle.py "$RUNNER_TEMP/MarkAllDown.app" --version "$version" --quarantine --report "macos-evidence/quarantined-${{ matrix.label }}.json"
       - name: Upload macOS signature and Gatekeeper evidence
         if: always() && runner.os == 'macOS'
         uses: actions/upload-artifact@v4
@@ -160,3 +161,26 @@ jobs:
           tag="v$(node -p "require('./package.json').version")"
           gh release create "$tag" --target "${{ github.sha }}" --title "MarkAllDown $tag" --notes-file RELEASE_NOTES.md
           gh release upload "$tag" release-assets/*
+  visual-prerelease:
+    if: github.ref == 'refs/heads/feature/local-web-conversion' && contains(github.event.head_commit.message, '[prerelease]')
+    needs: [native, ui-visual]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: MarkAllDown-*
+          path: installers
+      - uses: actions/download-artifact@v4
+        with:
+          name: UI-render-evidence
+          path: ui-screenshots
+      - name: Verify assets and publish an explicit RC
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/publish_prerelease.py

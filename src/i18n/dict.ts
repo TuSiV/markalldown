@@ -1,3 +1,5 @@
+import { APP_VERSION } from "../version";
+
 export type Locale = "zh-CN" | "en-US";
 
 export const dict = {
@@ -74,7 +76,7 @@ export const dict = {
     connectError: "无法连接到转换服务，请重启应用",
     langName: "中文",
     langSwitch: "EN",
-    footer: "MarkAllDown Desktop v2.2.1",
+    footer: `MarkAllDown Desktop v${APP_VERSION}`,
     copyright: "© 2026 YONGZHE CHEN. All rights reserved.",
     ocrNoText: "*(未识别到文字)*",
   },
@@ -151,7 +153,7 @@ export const dict = {
     connectError: "Cannot connect to conversion service. Please restart the app",
     langName: "English",
     langSwitch: "中",
-    footer: "MarkAllDown Desktop v2.2.1",
+    footer: `MarkAllDown Desktop v${APP_VERSION}`,
     copyright: "© 2026 YONGZHE CHEN. All rights reserved.",
     ocrNoText: "*(No text recognized)*",
   },
