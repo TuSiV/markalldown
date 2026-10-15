@@ -7,7 +7,7 @@ import {categoryLabels,type Redacted,newId} from './privacy';
 import {privacyJob} from './privacyClient';
 import {download,exportConversion,markdownName} from './download';
 import {ArrowUpRight,ArrowRight,FileText,FileCheck2,ShieldCheck,Layers,LockKeyhole,Upload,Settings2,RotateCcw,Loader2,Download,Copy,Code2,Eye} from 'lucide-react';
-import brandMark from './brand.svg';
+import brandMark from '../assets/brand.svg';
 import './web.css';
 interface Task {id:string;file:File;status:'pending'|'running'|'done'|'error'|'cancelled';message:string;result?:Converted}
 type Page='convert'|'redact'|'recovery'|'settings';

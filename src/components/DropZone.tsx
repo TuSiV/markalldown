@@ -1,5 +1,6 @@
+import brandMark from "../assets/brand.svg";
 import { useCallback, useState, useRef } from "react";
-import { FolderOpen, FileArchive, FileText, Loader2, AlertCircle } from "lucide-react";
+import { FolderOpen, FileArchive, FileText, Loader2, AlertCircle, ArrowRight } from "lucide-react";
 import { useUIStore } from "../stores/uiStore";
 import { useAppStore, FileEntry } from "../stores/appStore";
 import { api, localizeError } from "../lib/api";
@@ -292,9 +293,7 @@ export function DropZone({ compact = false }: DropZoneProps) {
       {folderInput}
 
       <div className="flex flex-col items-center gap-5 text-center">
-        <div className="p-4 rounded-2xl bg-[#f7f6f3]">
-          <FileText className="w-8 h-8 text-[#9b9a97]" />
-        </div>
+        <div className="desktop-import-art" aria-hidden="true"><span><FileText size={26}/><small>DOC · PDF</small></span><ArrowRight size={21}/><span><img src={brandMark} alt=""/><small>MARKDOWN</small></span></div>
 
         <div>
           <p className="text-lg font-medium text-[#37352f]">{t("dropTitle")}</p>

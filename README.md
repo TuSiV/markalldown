@@ -187,3 +187,16 @@ npm run preview:web
 ### Web 视觉与状态布局
 
 浅色首屏采用中心导入区、分级标题和简洁导航；未导入时不显示空队列与结果区。导入后切换紧凑工作区，单文件使用通栏结果，批量时提供文件侧栏；手机优先显示结果。脱敏、恢复与设置统一表单和排版。处理引擎标识作为测试属性保留，不作为用户界面文案。
+
+
+### 桌面视觉统一与 macOS 材质适配
+
+第三分支的桌面入口独立使用 `src/desktop.css`，与 Web 共用 `src/assets/brand.svg`；Windows ICO、macOS ICNS 和桌面 PNG 已从该矢量源生成。未导入时突出导入入口，不展示空队列或结果；单文件通栏阅读，批量保留文件队列。脱敏审核、恢复、导出及设置统一字体、表单、状态和间距。
+
+macOS 遵循 Apple 对导航层与内容层的区分：侧栏使用克制的自定义 WebKit 材质，正文、审核稿和恢复结果保持实色。保留系统原生标题栏与窗口按钮。通过 AppKit `NSWorkspace` 读取减少透明度、增强对比度和减少动态效果；进入前台时刷新，窗口可见时每三秒检查变化。读取失败时使用不透明背景，系统媒体查询也提供降级处理；Windows 使用实色导航。
+
+**实现边界**：这是依据 Liquid Glass 设计原则优化的 Tauri/WebKit 界面，不是原生 `NSGlassEffectView`，也未实现折射或原生玻璃形变。当前不引入透明窗口私有 API，不改变 macOS 12 最低系统要求。原生材质或 Icon Composer 分层图标若另行引入，需针对对应系统与 SDK 验证。
+
+`npm run test:ui` 覆盖空状态、单文件、批量、五个工作区、800×600 最小窗口，以及模拟 Mac 系统偏好变化与高对比度。截图是实际 React 组件配合模拟原生接口的渲染证据，不能替代 macOS 原生材质和系统设置的人工验收。原生安装包构建及启动检查由 Windows / Apple Silicon / Intel 的 CI 完成。
+
+参考：[Apple Materials](https://developer.apple.com/design/human-interface-guidelines/materials)、[Adopting Liquid Glass](https://developer.apple.com/documentation/technologyoverviews/adopting-liquid-glass)。

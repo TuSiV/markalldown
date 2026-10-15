@@ -1,3 +1,4 @@
+import brandMark from "../assets/brand.svg";
 import { FileDown, Loader2, Languages, ShieldCheck, RotateCcw, Settings } from "lucide-react";
 import { useAppStore } from "../stores/appStore";
 import { useI18n, useT } from "../i18n";
@@ -11,7 +12,7 @@ interface HeaderProps {
 }
 
 export function Header({ onExport, onRedact, onRecovery, workspace = false, onSettings }: HeaderProps) {
-  const { files, isReady, isConverting } = useAppStore();
+  const { files, isReady } = useAppStore();
   const t = useT();
   const toggleLocale = useI18n((s) => s.toggleLocale);
   const english = useI18n(s => s.locale) === "en-US";
@@ -19,15 +20,13 @@ export function Header({ onExport, onRedact, onRecovery, workspace = false, onSe
   const completedFiles = files.filter(f => f.status === "done" && f.cachePath).length;
 
   return (
-    <header className="flex items-center justify-between px-6 py-3 border-b border-[rgba(55,53,47,0.09)] bg-white">
+    <header className="desktop-header">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#2563eb] flex items-center justify-center">
-            <FileDown className="w-5 h-5 text-white" />
-          </div>
+          <img className="desktop-brand-mark" src={brandMark} alt="" />
           <div>
-            <h1 className="text-lg font-semibold text-[#37352f] leading-tight">{t("appName")}</h1>
-            <p className="text-[10px] text-[#9b9a97] leading-tight">© YONGZHE CHEN</p>
+            <h1 className="desktop-brand-name">{t("appName")}</h1>
+            <p className="desktop-brand-caption">{english ? "LOCAL DOCUMENT WORKSPACE" : "本地文档工作台"}</p>
           </div>
         </div>
 
@@ -42,7 +41,7 @@ export function Header({ onExport, onRedact, onRecovery, workspace = false, onSe
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="desktop-header-actions">
         {hasFiles && (
           <span className="text-sm text-[#787774] mr-2">
             {t("progress", { done: completedFiles, total: files.length })}

@@ -1,3 +1,5 @@
+mod appearance;
+
 use std::hash::{BuildHasher, Hash, Hasher, RandomState};
 use std::path::PathBuf;
 use std::process::{Child, Command};
@@ -134,7 +136,7 @@ pub fn run() {
             api_token: Mutex::new(String::new()),
             sidecar_child: Mutex::new(None),
         })
-        .invoke_handler(tauri::generate_handler![get_connection_info])
+        .invoke_handler(tauri::generate_handler![get_connection_info, appearance::get_desktop_appearance])
         .setup(|app| {
             log::info!("MarkAllDown starting...");
 

@@ -116,10 +116,10 @@ export function Preview({ fileId, onClose, inline = false }: PreviewProps) {
   return (
     <div className={inline ? "flex min-h-0 h-full flex-col" : "fixed inset-0 z-50 flex items-center justify-center bg-black/50"} onClick={inline ? undefined : onClose}>
       <div
-        className={inline ? "flex flex-col h-full min-h-0 bg-white rounded-xl border overflow-hidden" : "flex flex-col w-full max-w-4xl h-[80vh] bg-white rounded-xl shadow-2xl overflow-hidden"}
+        className={inline ? "desktop-preview flex flex-col h-full min-h-0 bg-white rounded-xl border overflow-hidden" : "flex flex-col w-full max-w-4xl h-[80vh] bg-white rounded-xl shadow-2xl overflow-hidden"}
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex flex-wrap gap-2 items-center justify-between px-4 py-3 border-b border-[rgba(55,53,47,0.09)]">
+        <div className="desktop-preview-header flex flex-wrap gap-2 items-center justify-between px-4 py-3 border-b border-[rgba(55,53,47,0.09)]">
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-[#9b9a97]" />
             <span className="text-sm font-medium">{file.name}</span>
@@ -161,6 +161,7 @@ export function Preview({ fileId, onClose, inline = false }: PreviewProps) {
             </button>
             <button
               onClick={onClose}
+              aria-label={locale === "en-US" ? "Close preview" : "关闭预览"}
               className="p-1.5 text-[#9b9a97] hover:text-[#37352f] hover:bg-[#f7f6f3]
                          rounded-md transition-colors"
             >
