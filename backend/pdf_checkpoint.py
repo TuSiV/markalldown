@@ -38,6 +38,8 @@ def extract_page(document, index):
                 image.close()
         finally:
             bitmap.close()
+        if text and recognized and ''.join(text.split()) not in ''.join(recognized.split()):
+            recognized = text + '\n\n<!-- OCR 补充 -->\n\n' + recognized
         return recognized or text or '*(本页未识别到文字)*', 'ocr'
     finally:
         page.close()

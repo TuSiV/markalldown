@@ -53,3 +53,11 @@ class PageCheckpointTests(unittest.TestCase):
             self.assertEqual(convert_pdf(source,checkpoint,extract)[0],original);self.assertEqual(calls,[0])
             source.write_bytes(source.read_bytes()+b'\nchanged')
             with self.assertRaisesRegex(ValueError,'不匹配'): convert_pdf(source,checkpoint)
+
+    def test_short_extractable_text_is_not_overwritten_by_conflicting_ocr(self):
+        with tempfile.TemporaryDirectory() as root:
+            source=Path(root)/'short.pdf'; canvas=Canvas(str(source)); canvas.drawString(40,800,'Amount 1250');canvas.save()
+            with patch('ocr.ocr_engine.ocr_image_array',return_value='Amount 1750'):
+                text,_=convert_pdf(source,Path(root)/'checkpoint')
+            self.assertIn('Amount 1250',text)
+            self.assertIn('<!-- OCR 补充 -->',text)
