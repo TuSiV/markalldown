@@ -82,7 +82,7 @@
 .desktop-queue { display: flex; flex-direction: column; min-height: 160px; min-width: 0; }
 .desktop-queue .queue-heading { flex-shrink: 0; padding-top: 0; }
 .desktop-result { min-height: 320px; min-width: 0; }
-.desktop-conversion-grid.single { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(320px, 1fr); gap: 16px; }
+.desktop-conversion-grid.single { grid-template-columns: minmax(0, 1fr); grid-template-rows: max-content minmax(320px, 1fr); gap: 16px; }
 .desktop-conversion-grid.single .desktop-queue { min-height: 0; }
 .desktop-conversion-grid.single .file-queue { flex: none; max-height: 128px; }
 .desktop-conversion-grid.single .file-row { padding: 10px 16px; }
@@ -194,7 +194,7 @@
 }
 @media (max-width: 900px) {
   .desktop-header .service-pill { display: none; }
-  .desktop-conversion-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(320px, 1fr); }
+  .desktop-conversion-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: max-content minmax(320px, 1fr); }
   .desktop-queue { min-height: 0; }
   .desktop-queue .file-queue { flex: none; max-height: 160px; }
   .desktop-task-summary { width: 100%; }

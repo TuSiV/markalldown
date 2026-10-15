@@ -30,8 +30,14 @@ if(await page.locator('.desktop-queue').count() || await page.locator('.desktop-
 await page.screenshot({path:`${out}/conversion-empty.png`,fullPage:true});
 await page.getByRole('button',{name:'选择文件',exact:true}).click();await page.getByRole('heading',{name:'采购合同审查意见',exact:true}).waitFor();
 const nav=page.getByRole('navigation',{name:'工作空间'});
-await page.addStyleTag({content:'*,*::before,*::after{transition:none!important;animation:none!important;caret-color:transparent!important;}'});
-const shot=async name=>{await page.evaluate(async()=>{for(const el of document.querySelectorAll('.workspace-page'))if(el.offsetParent)el.scrollTop=0;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));});await page.screenshot({path:`${out}/${name}.png`,fullPage:true});const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth);if(overflow)throw new Error(`Horizontal page overflow: ${name}`);};
+await page.addStyleTag({content:'*,*::before,*::after{transition:none!important;animation:none!important;caret-color:transparent!important;}[data-sonner-toaster]{visibility:hidden!important;}'});
+const shot=async name=>{await page.evaluate(async()=>{for(const el of document.querySelectorAll('.workspace-page'))if(el.offsetParent)el.scrollTop=0;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));});await page.screenshot({path:`${out}/${name}.png`,fullPage:true});const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth);if(overflow)throw new Error(`Horizontal page overflow: ${name}`);
+const overlap=await page.evaluate(()=>{
+ const grid=document.querySelector('.desktop-conversion-grid');
+ if(!grid?.offsetParent || getComputedStyle(grid).gridTemplateColumns.split(' ').length!==1)return false;
+ const queue=grid.querySelector('.file-queue'), result=grid.querySelector('.desktop-result');
+ return queue && result && queue.getBoundingClientRect().bottom>result.getBoundingClientRect().top+1;
+});if(overlap)throw new Error(`File queue overlaps conversion result: ${name}`);};
 await page.locator('.desktop-conversion-grid.single').waitFor();
 await shot('conversion');
 await page.getByRole('button',{name:'选择文件',exact:true}).click();
