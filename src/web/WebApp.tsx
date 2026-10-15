@@ -7,6 +7,7 @@ import {categoryLabels,type Redacted,newId} from './privacy';
 import {privacyJob} from './privacyClient';
 import {download,exportConversion,markdownName} from './download';
 import {ArrowUpRight,ArrowRight,FileText,FileCheck2,ShieldCheck,Layers,LockKeyhole,Upload,Settings2,RotateCcw,Loader2,Download,Copy,Code2,Eye} from 'lucide-react';
+import brandMark from './brand.svg';
 import './web.css';
 interface Task {id:string;file:File;status:'pending'|'running'|'done'|'error'|'cancelled';message:string;result?:Converted}
 type Page='convert'|'redact'|'recovery'|'settings';
@@ -69,7 +70,7 @@ export default function WebApp(){
  useEffect(()=>{if('serviceWorker' in navigator)navigator.serviceWorker.ready.then(r=>{setSwReady(true);return caches.open('mad-ocr-v1').then(c=>c.match(new URL('offline-ready',r.scope)));}).then(r=>setOffline(!!r)).catch(()=>{});},[]);
  return <div className={'web-app '+(page==='convert'&&!hasTasks?'web-landing':'')}>
   <header className="web-header"><div className="web-header-inner">
-   <button className="web-brand" aria-label="MarkAllDown 首页" disabled={busy} onClick={()=>setPage('convert')}><span className="web-brand-mark" aria-hidden="true">m<span>↓</span></span><strong>MarkAll<span>Down</span></strong></button>
+   <button className="web-brand" aria-label="MarkAllDown 首页" disabled={busy} onClick={()=>setPage('convert')}><span className="web-brand-mark" aria-hidden="true"><img src={brandMark} alt=""/></span><strong>MarkAll<span>Down</span></strong></button>
    <nav className="web-nav" aria-label="工作空间">{navigation.map(({id,label,icon:Icon})=><button key={id} disabled={busy} aria-current={page===id?'page':undefined} onClick={()=>{setPage(id);setError('');}}><Icon aria-hidden="true" size={15}/>{label}</button>)}</nav>
    <span className="web-badge"><span className="web-live-dot"/>{online?'文件留在此设备':'离线模式'}</span>
   </div></header>
@@ -85,7 +86,7 @@ export default function WebApp(){
     </section>
     <section className={'web-drop '+(hasTasks?'web-drop-compact ':'')+(dragging?'is-dragging':'')} onDragOver={e=>{e.preventDefault();setDragging(true);}} onDragLeave={e=>{if(!(e.relatedTarget instanceof Node)||!e.currentTarget.contains(e.relatedTarget))setDragging(false);}} onDrop={e=>{e.preventDefault();setDragging(false);add(Array.from(e.dataTransfer.files));}}>
      {!hasTasks&&<div className="web-drop-top"><span>01 / IMPORT</span><span>YOUR FILE → YOUR MARKDOWN</span></div>}
-     {!hasTasks&&<div className="web-document-pair" aria-hidden="true"><span className="web-document-original"><FileText size={23}/><small>DOC · PDF</small></span><ArrowRight size={22}/><span className="web-document-md"><span>m↓</span><small>MARKDOWN</small></span></div>}
+     {!hasTasks&&<div className="web-document-pair" aria-hidden="true"><span className="web-document-original"><FileText size={23}/><small>DOC · PDF</small></span><ArrowRight size={22}/><span className="web-document-md"><img src={brandMark} alt=""/><small>MARKDOWN</small></span></div>}
      <div className="web-import-content"><h2>{hasTasks?'继续添加文件':'文档的下一种可能'}</h2><p>{hasTasks?'加入当前队列，逐个转换。':'拖入你的文件，剩下的交给这里。'}</p></div>
      <button className="web-primary web-import-button" onClick={()=>input.current?.click()}><Upload size={17} aria-hidden="true"/>选择文件<ArrowUpRight size={18} aria-hidden="true"/></button>
      <input ref={input} type="file" multiple accept={extensions} hidden onChange={e=>{add(Array.from(e.target.files??[]));e.target.value='';}}/>

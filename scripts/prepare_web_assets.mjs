@@ -16,8 +16,8 @@ for(const [src,dest] of [['cmaps','cmaps'],['standard_fonts','fonts'],['wasm','w
  for(const file of await readdir('node_modules/pdfjs-dist/'+src))await copy('node_modules/pdfjs-dist/'+src+'/'+file,'pdf/'+dest+'/'+file);
 }
 await writeFile(join(root,'offline-resources.json'),JSON.stringify(resources));
-await copyFile('src-tauri/icons/128x128.png',join(root,'icon.png'));
-await copyFile('public/favicon.svg',join(root,'favicon.svg'));
+await copyFile('src/web/brand.svg',join(root,'icon.svg'));
+await copyFile('src/web/brand.svg',join(root,'favicon.svg'));
 const notices=[];
 for(const pkg of ['@firecrawl/anydoc-wasm','tesseract.js','tesseract.js-core','@tesseract.js-data/eng','@tesseract.js-data/chi_sim','pdfjs-dist','@noble/hashes','fflate']){
  const path='node_modules/'+pkg;const metadata=JSON.parse(await readFile(path+'/package.json','utf8'));
