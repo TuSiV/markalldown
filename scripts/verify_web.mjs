@@ -22,14 +22,18 @@ async function shot(name){await page.screenshot({path:resolve(out,name+'.png'),f
 async function upload(path){await page.locator('input[type=file]').first().setInputFiles(path);}
 async function downloaded(button,path){const event=page.waitForEvent('download');await button.click();const d=await event;await d.saveAs(path);return readFileSync(path);}
 try{
- await page.goto(base);await page.getByRole('heading',{name:'把文件变成可用的 Markdown'}).waitFor();
- await upload('/tmp/mad-web-fixtures/中文合同.docx');await page.getByText('anydoc-wasm · docx',{exact:false}).waitFor({timeout:30000});
+ await page.goto(base);await page.getByRole('heading',{name:/把文件，变成/}).waitFor();
+ if(await page.getByRole('heading',{name:/转换队列/}).count())throw Error('Empty landing exposes queue');
+ await shot('landing-desktop');
+ for(const width of [390,768]){await page.setViewportSize({width,height:844});await shot('landing-'+width);}
+ await page.setViewportSize({width:1440,height:1000});
+ await upload('/tmp/mad-web-fixtures/中文合同.docx');await page.locator('[data-engine="anydoc-wasm"][data-format="docx"]').waitFor({timeout:30000});
  const zip=await downloaded(page.getByRole('button',{name:'下载 ZIP'}),resolve(out,'contract.zip'));const files=unzipSync(zip);const original=strFromU8(files['中文合同.md']);
  if(!original.includes('13800138000')||!original.includes('125000.50')||!Object.keys(files).some(k=>k.startsWith('assets/')))throw Error('Document text or resource missing');
  checks.push('DOCX Chinese, money, table and resource ZIP');await shot('conversion-desktop');
  for(const [name,fmt] of [['sample.doc','doc'],['sample.ppt','ppt'],['sample.xls','xlsx'],['sample.xlsb','xlsx'],['chinese.doc','doc'],['chinese.ppt','ppt']]){
   await upload('tests/fixtures/local-engines/'+name);await page.getByRole('button',{name:new RegExp(name.replaceAll('.','\\.'))}).first().click();
-  await page.getByText('anydoc-wasm · '+fmt,{exact:false}).waitFor({timeout:30000});if(name.startsWith('chinese.'))await page.getByText('中文合同',{exact:false}).first().waitFor();
+  await page.locator(`[data-engine="anydoc-wasm"][data-format="${fmt}"]`).waitFor({timeout:30000});if(name.startsWith('chinese.'))await page.getByText('中文合同',{exact:false}).first().waitFor();
  }
  checks.push('DOC/PPT/XLS/XLSB actual WASM conversions');
  await page.getByRole('button',{name:/中文合同\.docx/}).first().click();
@@ -54,13 +58,13 @@ try{
  for(const width of [390,768]){await page.setViewportSize({width,height:844});for(const name of ['文件转换','脱敏审核','文件恢复','设置']){await page.getByRole('navigation').getByRole('button',{name}).click();await shot(name+'-'+width);}}
  await page.getByRole('navigation').getByRole('button',{name:'设置'}).click();await page.getByRole('button',{name:'准备全部离线资源'}).click();await page.getByText('离线资源已缓存',{exact:false}).waitFor({timeout:120000});
  await page.evaluate(()=>navigator.serviceWorker.ready);await context.setOffline(true);await page.reload();await page.getByRole('navigation').getByRole('button',{name:'文件转换'}).click();await page.getByLabel('扫描件 / 图片使用本地 OCR').check();
- await upload('/tmp/mad-web-fixtures/scan.png');await page.getByText('tesseract-local · image',{exact:false}).waitFor({timeout:120000});await page.getByText('Phone 13800138000',{exact:false}).waitFor();
+ await upload('/tmp/mad-web-fixtures/scan.png');await page.locator('[data-engine="tesseract-local"][data-format="image"]').waitFor({timeout:120000});await page.getByText('Phone 13800138000',{exact:false}).waitFor();
  checks.push('Fresh reload offline + local image OCR without network');
  if(existsSync('/tmp/mad-web-fixtures/chinese-scan.png')){
-  await upload('/tmp/mad-web-fixtures/chinese-scan.png');await page.getByRole('button',{name:/chinese-scan\.png/}).first().click();await page.getByText('tesseract-local · image',{exact:false}).waitFor({timeout:120000});await page.getByText('中文合同',{exact:false}).waitFor();await page.getByText('125000.50',{exact:false}).waitFor();checks.push('Chinese OCR recognizes contract heading and amount offline');
+  await upload('/tmp/mad-web-fixtures/chinese-scan.png');await page.getByRole('button',{name:/chinese-scan\.png/}).first().click();await page.locator('[data-engine="tesseract-local"][data-format="image"]').waitFor({timeout:120000});await page.getByText('中文合同',{exact:false}).waitFor();await page.getByText('125000.50',{exact:false}).waitFor();checks.push('Chinese OCR recognizes contract heading and amount offline');
  }
 
- await upload('/tmp/mad-web-fixtures/mixed.pdf');await page.getByRole('button',{name:/mixed\.pdf/}).first().click();await page.getByText('tesseract-local · pdf',{exact:false}).waitFor({timeout:120000});await page.getByText('Text page 1',{exact:false}).waitFor();await page.getByText('Phone 13800138000',{exact:false}).waitFor();
+ await upload('/tmp/mad-web-fixtures/mixed.pdf');await page.getByRole('button',{name:/mixed\.pdf/}).first().click();await page.locator('[data-engine="tesseract-local"][data-format="pdf"]').waitFor({timeout:120000});await page.getByText('Text page 1',{exact:false}).waitFor();await page.getByText('Phone 13800138000',{exact:false}).waitFor();
  checks.push('Offline mixed PDF preserves text page and OCRs scanned page');await shot('offline-ocr-mobile');
  await page.getByLabel('扫描件 / 图片使用本地 OCR').uncheck();await upload('/tmp/mad-web-fixtures/mixed.pdf');await page.getByText('扫描页需要启用本地 OCR 后重试',{exact:false}).waitFor();checks.push('Scanned page failure is explicit when OCR disabled');
  const cancelContext=await browser.newContext({serviceWorkers:'block'}),cancelPage=await cancelContext.newPage();
@@ -71,7 +75,7 @@ try{
   await cancelPage.locator('input[type=file]').first().setInputFiles('/tmp/mad-web-fixtures/scan.png');await entered;
   await cancelPage.getByRole('button',{name:'取消',exact:true}).click();release();
   await cancelPage.locator('input[type=file]').first().setInputFiles('/tmp/mad-web-fixtures/source.md');await cancelPage.getByRole('button',{name:/source\.md/}).first().click();
-  await cancelPage.getByText('utf8 · md',{exact:false}).waitFor();
+  await cancelPage.locator('[data-engine="utf8"][data-format="md"]').waitFor();
   if(cancelPage.workers().length)throw Error('Cancelled OCR left workers running');
   checks.push('Cancelling OCR during model initialization terminates workers and advances queue');
  }finally{await cancelContext.close();}
