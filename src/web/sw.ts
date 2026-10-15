@@ -20,7 +20,15 @@ self.addEventListener('message',event=>{
    const cache=await caches.open('mad-ocr-v1');
    // Sequential fetches avoid mobile memory spikes; the ready marker is written
    // only when every expected resource has been downloaded successfully.
-   for(const path of resources){controller.signal.throwIfAborted();const url=new URL(path,self.registration.scope);if(!await cache.match(url)){const r=await fetch(url,{signal:controller.signal});if(!r.ok)throw Error('Download failed');await cache.put(url,r);}}
+   let completed=0;
+   const progress=(current:string)=>event.ports[0]?.postMessage({type:'OFFLINE_PROGRESS',completed,total:resources.length,current});
+   for(const path of resources){
+    controller.signal.throwIfAborted();progress(path);
+    const url=new URL(path,self.registration.scope);
+    if(!await cache.match(url)){const r=await fetch(url,{signal:controller.signal});if(!r.ok)throw Error('Download failed');await cache.put(url,r);}
+    controller.signal.throwIfAborted();completed++;progress('');
+   }
+   controller.signal.throwIfAborted();
    await cache.put(new URL('offline-ready',self.registration.scope),new Response('ready'));
    event.ports[0]?.postMessage({ok:true});
   }catch{event.ports[0]?.postMessage({ok:false});}finally{downloads.delete(event.data.id);}

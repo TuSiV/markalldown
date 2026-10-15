@@ -9,6 +9,7 @@ import {download,exportConversion,markdownName} from './download';
 import {ArrowUpRight,ArrowRight,FileText,FileCheck2,ShieldCheck,Layers,LockKeyhole,Upload,Settings2,RotateCcw,Loader2,Download,Copy,Code2,Eye} from 'lucide-react';
 import brandMark from '../assets/brand.svg';
 import './web.css';
+import {prepareOfflineResources,type OfflineProgress} from './offlinePreparation';
 interface Task {id:string;file:File;status:'pending'|'running'|'done'|'error'|'cancelled';message:string;result?:Converted}
 type Page='convert'|'redact'|'recovery'|'settings';
 type Recovery={content:string;restored:number;missing:number;integrity:string;originalMatch:boolean|null};
@@ -25,6 +26,7 @@ export default function WebApp(){
  const recoveryInput=useRef<HTMLInputElement>(null),packInput=useRef<HTMLInputElement>(null);
  const input=useRef<HTMLInputElement>(null),active=useRef<{id:string;controller:AbortController}|null>(null),job=useRef<AbortController|null>(null),tasksRef=useRef(tasks),alive=useRef(true);
  const [dragging,setDragging]=useState(false);
+ const [offlineProgress,setOfflineProgress]=useState<OfflineProgress|null>(null),[preparingOffline,setPreparingOffline]=useState(false);
  const [offline,setOffline]=useState(false),[swReady,setSwReady]=useState(false),[online,setOnline]=useState(navigator.onLine);
  const task=tasks.find(t=>t.id===selected);
  const hasTasks=tasks.length>0;
@@ -56,16 +58,9 @@ export default function WebApp(){
   try{if(file.size>(kind==='pack'?10_000_000:32_000_000))throw Error('文件超过恢复大小限制');const text=await file.text();if(kind==='pack'){setRecoveryPack(JSON.parse(text));setRecoveryPackName(file.name);}else{setRecoveryText(text);setRecoveryName(file.name);}}catch(e){setError((e as Error).message);}
  }
  const prepareOffline=()=>run(async()=>{
-  const registration=await navigator.serviceWorker.ready;
-  const worker=registration.active;if(!worker)throw Error('离线服务尚未就绪，请刷新后重试');
-  await new Promise<void>((resolve,reject)=>{
-   const channel=new MessageChannel(),id=newId(),signal=job.current!.signal;
-   const cleanup=()=>{clearTimeout(timer);signal.removeEventListener('abort',cancel);channel.port1.close();};
-   const cancel=()=>{worker.postMessage({type:'CANCEL_OFFLINE',id});cleanup();reject(new DOMException('已取消','AbortError'));};
-   const timer=setTimeout(()=>{worker.postMessage({type:'CANCEL_OFFLINE',id});cleanup();reject(Error('离线资源准备超时，请重试'));},120_000);
-   signal.addEventListener('abort',cancel);if(signal.aborted){cancel();return;}
-   channel.port1.onmessage=e=>{cleanup();e.data.ok?resolve():reject(Error('离线资源下载失败，请重试'));};worker.postMessage({type:'PREPARE_OFFLINE',id},[channel.port2]);
-  });setOffline(true);
+  setPreparingOffline(true);setOfflineProgress(null);
+  try{await prepareOfflineResources(job.current!.signal,setOfflineProgress);setOffline(true);}
+  finally{setPreparingOffline(false);}
  });
  useEffect(()=>{if('serviceWorker' in navigator)navigator.serviceWorker.ready.then(r=>{setSwReady(true);return caches.open('mad-ocr-v1').then(c=>c.match(new URL('offline-ready',r.scope)));}).then(r=>setOffline(!!r)).catch(()=>{});},[]);
  return <div className={'web-app '+(page==='convert'&&!hasTasks?'web-landing':'')}>
@@ -76,7 +71,15 @@ export default function WebApp(){
   </div></header>
   <main className="web-main">
    {error&&<div role="alert" className="web-alert">{error}</div>}
-   {busy&&<div role="status" className="web-status">本地处理中… <button onClick={()=>job.current?.abort()}>取消处理</button></div>}
+   {busy&&<div className="web-status">
+    <div className="web-status-heading"><strong role="status">{preparingOffline?'正在准备离线资源':'本地处理中…'}</strong><button onClick={()=>job.current?.abort()}>{preparingOffline?'取消准备':'取消处理'}</button></div>
+    {preparingOffline&&<div className="web-offline-progress">
+     <progress aria-label="离线资源准备进度" max={offlineProgress?.total||1} value={offlineProgress?offlineProgress.completed:undefined}/>
+     <p>{offlineProgress?`已准备 ${offlineProgress.completed} / ${offlineProgress.total} 项资源 · ${Math.floor(offlineProgress.completed/offlineProgress.total*100)}%`:'正在连接离线服务并读取资源清单…'}</p>
+     <small>{offlineProgress?.current?`正在下载或检查：${offlineProgress.current}`:'正在检查已缓存资源…'}</small>
+     <small>按资源数量统计；大模型下载时进度可能暂时不变。取消后重试会复用已缓存资源。</small>
+    </div>}
+   </div>}
    {page==='convert'&&<>
     <section className={'web-intro '+(hasTasks?'web-intro-compact':'')}>
      <p className="web-eyebrow"><span/> A LITTLE LESS FORMATTING. A LOT MORE CLARITY.</p>
