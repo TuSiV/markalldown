@@ -2,7 +2,7 @@
 
 MarkAllDown 是一款本地桌面应用，可将 PDF / Office / 图片 / 压缩包等多种文件批量转换为 Markdown。转换引擎基于 [Microsoft MarkItDown](https://github.com/microsoft/markitdown)，并内置中文优先 OCR（扫描件与图片）。
 
-> 产品名：**MarkAllDown** · 版本 **2.3.0-rc.3（预发布）** · 默认纯本地运行；仅启用可选 AI 且明确同意后，会向所选 AI 服务发送脱敏稿（OCR 始终在本地）
+> 产品名：**MarkAllDown** · 版本 **2.3.0-rc.4（预发布）** · 默认纯本地运行；仅启用可选 AI 且明确同意后，会向所选 AI 服务发送脱敏稿（OCR 始终在本地）
 
 ## 功能
 

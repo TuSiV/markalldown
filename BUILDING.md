@@ -26,6 +26,18 @@ Installed desktop check: `python scripts/smoke_desktop.py /path/to/main/executab
 
 The installed DMG app must pass codesign deep/strict verification. Quarantined spctl assessments are recorded separately: ad-hoc signing does not imply Gatekeeper approval. Native process smoke alone is not browser/Finder first-launch acceptance.
 
+Mac builds keep hardened runtime enabled. `src-tauri/Entitlements.plist` supplies
+the library-validation exception required by the frozen Python loader and its
+bundled ad-hoc signed libraries. Verify that entitlement on the **final bundled
+sidecar**, after Tauri signing, with `scripts/check_macos_bundle.py`; testing only
+`backend/dist` does not cover Tauri's re-signing step. No system security setting
+needs to be changed.
+
+The current desktop artwork is `src-tauri/icons/icon.png` (the document with M).
+`python scripts/macos_icon.py` regenerates only `icon.icns` with 100 px of optical
+padding on its 1024 px canvas. Pillow is required. `icon_source.png` is legacy
+artwork and is not used by this generator.
+
 The frozen-service and installed-desktop smoke checks also exercise version-2 export manifests, independent preview/save, and encrypted recovery library matching/removal. Unit tests verify old-pack compatibility, per-file batch recovery, modified-file acknowledgement, metadata tampering, non-overwrite saves and ciphertext-only persistence.
 
 

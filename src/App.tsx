@@ -23,6 +23,7 @@ function App() {
   const locale = useI18n((s) => s.locale);
   const [panel, setPanel] = useState<Workspace>("convert");
   const [initError, setInitError] = useState<string | null>(null);
+  const [restarting, setRestarting] = useState(false);
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -56,7 +57,17 @@ function App() {
             {initError}
           </p>
           <button
-            onClick={() => window.location.reload()}
+            disabled={restarting}
+            onClick={async () => {
+              setRestarting(true);
+              try {
+                await api.restartServer();
+                window.location.reload();
+              } catch (error) {
+                setInitError(error instanceof Error ? error.message : String(error));
+                setRestarting(false);
+              }
+            }}
             className="flex items-center gap-2 px-6 py-2.5 text-sm bg-[#2eaadc] text-white rounded-lg hover:bg-[#2eaadc]/90 mx-auto"
           >
             <RefreshCw className="w-4 h-4" />

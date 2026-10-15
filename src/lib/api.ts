@@ -1,7 +1,7 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { ExportOptions } from "../stores/appStore";
 
-const MAX_RETRIES = 60;
+const MAX_RETRIES = 120;
 const RETRY_INTERVAL = 1000;
 
 export interface ConversionCheckpoint {completed?: number; total?: number; current?: number | null; resumed?: number; checkpoint?: boolean}
@@ -44,14 +44,14 @@ interface ConnectionInfo {
 }
 
 async function getConnectionInfo(): Promise<ConnectionInfo> {
+  if (!isTauri()) return { port: 18765, token: "" };
   try {
     const info = await invoke<{ port: number; token: string }>("get_connection_info");
     const port = Number(info?.port) || 18765;
     const token = String(info?.token ?? "");
     return { port, token };
-  } catch {
-    // Dev outside Tauri: fall back to local defaults
-    return { port: 18765, token: "" };
+  } catch (error) {
+    throw new Error(localizeError(String(error), localStorage.getItem("markitdown.locale") || "zh-CN"));
   }
 }
 
@@ -78,6 +78,12 @@ export function basenameOf(filePath: string): string {
 export function localizeError(message: string, locale: string): string {
   const en = locale === "en-US";
   const map: Record<string, string> = {
+    service_exited: en
+      ? "The conversion service stopped during startup. Retry to restart it. If it fails again, see service-startup.log in the app logs."
+      : "转换服务启动时已退出。请重试以重新启动；如仍失败，请查看应用日志中的 service-startup.log。",
+    service_start_failed: en
+      ? "Unable to start the conversion service. Retry to restart it. If it fails again, reinstall the latest version."
+      : "无法启动转换服务。请重试以重新启动；如仍失败，请重新安装最新版本。",
     parse_error: en ? "Failed to parse response" : "解析响应失败",
     auth_error: en
       ? "Unauthorized: local service token mismatch. Fully quit the app and reopen"
@@ -92,25 +98,35 @@ export function localizeError(message: string, locale: string): string {
 }
 
 export const api = {
+  async restartServer(): Promise<void> {
+    if (!isTauri()) return;
+    try {
+      await invoke("restart_service");
+    } catch (error) {
+      throw new Error(localizeError(String(error), localStorage.getItem("markitdown.locale") || "zh-CN"));
+    }
+  },
+
   async waitForServer(): Promise<ConnectionInfo> {
-    const info = await getConnectionInfo();
+    const deadline = Date.now() + 120_000;
 
-    for (let i = 0; i < MAX_RETRIES; i++) {
+    for (let i = 0; i < MAX_RETRIES && Date.now() < deadline; i++) {
+      // Check the native child each time; a dead service must not look like loading.
+      const info = await getConnectionInfo();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 2000);
       try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 2000);
-
         const response = await fetch(`http://127.0.0.1:${info.port}/api/health`, {
           signal: controller.signal,
         });
-
-        clearTimeout(timeout);
 
         if (response.ok) {
           return info;
         }
       } catch {
         // Server not ready
+      } finally {
+        clearTimeout(timeout);
       }
       await new Promise(resolve => setTimeout(resolve, RETRY_INTERVAL));
     }

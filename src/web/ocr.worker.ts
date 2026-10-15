@@ -8,7 +8,7 @@ self.onmessage=async(event:MessageEvent<{operation:string;base?:string;bytes?:Ui
    self.postMessage({result:true});
   }else if(event.data.operation==='recognize'){
    if(!engine)throw Error('OCR 尚未就绪');
-   const result=await engine.recognize(event.data.bytes!);self.postMessage({result:result.data.text});
+   const result=await engine.recognize(new Blob([event.data.bytes!]));self.postMessage({result:result.data.text});
   }else throw Error('未知 OCR 操作');
  }catch(e){self.postMessage({error:(e as Error).message||String(e)});}
 };

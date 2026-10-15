@@ -2,7 +2,7 @@ mod appearance;
 
 use std::hash::{BuildHasher, Hash, Hasher, RandomState};
 use std::path::PathBuf;
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 
@@ -11,6 +11,7 @@ struct AppState {
     api_token: Mutex<String>,
     sidecar_child: Mutex<Option<Child>>,
     session_dir: Mutex<Option<PathBuf>>,
+    startup_error: Mutex<Option<String>>,
 }
 
 #[derive(serde::Serialize, Clone)]
@@ -21,10 +22,39 @@ struct ConnectionInfo {
 }
 
 #[tauri::command]
-fn get_connection_info(state: tauri::State<AppState>) -> ConnectionInfo {
+fn get_connection_info(state: tauri::State<AppState>) -> Result<ConnectionInfo, String> {
+    if state.startup_error.lock().unwrap().is_some() {
+        return Err("service_start_failed".into());
+    }
+    let mut child = state.sidecar_child.lock().unwrap();
+    match child.as_mut() {
+        Some(process) => match process.try_wait() {
+            Ok(Some(status)) => {
+                log::error!("Conversion service exited: {}. See service-startup.log", status);
+                return Err("service_exited".into());
+            }
+            Err(error) => {
+                log::error!("Cannot inspect conversion service: {}", error);
+                return Err("service_start_failed".into());
+            }
+            Ok(None) => {}
+        },
+        None => return Err("service_start_failed".into()),
+    }
     let port = *state.sidecar_port.lock().unwrap();
     let token = state.api_token.lock().unwrap().clone();
-    ConnectionInfo { port, token }
+    Ok(ConnectionInfo { port, token })
+}
+
+#[tauri::command]
+fn restart_service(app: AppHandle) -> Result<(), String> {
+    kill_sidecar(&app);
+    *app.state::<AppState>().startup_error.lock().unwrap() = None;
+    start_sidecar(&app).map(|_| ()).map_err(|error| {
+        log::error!("Conversion service restart failed: {}", error);
+        *app.state::<AppState>().startup_error.lock().unwrap() = Some(error);
+        "service_start_failed".into()
+    })
 }
 
 fn generate_token() -> String {
@@ -80,6 +110,13 @@ fn start_sidecar(app: &AppHandle) -> Result<(u16, String), String> {
     let token = generate_token();
     let sidecar_path = find_sidecar(app)?;
 
+    // Preserve early loader failures, which happen before Python can log.
+    let log_dir = app.path().app_log_dir().map_err(|error| error.to_string())?;
+    std::fs::create_dir_all(&log_dir).map_err(|error| error.to_string())?;
+    let startup_log = std::fs::File::create(log_dir.join("service-startup.log"))
+        .map_err(|error| error.to_string())?;
+    let startup_stderr = startup_log.try_clone().map_err(|error| error.to_string())?;
+
     let session_dir = std::env::temp_dir().join(format!("markalldown-session-{}", generate_token()));
     std::fs::create_dir(&session_dir).map_err(|error| error.to_string())?;
     #[cfg(unix)]
@@ -88,6 +125,7 @@ fn start_sidecar(app: &AppHandle) -> Result<(u16, String), String> {
         std::fs::set_permissions(&session_dir, std::fs::Permissions::from_mode(0o700)).map_err(|error| error.to_string())?;
     }
     let mut command = Command::new(&sidecar_path);
+    command.stdout(Stdio::from(startup_log)).stderr(Stdio::from(startup_stderr));
     command.args(["--port", &port.to_string(), "--token", &token, "--session-dir", &session_dir.to_string_lossy()])
         .current_dir(sidecar_path.parent().unwrap_or(std::path::Path::new(".")));
     #[cfg(unix)]
@@ -168,8 +206,9 @@ pub fn run() {
             api_token: Mutex::new(String::new()),
             sidecar_child: Mutex::new(None),
             session_dir: Mutex::new(None),
+            startup_error: Mutex::new(None),
         })
-        .invoke_handler(tauri::generate_handler![get_connection_info, appearance::get_desktop_appearance])
+        .invoke_handler(tauri::generate_handler![get_connection_info, restart_service, appearance::get_desktop_appearance])
         .setup(|app| {
             log::info!("MarkAllDown starting...");
 
@@ -179,6 +218,7 @@ pub fn run() {
                 }
                 Err(e) => {
                     log::error!("Sidecar failed: {}", e);
+                    *app.state::<AppState>().startup_error.lock().unwrap() = Some(e);
                 }
             }
             Ok(())
