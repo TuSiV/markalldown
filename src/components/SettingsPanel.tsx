@@ -6,7 +6,7 @@ import { useI18n } from "../i18n";
 import { useUIStore } from "../stores/uiStore";
 import { useAppStore, type ExportOptions } from "../stores/appStore";
 import { PageHeading } from "./WorkspaceShell";
-export function SettingsPanel() {
+export function SettingsPanel({platform}: {platform?: string} = {}) {
   const { locale,setLocale } = useI18n();const en = locale === "en-US";
   const [tab,setTab] = useState("general");
   const p = useUIStore();const ready = useAppStore(s => s.isReady);
@@ -18,6 +18,7 @@ export function SettingsPanel() {
         <div className="settings-tabs" role="tablist" aria-label={tr("设置分类", "Settings sections")}>{[["general",tr("通用与预览","General & preview"),Eye],["conversion",tr("转换","Conversion"),SlidersHorizontal],["export",tr("导出","Export"),FileDown]] .map(([id,label,Icon]) => {const Glyph=Icon as typeof Eye;return <button type="button" role="tab" aria-selected={tab===id} key={String(id)} onClick={()=>setTab(String(id))}><Glyph size={17}/>{String(label)}</button>;})}</div>
         <section hidden={tab!=="general"} className="ui-card settings-section space-y-4"><h3 className="section-title">{tr("通用与预览","General and preview")}</h3>
           <label className="settings-row">{tr("界面语言","Language")}<select value={locale} onChange={e => setLocale(e.target.value as "zh-CN" | "en-US")}><option value="zh-CN">中文</option><option value="en-US">English</option></select></label>
+          {platform === "macos" && <label className="settings-row">{tr("外观","Appearance")}<select value={p.macAppearance} onChange={e => p.update({macAppearance:e.target.value as "system" | "light" | "dark"})}><option value="system">{tr("跟随系统","System")}</option><option value="light">{tr("浅色","Light")}</option><option value="dark">{tr("深色","Dark")}</option></select></label>}
           <label className="settings-row">{tr("转换完成后自动预览","Automatically preview completed files")}<input className="ui-switch" type="checkbox" checked={p.autoPreview} onChange={e => p.update({autoPreview:e.target.checked})} /></label>
           <label className="settings-row">{tr("默认预览方式","Default preview mode")}<select value={p.previewMode} onChange={e => p.update({previewMode:e.target.value as "rendered" | "source"})}><option value="rendered">{tr("阅读预览","Rendered")}</option><option value="source">Markdown</option></select></label>
           <label className="settings-row">{tr("预览字号","Preview font size")}<select value={p.fontSize} onChange={e => p.update({fontSize:Number(e.target.value)})}>{[14,16,18].map(n => <option key={n} value={n}>{n} px</option>)}</select></label>

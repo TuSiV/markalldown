@@ -14,6 +14,8 @@ import { api } from "./lib/api";
 import { useT, useI18n } from "./i18n";
 import { useDesktopAppearance } from "./lib/desktopAppearance";
 import "./desktop.css";
+import "./mac.css";
+import { useUIStore } from "./stores/uiStore";
 import { RefreshCw } from "lucide-react";
 
 function App() {
@@ -24,6 +26,14 @@ function App() {
   const [panel, setPanel] = useState<Workspace>("convert");
   const [initError, setInitError] = useState<string | null>(null);
   const [restarting, setRestarting] = useState(false);
+
+  const colorMode = useUIStore(s => s.macAppearance);
+  useEffect(() => {
+    if (appearance.platform !== "macos") return;
+    document.documentElement.dataset.macAppearance = colorMode;
+    document.documentElement.style.colorScheme = colorMode === "system" ? "light dark" : colorMode;
+    return () => { delete document.documentElement.dataset.macAppearance; document.documentElement.style.colorScheme = ""; };
+  }, [appearance.platform, colorMode]);
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -89,7 +99,7 @@ function App() {
           <div hidden={panel !== "redaction"} className="h-full"><RedactionPanel onClose={() => setPanel("convert")} onExport={() => setPanel("export")} /></div>
           <div hidden={panel !== "recovery"} className="h-full"><RecoveryPanel onClose={() => setPanel("convert")} /></div>
           <div hidden={panel !== "export"} className="h-full"><ExportPanel workspace onClose={() => setPanel("convert")} onRedact={() => setPanel("redaction")} /></div>
-          <div hidden={panel !== "settings"} className="h-full"><SettingsPanel /></div>
+          <div hidden={panel !== "settings"} className="h-full"><SettingsPanel platform={appearance.platform} /></div>
         </div>
       </main>
 

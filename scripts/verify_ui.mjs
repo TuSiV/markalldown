@@ -63,8 +63,38 @@ await appearance({reduceTransparency:false,increaseContrast:false,reduceMotion:f
 for(const [name,label] of [['convert','文件转换'],['redaction','脱敏审核'],['recovery','文件恢复'],['export','导出中心'],['settings','设置']]){
  await nav.getByRole('button',{name:label,exact:true}).click();await shot(`mac-${name}`);
 }
+await page.getByRole('tab',{name:'通用与预览',exact:true}).click();
+// Glass is limited to chrome; verify both surfaces and explicit light/dark preferences.
+for(const selector of ['.desktop-header','.desktop-sidebar']) {
+ if(!await page.locator(selector).evaluate(el=>getComputedStyle(el).backdropFilter.includes('blur')))throw new Error(`Missing Mac glass: ${selector}`);
+}
+const appearanceSelect=page.getByRole('combobox',{name:'外观',exact:true});
+const selectStyle=await appearanceSelect.evaluate(el=>({appearance:getComputedStyle(el).appearance,image:getComputedStyle(el).backgroundImage}));
+if(selectStyle.appearance!=='none' || !selectStyle.image.includes('svg'))throw new Error('Mac select must use the unified closed appearance');
+await appearanceSelect.selectOption('dark');
+await page.waitForFunction(()=>document.documentElement.dataset.macAppearance==='dark');
+await shot('mac-dark-settings');
+await nav.getByRole('button',{name:'文件转换',exact:true}).click();await shot('mac-dark-conversion');
+if(await page.locator('.document-paper').evaluate(el=>getComputedStyle(el).backgroundColor)!=='rgb(36, 36, 38)')throw new Error('Dark document must remain opaque');
+// Inspect every visible large surface, not just the settings preview.
+for(const [name,label] of [['convert','文件转换'],['redaction','脱敏审核'],['recovery','文件恢复'],['export','导出中心'],['settings','设置']]) {
+ await nav.getByRole('button',{name:label,exact:true}).click();await shot(`mac-dark-${name}`);
+ const bright=await page.locator('.desktop-app').evaluate(root=>Array.from(root.querySelectorAll('*')).flatMap(el=>{
+  const r=el.getBoundingClientRect(), css=getComputedStyle(el), color=css.backgroundColor.match(/[\d.]+/g)?.map(Number);
+  if(!el.checkVisibility() || r.width*r.height<8000 || !color || color.length>3 && color[3]<.9)return [];
+  return color.slice(0,3).every(v=>v>185)?[{tag:el.tagName,class:el.className,background:css.backgroundColor}]:[];
+ }));
+ if(bright.length)throw new Error(`Unadapted bright dark surfaces in ${name}: ${JSON.stringify(bright)}`);
+ const unreadable=await page.locator('.desktop-app').evaluate(root=>Array.from(root.querySelectorAll('h2,h3,.form-label,.checkbox-row')).filter(el=>el.checkVisibility()).filter(el=>{
+  const color=getComputedStyle(el).color.match(/[\d.]+/g)?.map(Number);return color && color.slice(0,3).every(v=>v<90);
+ }).map(el=>el.textContent.slice(0,70)));
+ if(unreadable.length)throw new Error(`Dark heading/label contrast missing in ${name}: ${JSON.stringify(unreadable)}`);
+}
+await nav.getByRole('button',{name:'设置',exact:true}).click();
+await page.getByRole('combobox',{name:'外观',exact:true}).selectOption('light');
+await page.waitForFunction(()=>document.documentElement.dataset.macAppearance==='light');
 await appearance({reduceTransparency:true,increaseContrast:true,reduceMotion:true});
-if(await page.locator('.desktop-sidebar').evaluate(el=>getComputedStyle(el).backdropFilter)!=='none')throw new Error('Native reduced transparency must disable custom blur');
+for(const selector of ['.desktop-header','.desktop-sidebar'])if(await page.locator(selector).evaluate(el=>getComputedStyle(el).backdropFilter)!=='none')throw new Error('Native reduced transparency must disable custom blur');
 await shot('mac-accessible-settings');
 await nav.getByRole('button',{name:'文件转换',exact:true}).click();
 if(await page.locator('.document-paper').evaluate(el=>getComputedStyle(el).backgroundColor)!=='rgb(255, 255, 255)')throw new Error('Document surface must remain opaque');

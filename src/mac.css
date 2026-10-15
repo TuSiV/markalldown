@@ -1,0 +1,220 @@
+/* Custom glass for the existing Mac interface, including macOS 15.
+   This is a WebKit simulation, not Apple's native Liquid Glass material. */
+.desktop-app[data-platform="macos"] {
+  --mac-paper: #fff;
+  --mac-control: #fff;
+  --mac-hover: #edf3ff;
+  --mac-glass: #ffffff9c;
+  --mac-glass-edge: #ffffffe6;
+  --mac-glass-shadow: #2b508c1a;
+  --mac-glass-tint: #dae8ff55;
+  --mac-reflection: #ffffff5c;
+  --mac-edge-top: #ffffffb3; --mac-edge-side: #ffffff73; --mac-edge-bottom: #ffffff33;
+  --mac-edge-gradient: linear-gradient(140deg, #fff, #ffffff14 28%, #9ec5f04d 55%, #ffffffc7 83%, #ffffff38);
+  --mac-nav-selected: linear-gradient(135deg, #fffffff5, #ffffffa8);
+  --mac-nav-border: #ffffffeb; --mac-nav-ink: #2257d8; --mac-nav-hover: #ffffff52;
+  --mac-language: #ffffff66;
+  --mac-summary-bg: #eaf0f9; --mac-summary-ink: #64748c; --mac-completed-bg: #e8f5ee; --mac-completed-ink: #197d60;
+  --mac-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m5 6.5 3 3 3-3' fill='none' stroke='%2362718a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --mac-background: radial-gradient(ellipse at 0% 8%, #a8d6ff99, transparent 44%), radial-gradient(ellipse at 92% 4%, #dad8ff7a, transparent 46%), radial-gradient(ellipse at 8% 95%, #b7e5eb88, transparent 45%), #f3f6fc;
+  background: var(--mac-background);
+}
+.desktop-app[data-platform="macos"] .desktop-main { background: transparent; }
+.desktop-app[data-platform="macos"] .desktop-header {
+  margin: 12px 14px 0;
+  border: 1px solid var(--desktop-line);
+  border-radius: 24px;
+}
+.desktop-app[data-platform="macos"] .desktop-sidebar { border-radius: 24px; }
+/* Two directional reflections follow the curved edge rather than tinting text.
+   Backdrop filtering samples the softly colored canvas underneath these surfaces. */
+.desktop-app[data-platform="macos"][data-reduce-transparency="false"][data-increase-contrast="false"] :is(.desktop-header,.desktop-sidebar) {
+  position: relative;
+  background: linear-gradient(135deg, var(--mac-reflection), #ffffff08 45%, var(--mac-glass-tint)), var(--mac-glass);
+  -webkit-backdrop-filter: blur(28px) saturate(155%);
+  backdrop-filter: blur(28px) saturate(155%);
+  border-color: var(--mac-glass-edge);
+  box-shadow: inset 0 1px 0 var(--mac-edge-top), inset 1px 0 0 var(--mac-edge-side), inset 0 -1px 0 var(--mac-edge-bottom), 0 10px 28px -10px var(--mac-glass-shadow), 0 2px 6px #25466d08;
+}
+.desktop-app[data-platform="macos"][data-reduce-transparency="false"][data-increase-contrast="false"] :is(.desktop-header,.desktop-sidebar)::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--mac-edge-gradient);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+.desktop-app[data-platform="macos"] .desktop-nav-item { transition: background .18s ease, box-shadow .18s ease; }
+.desktop-app[data-platform="macos"] .desktop-nav-item:hover { background: var(--mac-nav-hover); }
+.desktop-app[data-platform="macos"] .desktop-nav-item[aria-current="page"] {
+  background: var(--mac-nav-selected);
+  border-color: var(--mac-nav-border);
+  box-shadow: inset 0 1px 0 var(--mac-edge-top), 0 3px 10px var(--mac-glass-shadow);
+}
+.desktop-app[data-platform="macos"] .desktop-footer { background: transparent; border-top-color: #c8d6e55c; }
+.desktop-app[data-platform="macos"] .import-zone { box-shadow: 0 12px 35px #203a6308; }
+.desktop-app[data-platform="macos"] .ui-secondary { background: var(--mac-control); border-color: var(--desktop-line); }
+.desktop-app[data-platform="macos"] .language-segments { background: var(--mac-language); border-color: var(--mac-glass-edge); box-shadow: inset 0 1px 0 var(--mac-edge-top); }
+.desktop-app[data-platform="macos"] .language-segments button[aria-pressed="true"] { box-shadow: 0 2px 7px #25466d14; }
+.desktop-app[data-platform="macos"] :focus-visible { outline: 3px solid var(--desktop-blue); outline-offset: 3px; }
+/* Keep document and form surfaces opaque. Glass belongs to navigation. */
+.desktop-app[data-platform="macos"] :is(.document-paper,.review-paper,.desktop-preview,.ui-card,.file-list,.privacy-card,.settings-tabs,.empty-workspace,.export-actions) { background-color: var(--mac-paper); }
+.desktop-app[data-platform="macos"] .settings-row select { color-scheme: inherit; }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] {
+  --desktop-ink: #eeeef0; --desktop-muted: #b5b5be; --desktop-line: #454549;
+    --desktop-blue: #92b9ff; --mac-paper: #242426; --mac-control: #303033; --mac-hover: #37373b;
+    --mac-reflection: #ffffff06; --mac-glass: #252527b8; --mac-glass-edge: #ffffff1f;
+    --mac-glass-shadow: #00000030; --mac-glass-tint: #ffffff03;
+    --mac-edge-top: #ffffff12; --mac-edge-side: #ffffff08; --mac-edge-bottom: #00000014;
+    --mac-edge-gradient: linear-gradient(140deg, #ffffff26, #ffffff04 35%, #ffffff08 65%, #ffffff1a);
+    --mac-nav-selected: #283b58; --mac-nav-border: #5d87c133; --mac-nav-ink: #b9d2ff; --mac-nav-hover: #ffffff0a;
+    --mac-language: #ffffff08;
+    --mac-summary-bg: #303033; --mac-summary-ink: #eeeef0; --mac-completed-bg: #29372f; --mac-completed-ink: #9bcab0;
+    --mac-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m5 6.5 3 3 3-3' fill='none' stroke='%23b5b5be' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --mac-background: radial-gradient(ellipse at 0% 0%, #ffffff05, transparent 55%), #1b1b1d;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] {
+    --desktop-ink: #eeeef0; --desktop-muted: #b5b5be; --desktop-line: #454549;
+    --desktop-blue: #92b9ff; --mac-paper: #242426; --mac-control: #303033; --mac-hover: #37373b;
+    --mac-reflection: #ffffff06; --mac-glass: #252527b8; --mac-glass-edge: #ffffff1f;
+    --mac-glass-shadow: #00000030; --mac-glass-tint: #ffffff03;
+    --mac-edge-top: #ffffff12; --mac-edge-side: #ffffff08; --mac-edge-bottom: #00000014;
+    --mac-edge-gradient: linear-gradient(140deg, #ffffff26, #ffffff04 35%, #ffffff08 65%, #ffffff1a);
+    --mac-nav-selected: #283b58; --mac-nav-border: #5d87c133; --mac-nav-ink: #b9d2ff; --mac-nav-hover: #ffffff0a;
+    --mac-language: #ffffff08;
+    --mac-summary-bg: #303033; --mac-summary-ink: #eeeef0; --mac-completed-bg: #29372f; --mac-completed-ink: #9bcab0;
+    --mac-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m5 6.5 3 3 3-3' fill='none' stroke='%23b5b5be' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --mac-background: radial-gradient(ellipse at 0% 0%, #ffffff05, transparent 55%), #1b1b1d;
+  }
+}
+/* Dark styling follows the same layout and blue brand as the original light UI. */
+.desktop-app[data-platform="macos"] :is(.desktop-hero h2,.section-title,.settings-row,.desktop-brand-name,.desktop-nav-item,.desktop-local-title,.review-file strong,.export-option-label strong,.empty-workspace h3) { color: var(--desktop-ink); }
+.desktop-app[data-platform="macos"] :is(.desktop-nav-caption,.desktop-local-status,.desktop-hero-description,.hint,.pane-label,.settings-info p,.settings-section p,.desktop-feature-row p,.desktop-feature-row h3) { color: var(--desktop-muted); }
+.desktop-app[data-platform="macos"] .desktop-hero h2 > span { color: var(--desktop-blue); }
+.desktop-app[data-platform="macos"] .desktop-nav-item[aria-current="page"] { color: var(--mac-nav-ink); }
+.desktop-app[data-platform="macos"] :is(.ui-card,.review-paper,.document-paper,.file-row,.settings-section) { color: var(--desktop-ink); border-color: var(--desktop-line); }
+.desktop-app[data-platform="macos"] :is(.preview-toolbar,.desktop-preview-header,.import-strip,.upload-card,.export-option,.rule-chip,.review-banner,.workflow-steps) { background: var(--mac-paper); color: var(--desktop-ink); border-color: var(--desktop-line); }
+.desktop-app[data-platform="macos"] :is(input:not([type="checkbox"]):not([type="radio"]),textarea,select) { color: var(--desktop-ink); background-color: var(--mac-control) !important; border-color: var(--desktop-line) !important; }
+.desktop-app[data-platform="macos"] :is(.text-slate-800,.text-slate-700,.text-gray-800,[class*="text-[#37352f]"],[class*="text-[#22324b]"]) { color: var(--desktop-ink) !important; }
+.desktop-app[data-platform="macos"] :is(.text-slate-500,.text-slate-600,.text-gray-500,[class*="text-[#787774]"],[class*="text-[#9b9a97]"]) { color: var(--desktop-muted) !important; }
+.desktop-app[data-platform="macos"] :is([class*="bg-white"],[class*="bg-[#f7f6f3]"]) { background-color: var(--mac-paper); }
+.desktop-app[data-platform="macos"] :is(.desktop-result-empty,.import-zone,.file-queue) { background: var(--mac-paper); color: var(--desktop-ink); border-color: var(--desktop-line); }
+.desktop-app[data-platform="macos"] .ui-primary { background: #245df2; border-color: #245df2; color: #fff; }
+.desktop-app[data-platform="macos"] .file-row.selected { background: var(--mac-hover); }
+/* Explicit opt-outs take precedence over every decorative material. */
+.desktop-app[data-platform="macos"]:is([data-reduce-transparency="true"],[data-increase-contrast="true"]) :is(.desktop-header,.desktop-sidebar,.language-segments,.desktop-nav-item[aria-current="page"]) { background: var(--mac-paper) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; box-shadow: none !important; border-color: var(--desktop-line) !important; }
+.desktop-app[data-platform="macos"]:is([data-reduce-transparency="true"],[data-increase-contrast="true"]) { background: var(--mac-paper); }
+.desktop-app[data-platform="macos"][data-increase-contrast="true"] { --desktop-muted: var(--desktop-ink); --desktop-line: var(--desktop-ink); }
+.desktop-app[data-platform="macos"][data-increase-contrast="true"] :is(p,small,label,.hint,.pane-label,.identity-details,.text-button) { color: var(--desktop-ink); }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+  .desktop-app[data-platform="macos"] :is(.desktop-header,.desktop-sidebar,.language-segments,.desktop-nav-item[aria-current="page"]) { background: var(--mac-paper) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; box-shadow: none !important; border-color: var(--desktop-line) !important; }
+  .desktop-app[data-platform="macos"] :is(.desktop-header,.desktop-sidebar)::before { display: none; }
+  .desktop-app[data-platform="macos"] { background: var(--mac-paper); }
+}
+@media (forced-colors: active) {
+  .desktop-app[data-platform="macos"] { --desktop-ink: CanvasText; --desktop-muted: CanvasText; --desktop-line: CanvasText; --mac-paper: Canvas; --desktop-blue: LinkText; }
+}
+.desktop-app[data-platform="macos"] :is(.file-name,.desktop-result-empty h3,.review-banner h3,.review-approval,.settings-tabs button,.export-option-label strong) { color: var(--desktop-ink); }
+.desktop-app[data-platform="macos"] .document-paper :is(h1,h3,h4,h5,h6,strong,th) { color: var(--desktop-ink); }
+.desktop-app[data-platform="macos"] .document-paper :is(h2,a) { color: var(--desktop-blue); }
+.desktop-app[data-platform="macos"] .document-paper :is(pre,code,blockquote) { background: var(--mac-hover); color: var(--desktop-ink); }
+.desktop-app[data-platform="macos"] :is(.ui-secondary,.icon-button,.mode-button,.file-row button[title]) { background: var(--mac-control); color: var(--desktop-ink); border-color: var(--desktop-line); }
+.desktop-app[data-platform="macos"] :is(.file-row:hover,.mode-button.active) { background: var(--mac-hover); }
+.desktop-app[data-platform="macos"] :is(.text-button,.settings-tabs button[aria-selected="true"],.text-blue-600,.text-blue-700,.rule-chip.active) { color: var(--desktop-blue); }
+.desktop-app[data-platform="macos"] :is(.desktop-eyebrow,.workflow-steps li,.review-banner p,.finding-row small,.identity-details,.export-option-label small) { color: var(--desktop-muted); }
+
+/* Keep the real select for native menus, keyboard selection and assistive technology.
+   Only its closed presentation is customized; never draw a second clickable control. */
+.desktop-app[data-platform="macos"] select {
+  -webkit-appearance: none; appearance: none;
+  border: 1px solid var(--desktop-line);
+  border-radius: 9px;
+  min-height: 34px;
+  padding: 7px 34px 7px 11px;
+  background-image: var(--mac-chevron) !important;
+  background-position: right 10px center !important;
+  background-size: 16px 16px !important;
+  background-repeat: no-repeat !important;
+  box-shadow: inset 0 1px 0 var(--mac-edge-side);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.desktop-app[data-platform="macos"] .settings-row select { min-width: 140px; max-width: 50%; }
+.desktop-app[data-platform="macos"] select:hover:not(:disabled) { border-color: var(--desktop-muted) !important; }
+.desktop-app[data-platform="macos"] select:focus-visible { border-color: var(--desktop-blue) !important; box-shadow: none; }
+.desktop-app[data-platform="macos"] .desktop-task-summary span { background: var(--mac-summary-bg); color: var(--mac-summary-ink); }
+.desktop-app[data-platform="macos"] .desktop-task-summary .completed { background: var(--mac-completed-bg); color: var(--mac-completed-ink); }
+@media (forced-colors: active) {
+  .desktop-app[data-platform="macos"] select { appearance: auto; background-image: none !important; }
+}
+
+.desktop-app[data-platform="macos"] .language-segments button[aria-pressed="true"] { background: var(--mac-control); color: var(--desktop-blue); }
+
+.desktop-app[data-platform="macos"] :is(.settings-row,.settings-tabs) { border-color: var(--desktop-line); }
+
+/* Complete dark surfaces, scoped to dark appearance so the light palette is unchanged. */
+html[data-mac-appearance="dark"], html[data-mac-appearance="dark"] body { background-color: #1b1b1d; }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] { --ui-ink: var(--desktop-ink); --ui-muted: var(--desktop-muted); }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] :is(.form-label,.checkbox-row) { color: var(--desktop-muted); }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] :is(.border-b,.border-t,.export-actions) { border-color: var(--desktop-line); }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] :is(.export-config-grid>div,.review-document-footer,.segmented-controls,.stat-card) { background: var(--mac-paper); color: var(--desktop-ink); border-color: var(--desktop-line); }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] .export-option { background: var(--mac-paper) !important; border-color: var(--desktop-line) !important; }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] :is(.export-option[data-selected="true"],.export-config-grid label:has(input[type="radio"]:checked),.review-file[aria-pressed="true"],.segmented-controls button[aria-pressed="true"],.rule-chip.active) { background: #283b58 !important; color: #b9d2ff; border-color: #5d87c1 !important; box-shadow: none; }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] :is(.export-config-grid label,.export-config-grid button,.export-config-grid>div) { color: var(--desktop-ink); }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] :is(.export-config-grid label,.export-config-grid button):hover { background-color: var(--mac-hover); }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] :is(.export-config-grid label,.export-config-grid button,.review-document-footer,.finding-row,.card-title,.document-paper h1) { border-color: var(--desktop-line); }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] :is(.export-config-grid .text-sm,.export-option-label strong,.rule-details summary) { color: var(--desktop-ink); }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] :is(.export-config-grid label.uppercase,.batch-file,.segmented-controls button,.stat-card span) { color: var(--desktop-muted); }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] .export-config-grid [class*="text-[#2563eb]"] { color: var(--desktop-blue); }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] :is(.notice,.recovery-stat,.count-pill,.workflow-steps li span) { background: var(--mac-control); color: var(--desktop-muted); border-color: var(--desktop-line); }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] :is(.notice.warning,[class*="bg-amber-50"]) { background: #3b3020; color: #ebc78a; border-color: #705b35; }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] :is([class*="bg-red-50"],[class*="bg-red-100"]:hover) { background: #3d262b; color: #f1afb8; border-color: #7a4851; }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] [class*="bg-emerald-50"] { background: #253a30; color: #abd4ba; border-color: #41634e; }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] :is([class*="hover:bg-gray-100"],[class*="hover:bg-[#f7f6f3]"]):hover { background-color: var(--mac-hover); }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] .sensitive-mark { background: #493d23; color: #f2d18f; }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] :is(.mark-phone,.mark-id_card) { background: #492e2b; color: #f0b5a8; }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] .mark-email { background: #254333; color: #a6d9b8; }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] .mark-keyword { background: #3c304e; color: #d1b9ec; }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] .workflow-steps .active span { background: #245df2; color: white; }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] .workflow-steps .complete span { background: #29372f; color: #9bcab0; }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] :is([role="dialog"],[data-sonner-toast]) { background: var(--mac-paper); color: var(--desktop-ink); border-color: var(--desktop-line); }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] * { scrollbar-color: #626266 #1b1b1d; }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] ::-webkit-scrollbar { width: 10px; height: 10px; background: #1b1b1d; }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] ::-webkit-scrollbar-thumb { background: #626266; border: 2px solid #1b1b1d; border-radius: 8px; }
+html[data-mac-appearance="dark"] .desktop-app[data-platform="macos"] ::-webkit-scrollbar-corner { background: #1b1b1d; }
+@media (prefers-color-scheme: dark) {
+html[data-mac-appearance="system"], html[data-mac-appearance="system"] body { background-color: #1b1b1d; }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] { --ui-ink: var(--desktop-ink); --ui-muted: var(--desktop-muted); }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] :is(.form-label,.checkbox-row) { color: var(--desktop-muted); }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] :is(.border-b,.border-t,.export-actions) { border-color: var(--desktop-line); }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] :is(.export-config-grid>div,.review-document-footer,.segmented-controls,.stat-card) { background: var(--mac-paper); color: var(--desktop-ink); border-color: var(--desktop-line); }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] .export-option { background: var(--mac-paper) !important; border-color: var(--desktop-line) !important; }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] :is(.export-option[data-selected="true"],.export-config-grid label:has(input[type="radio"]:checked),.review-file[aria-pressed="true"],.segmented-controls button[aria-pressed="true"],.rule-chip.active) { background: #283b58 !important; color: #b9d2ff; border-color: #5d87c1 !important; box-shadow: none; }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] :is(.export-config-grid label,.export-config-grid button,.export-config-grid>div) { color: var(--desktop-ink); }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] :is(.export-config-grid label,.export-config-grid button):hover { background-color: var(--mac-hover); }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] :is(.export-config-grid label,.export-config-grid button,.review-document-footer,.finding-row,.card-title,.document-paper h1) { border-color: var(--desktop-line); }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] :is(.export-config-grid .text-sm,.export-option-label strong,.rule-details summary) { color: var(--desktop-ink); }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] :is(.export-config-grid label.uppercase,.batch-file,.segmented-controls button,.stat-card span) { color: var(--desktop-muted); }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] .export-config-grid [class*="text-[#2563eb]"] { color: var(--desktop-blue); }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] :is(.notice,.recovery-stat,.count-pill,.workflow-steps li span) { background: var(--mac-control); color: var(--desktop-muted); border-color: var(--desktop-line); }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] :is(.notice.warning,[class*="bg-amber-50"]) { background: #3b3020; color: #ebc78a; border-color: #705b35; }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] :is([class*="bg-red-50"],[class*="bg-red-100"]:hover) { background: #3d262b; color: #f1afb8; border-color: #7a4851; }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] [class*="bg-emerald-50"] { background: #253a30; color: #abd4ba; border-color: #41634e; }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] :is([class*="hover:bg-gray-100"],[class*="hover:bg-[#f7f6f3]"]):hover { background-color: var(--mac-hover); }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] .sensitive-mark { background: #493d23; color: #f2d18f; }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] :is(.mark-phone,.mark-id_card) { background: #492e2b; color: #f0b5a8; }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] .mark-email { background: #254333; color: #a6d9b8; }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] .mark-keyword { background: #3c304e; color: #d1b9ec; }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] .workflow-steps .active span { background: #245df2; color: white; }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] .workflow-steps .complete span { background: #29372f; color: #9bcab0; }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] :is([role="dialog"],[data-sonner-toast]) { background: var(--mac-paper); color: var(--desktop-ink); border-color: var(--desktop-line); }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] * { scrollbar-color: #626266 #1b1b1d; }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] ::-webkit-scrollbar { width: 10px; height: 10px; background: #1b1b1d; }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] ::-webkit-scrollbar-thumb { background: #626266; border: 2px solid #1b1b1d; border-radius: 8px; }
+html[data-mac-appearance="system"] .desktop-app[data-platform="macos"] ::-webkit-scrollbar-corner { background: #1b1b1d; }
+}
