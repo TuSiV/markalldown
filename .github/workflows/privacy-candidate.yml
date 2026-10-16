@@ -1,4 +1,4 @@
-name: Desktop builds
+name: Desktop and browser acceptance
 on:
   push:
     branches: [feature/redaction-ai, feature/local-web-conversion, perf/desktop-startup]
