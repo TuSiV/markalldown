@@ -74,7 +74,7 @@ jobs:
           python scripts/check_macos_bundle.py "$RUNNER_TEMP/Previous-MarkAllDown.app" --inspect-only --quarantine --report "macos-evidence/previous-${{ matrix.label }}.json"
       - name: Native sidecar and installer build
         env:
-          MAD_PRERELEASE: "1"
+          MAD_PRERELEASE: ${{ contains(github.event.head_commit.message, '[stable-3.0.0]') && '0' || '1' }}
         run: python scripts/build.py --skip-install
       - name: Packaged sidecar smoke (Windows)
         if: runner.os == 'Windows'
@@ -185,44 +185,28 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: python scripts/publish_prerelease.py
 
-  consolidate-branches:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[consolidate]')
+  stable-release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[stable-3.0.0]')
     needs: [native, ui-visual, browser-acceptance]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
-      pull-requests: write
+      actions: read
     steps:
-      - name: Close superseded PRs and remove verified old branch heads
-        uses: actions/github-script@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          script: |
-            const {owner, repo} = context.repo;
-            const expected = {
-              'feature/redaction-ai': '39da8e1b1209f14e238653840b8c1c12f09ee8b0',
-              'feature/local-web-conversion': '781310bb095208b6fe3d96fccb3d8696c9fad162',
-              'perf/desktop-startup': '97226cdbb0ca34a2c1bc0b422f67046cfc95d1af'
-            };
-            const repository = (await github.rest.repos.get({owner, repo})).data;
-            if (repository.default_branch !== 'main') throw new Error('Default branch must be main');
-            const main = (await github.rest.git.getRef({owner, repo, ref:'heads/main'})).data;
-            if (main.object.sha !== context.sha) throw new Error('Main moved; inspect before cleanup');
-            const tag = (await github.rest.git.getRef({owner, repo, ref:'tags/v3.0.0'})).data;
-            if (tag.object.sha !== '6090b7a12d939377edd323fe39cf93b65b97bd0e') throw new Error('Released tag changed');
-            const existing = [];
-            for (const [branch, sha] of Object.entries(expected)) {
-              let ref;
-              try { ref = (await github.rest.git.getRef({owner, repo, ref:'heads/'+branch})).data; }
-              catch (error) { if (error.status === 404) continue; throw error; }
-              if (ref.object.sha !== sha) throw new Error('Branch moved: '+branch);
-              existing.push(branch);
-            }
-            for (const pull_number of [1, 2]) {
-              const pull = (await github.rest.pulls.get({owner, repo, pull_number})).data;
-              if (!(pull.head.ref in expected) || pull.head.sha !== expected[pull.head.ref]) throw new Error('Unexpected PR head');
-              if (pull.state === 'open') await github.rest.pulls.update({owner, repo, pull_number, state:'closed'});
-            }
-            for (const branch of existing) {
-              await github.rest.git.deleteRef({owner, repo, ref:'heads/'+branch});
-              core.info('Deleted '+branch);
-            }
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: MarkAllDown-*
+          path: installers
+      - uses: actions/download-artifact@v4
+        with:
+          name: UI-render-evidence
+          path: ui-screenshots
+      - name: Stage verified fresh builds and replace the 3.0.0 prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/publish_stable.py

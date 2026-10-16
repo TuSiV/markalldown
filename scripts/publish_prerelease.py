@@ -38,15 +38,17 @@ def digest(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
-def prepare(version, installers, screenshots, output):
+def prepare(version, installers, screenshots, output, include_msi=False):
     assert re.fullmatch(r'\d+\.\d+\.\d+(?:-rc\.\d+)?', version), 'Expected a release or RC version'
     expected = {
         f'MarkAllDown_{version}_x64-setup.exe',
         f'MarkAllDown_{version}_aarch64.dmg',
         f'MarkAllDown_{version}_x64.dmg',
     }
+    if include_msi:
+        expected.add(f'MarkAllDown_{version}_x64_en-US.msi')
     native = [p for p in installers.rglob('*') if p.is_file() and p.suffix in {'.exe', '.dmg', '.msi'}]
-    assert len(native) == 3 and {p.name for p in native} == expected, 'Native artifact set is incomplete or has a mismatched version'
+    assert len(native) == len(expected) and {p.name for p in native} == expected, 'Native artifact set is incomplete or has a mismatched version'
     images = sorted(screenshots.glob('*.png'))
     assert len(images) >= 20, 'UI rendering evidence is incomplete'
     output.mkdir(parents=True, exist_ok=True)

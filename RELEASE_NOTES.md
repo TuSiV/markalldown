@@ -1,6 +1,6 @@
-# MarkAllDown 3.0.0 · 预发布
+# MarkAllDown 3.0.0 · 正式版
 
-本版本来自 `perf/desktop-startup`，用于正式发布前的体验与反馈。GitHub Release 标记为 prerelease，不作为最新稳定版。
+本版本从统一后的 `main` 重新构建，替换原 3.0.0 预发布安装包，并作为最新正式版发布。包含合并导出选项修复；原预发布安装包用户需重新下载安装，不能仅凭相同版本号判断包内容。请以本发布页新生成的 SHA256SUMS.txt 为准。
 
 ## 桌面启动
 
@@ -15,6 +15,11 @@
 - 页眉提供中文 / English 切换，覆盖各工作区、状态与常见错误提示。
 - 记住浏览器语言偏好；切换保留文件、队列、正文及恢复结果。
 
+## 导出选项修复
+
+- 合并为一个 Markdown 时禁用不适用的原文件名与目录结构选项，提示输出固定为 combined.md。
+- 目录结构说明明确适用于独立文件与 ZIP；切换格式后恢复可用选项，并保留脱敏匿名命名限制。
+
 ## 已包含的工作能力
 
 - 本地文件与文件夹批量转换，支持 PDF、Office、旧版 Office、图片及压缩包。
@@ -25,13 +30,13 @@
 
 ## 发布验证
 
-发布任务必须等待同一提交的 Windows x64、macOS Apple Silicon、macOS Intel、桌面 UI 和浏览器验收全部成功；随后校验三份安装包、UI 截图及 SHA256。
+本次正式发布在重新构建后，等待同一提交的 Windows x64、macOS Apple Silicon、macOS Intel、桌面 UI 和浏览器验收全部成功；随后校验四份安装包、UI 截图及 SHA256。
 
 Linux 目录式服务连续 5 次就绪中位数约 0.52 秒，仅为开发环境测量，不代表 Windows/macOS 冷启动或首次转换时间。
 
 ## 下载
 
-- Windows x64：`MarkAllDown_3.0.0_x64-setup.exe`
+- Windows x64：`MarkAllDown_3.0.0_x64-setup.exe` 或 `MarkAllDown_3.0.0_x64_en-US.msi`
 - macOS Apple Silicon：`MarkAllDown_3.0.0_aarch64.dmg`
 - macOS Intel：`MarkAllDown_3.0.0_x64.dmg`
 - `SHA256SUMS.txt`：下载完整性校验。
