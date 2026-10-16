@@ -1,17 +1,74 @@
-# Privacy boundary
+# Security and privacy
 
-- All privacy HTTP routes reuse the existing authenticated loopback API. AI is optional and requires per-request outbound consent.
-- Vault encryption uses AES-256-GCM with random nonce/salt and scrypt. The password and API key remain in UI session memory and are not deliberately persisted.
-- Redacted export requires per-document review, validates text recovery against the original SHA-256, saves and reads back a separate encrypted vault before publishing a staged export directory. ZIP never contains that vault.
-- Invalid paths, traversal, reserved Windows names and symlinks escaping export directories are rejected. Duplicate ZIP entries are renamed rather than silently overwritten.
-- Original cache contents remain plaintext. Normal shutdown clears cache; crash remnants are possible. POSIX permissions do not establish a Windows ACL guarantee.
-- Only Markdown text is replaced. Image pixels, unidentified content and source metadata are outside the automated redaction guarantee. Reviewing a document is an operator decision, not proof that no sensitive text remains.
-- AI suggestions are untrusted candidate strings, bounded and required to occur in the sent text. No model output is executed. HTTPS is required except explicitly selected local-loopback HTTP; redirects are rejected. Configured endpoints can intentionally address local services; use trusted endpoints.
-- Version-2 packs authenticate encrypted document metadata and export manifests. Independent recovery labels exact, edited/excerpt, and legacy input separately. Edited/excerpt and legacy output requires explicit acknowledgement; all output requires review and exclusive save to a new filename. Restoration remains placeholder replacement, not authentication of arbitrary edits or reconstruction of original PDF/Office binaries. Losing all pack copies or the password prevents recovery.
-- Native installer and frozen-service checks exercise recovery preview/save and the SQLite recovery library. macOS bundles require deep/strict code signature validation. Ad-hoc signing does not establish Apple Developer ID trust or notarization; direct process startup does not prove browser/Finder first-launch acceptance.
+[Home](README.md) · [简体中文](README.zh-CN.md) · [Documentation](docs/README.md)
 
-- The optional recovery library persists ciphertext packs only on explicit request. Public lookup metadata consists of random IDs, counts and timestamps; filenames and original/redacted content hashes remain inside the authenticated encrypted manifest. No original document text or passwords are persisted in the library. Recovery previews and current review data are session memory.
-- Library removal deletes database records and lookup references; it is not secure erasure and does not remove external recovery packs/backups. The library is separate from the normal-shutdown conversion cache cleanup. POSIX modes are 700 for the directory and 600 for the SQLite database.
-- New document IDs last for one import; processing IDs change on reprocessing. Existing placeholders and ID headers identify files independently of filesystem path, but removing all markers/placeholders can prevent automatic association. IDs alone cannot restore values without a matching encrypted mapping and password.
+This document describes data handling and the limits of conversion, redaction, and recovery.
 
-- Recovery input is bounded to 8,000,000 characters, restored output to 32,000,000 characters, and JSON requests to 10 MB. Output expansion is checked before substitution so hostile repeated placeholders cannot allocate unbounded restored text. Source redaction remains limited to 5,000,000 characters per document.
+## Data flow
+
+| Data / operation | Handling |
+|---|---|
+| Desktop conversion and OCR | Local service on loopback; sensitive API routes require the session token |
+| Browser conversion and OCR | Local browser workers; app, engine, and model resources are downloaded from the deployment |
+| Optional desktop AI | Off by default; explicit per-request consent sends masked text, up to 20,000 characters |
+| Passwords and AI keys | UI session memory; not deliberately persisted |
+| Desktop conversion cache | Plaintext; normal-exit cleanup, with possible crash remnants |
+| Browser documents and mappings | Session memory, excluded from offline resource caches |
+| Optional desktop recovery library | Encrypted packs persisted only on explicit request; separate from conversion-cache cleanup |
+
+Offline support caches application resources, not user documents. Downloaded Markdown and recovery packs are files under the user's control.
+
+## Redaction and export
+
+1. Review each document's complete original and masked text.
+2. Approve each file under the current rules and password.
+3. Export masked text and keep the encrypted JSON recovery pack separately.
+
+Desktop redacted export validates recovery against the original SHA-256, writes and reads back the separate encrypted pack, and publishes the staged export directory. ZIP does not contain the pack. Browser export requires downloading the pack and acknowledging it; the browser cannot prove that a download was saved successfully.
+
+**Ordinary preview, copy, and export still use original text.** Automated replacement covers Markdown text, not image pixels, unidentified content, link targets, or source metadata. Operator approval is not proof that all sensitive information was removed.
+
+## Encryption and recovery
+
+| Component | Design |
+|---|---|
+| Encryption | AES-256-GCM with random salt and nonce |
+| Key derivation | scrypt, N=16384, r=8, p=1; 32-byte key |
+| Version-2 packs | Authenticated encrypted document metadata and export manifests |
+| Association | Random document/processing IDs and embedded markers; independent of file path |
+| Output | Reviewed Markdown saved to a new file, without overwriting an existing file |
+
+Exact, edited/excerpt, and legacy inputs are distinguished. Edited or legacy content requires additional acknowledgement; arbitrary edits are not authenticated merely because placeholders can be restored. Wrong passwords, unknown placeholders, and invalid authenticated data are rejected.
+
+Recovery restores converted Markdown, not original PDF/Office binaries. Losing all pack copies or the password prevents recovery. Removing markers and placeholders can prevent association; identifiers alone cannot restore values.
+
+### Local recovery library
+
+The library stores ciphertext packs and lookup metadata such as random IDs, counts, and timestamps. Original text, passwords, filenames, and content hashes are not stored as public lookup fields; document metadata remains in the encrypted manifest.
+
+Removing a library entry deletes database records and lookup references, not external packs, backups, or securely erased storage blocks. POSIX directory/database modes are 700/600; these are not a Windows ACL guarantee.
+
+## External AI requests
+
+AI output is untrusted candidate text, must occur in the sent text, and is never executed. Suggestions require manual adoption. HTTPS is required except explicitly selected loopback HTTP; redirects are rejected. A configured endpoint may intentionally address a local service, so choose endpoints you trust.
+
+Production third-party AI providers were not exercised by release acceptance; protocol checks use a deterministic local server.
+
+## Resource and path controls
+
+| Boundary | Current limit / behavior |
+|---|---|
+| Source redaction text | 5,000,000 characters per document |
+| Recovery input / output | 8,000,000 / 32,000,000 characters |
+| JSON requests | 10 MB |
+| Desktop candidate matches | At most 20,000 |
+| Export paths | Traversal, reserved Windows names, and escaping symlinks rejected |
+| ZIP collisions | Renamed instead of silently overwritten |
+
+Expansion is checked before recovery substitution. Plaintext caches are not encrypted by enabling redaction, and normal cleanup is not secure erasure.
+
+## Distribution and evidence
+
+Native acceptance exercises the bundled service, installed application, recovery, and local library. UI rendering uses clearly identified synthetic fixtures. macOS bundles require deep/strict signature checks, but ad-hoc signing does not establish Developer ID trust or notarization.
+
+[Release evidence](docs/README.md#release-evidence) · [Build and verification](BUILDING.md)

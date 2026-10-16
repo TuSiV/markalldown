@@ -1,3 +1,15 @@
+# README development history
+
+[Current documentation](../README.md) · [English home](../../README.md) · [中文首页](../../README.zh-CN.md)
+
+> Historical snapshot, not current instructions. Old branch names, test counts, and pending items reflect the original writing stage.
+
+[View the original rendered document](https://github.com/TuSiV/markalldown/blob/bf0d48198f9afc30954f54850f7ccfac72ac04b9/docs/archive/README-development-history.md)
+
+<details>
+<summary><strong>Expand the preserved source</strong></summary>
+
+````markdown
 # 历史 README 与开发过程归档
 
 > 本文保存 README 改写前的完整快照，可能包含过时版本号、阶段性结论与已完成的待办，不作为当前使用或验收依据。
@@ -235,3 +247,6 @@ macOS 遵循 Apple 对导航层与内容层的区分：侧栏使用克制的自�
 ### 浏览器版语言
 
 页眉的“中文 / English”可随时切换界面语言，覆盖转换、脱敏、恢复、设置及常见状态和错误提示。语言偏好保存在当前浏览器；存储受限时仍可切换。切换不会翻译文件正文、文件名、脱敏内容或恢复结果，也不会清空当前任务。
+````
+
+</details>

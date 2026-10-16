@@ -1,44 +1,68 @@
-# MarkAllDown 3.0.0 · 正式版
+# MarkAllDown 3.0.0
 
-本版本从统一后的 `main` 重新构建，替换原 3.0.0 预发布安装包，并作为最新正式版发布。包含合并导出选项修复；原预发布安装包用户需重新下载安装，不能仅凭相同版本号判断包内容。请以本发布页新生成的 SHA256SUMS.txt 为准。
+[Home](README.md) · [简体中文](README.zh-CN.md) · [Documentation](docs/README.md)
 
-## 桌面启动
+**Stable release · Windows x64 · macOS Apple Silicon / Intel**
 
-- 内置 Python 转换服务改为目录式分发，避免每次启动解压单文件运行环境。
-- 转换和 OCR 依赖按实际任务加载，基础服务先就绪。
-- 启动期间可选择文件；服务就绪后自动转换。
-- 服务启动失败可原地重试，保留已选文件和工作区设置。
-- 显示真实等待时间，并保存本地阶段耗时日志，便于定位启动问题。
+[Download](https://github.com/TuSiV/markalldown/releases/tag/v3.0.0) · [Checksums](https://github.com/TuSiV/markalldown/releases/download/v3.0.0/SHA256SUMS.txt) · [Acceptance run](https://github.com/TuSiV/markalldown/actions/runs/38850938759)
 
-## 浏览器语言
+## Highlights
 
-- 页眉提供中文 / English 切换，覆盖各工作区、状态与常见错误提示。
-- 记住浏览器语言偏好；切换保留文件、队列、正文及恢复结果。
+| Area | Result |
+|---|---|
+| Desktop startup | Directory-based bundled Python runtime; conversion/OCR dependencies load on demand |
+| Startup workflow | Select files while starting; process queued files once ready; retry without losing selection |
+| Browser language | English/Chinese switching across workspaces and common status/errors, with remembered preference where storage permits |
+| Export options | Combined output disables irrelevant naming/folder controls and explains the fixed `combined.md` filename |
+| Diagnostics | Actual elapsed startup time and local phase logs, without an invented progress percentage |
 
-## 导出选项修复
+Switching UI language preserves tasks, document content, filenames, and recovery results.
 
-- 合并为一个 Markdown 时禁用不适用的原文件名与目录结构选项，提示输出固定为 combined.md。
-- 目录结构说明明确适用于独立文件与 ZIP；切换格式后恢复可用选项，并保留脱敏匿名命名限制。
+## Included workflows
 
-## 已包含的工作能力
+- Local document/folder conversion, Chinese OCR, and legacy Office text extraction.
+- Desktop adjustable concurrency, task pause/resume, failure retry, and session-scoped PDF page checkpoints.
+- Full-text redaction review, independent recovery, encrypted packs, and an optional desktop recovery library.
+- Browser-local conversion, optional offline resources, and desktop/browser recovery-pack interoperability.
+- Desktop workspaces with macOS light/dark and accessibility preference adaptation.
 
-- 本地文件与文件夹批量转换，支持 PDF、Office、旧版 Office、图片及压缩包。
-- 可调并发队列、任务暂缓与继续、失败重试；PDF 使用当前会话内已完成页的检查点。
-- 脱敏全文审核、导出及独立文件恢复、加密恢复库。
-- Windows 桌面界面与 macOS 浅色/深色、透明度及对比度适配。
-- 浏览器本地转换、离线资源及恢复包互通。
+## Upgrade from the old 3.0.0 prerelease
 
-## 发布验证
+The stable release was rebuilt from the unified main source and replaced the old prerelease assets and tag target. It includes the export-option fix.
 
-本次正式发布在重新构建后，等待同一提交的 Windows x64、macOS Apple Silicon、macOS Intel、桌面 UI 和浏览器验收全部成功；随后校验四份安装包、UI 截图及 SHA256。
+**Download and reinstall the stable package even if the installed prerelease already says 3.0.0.** Verify against the new checksum file, not a previously saved one.
 
-Linux 目录式服务连续 5 次就绪中位数约 0.52 秒，仅为开发环境测量，不代表 Windows/macOS 冷启动或首次转换时间。
+## Release contents
 
-## 下载
+| Asset | Purpose |
+|---|---|
+| `MarkAllDown_3.0.0_x64-setup.exe` | Windows x64 NSIS installer |
+| `MarkAllDown_3.0.0_x64_en-US.msi` | Windows x64 MSI installer |
+| `MarkAllDown_3.0.0_aarch64.dmg` | Apple Silicon Mac |
+| `MarkAllDown_3.0.0_x64.dmg` | Intel Mac |
+| `MarkAllDown_3.0.0_UI-screenshots.zip` | Synthetic UI acceptance screenshots |
+| `SHA256SUMS.txt` | Checksums for installers and screenshot archive |
 
-- Windows x64：`MarkAllDown_3.0.0_x64-setup.exe` 或 `MarkAllDown_3.0.0_x64_en-US.msi`
-- macOS Apple Silicon：`MarkAllDown_3.0.0_aarch64.dmg`
-- macOS Intel：`MarkAllDown_3.0.0_x64.dmg`
-- `SHA256SUMS.txt`：下载完整性校验。
+## Verification
 
-macOS 使用临时签名，未作 Developer ID 公证；最终签名完整性与系统信任评估分别记录。首次模型加载仍可能有等待；PDF 检查点限当前会话。处理重要材料时，请核对 OCR、表格和脱敏结果。
+Release source: [bf0d481](https://github.com/TuSiV/markalldown/commit/bf0d48198f9afc30954f54850f7ccfac72ac04b9). The same commit passed all five required acceptance groups before publication.
+
+| Group | Scope |
+|---|---|
+| Windows x64 | Source checks, EXE/MSI build, bundled service, and installed NSIS app |
+| macOS arm64 | Source checks, DMG build, installed app/service, signing and system-policy records |
+| macOS x64 | Same native checks on Intel |
+| Desktop UI | Workspace rendering and interaction with synthetic fixtures |
+| Browser | Actual conversion, offline OCR, recovery, language, and responsive-layout checks |
+
+The run passed 94 backend and 64 frontend tests. Staged and final asset sets were checked before marking the release stable/latest. These are results for this release commit, not a count promised for future source revisions.
+
+## Operational boundaries
+
+- macOS packages are ad-hoc signed, without Developer ID signing or notarization.
+- Lazy loading can move some waiting time to the first conversion/OCR task.
+- PDF checkpoints last only for the current desktop session.
+- Check OCR, tables, formulas, and redaction against the source.
+- UI screenshots and simulated mobile widths do not establish physical-device or every native-control acceptance.
+
+[Security and privacy](SECURITY.md) · [Startup measurement scope](docs/DESKTOP_STARTUP.md)

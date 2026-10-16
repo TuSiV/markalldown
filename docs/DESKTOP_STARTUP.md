@@ -1,55 +1,67 @@
-# Desktop startup changes
+# Desktop startup
 
-Base: `feature/local-web-conversion`, commit `e24ab88c35e203b3b5462e8863956bb48a08abc0`.
+[Home](../README.md) · [中文](../README.zh-CN.md) · [Documentation](README.md)
 
-## Behavior
+This guide explains current startup behavior, diagnostics, and what the measurements establish.
 
-- PyInstaller now builds an `onedir` service. Tauri installs the entire environment under its resource directory at `runtime/`. The executable resolves its sibling `_internal` directory without extraction at every launch.
-- The build script replaces its generated runtime directory as a unit. macOS Mach-O files are signed before Tauri seals the outer app. The bundle inspection script supports both the historical sidecar path and the new resource path.
-- Basic API startup does not import MarkItDown, AnyDoc, ONNX Runtime, OpenCV or RapidOCR. Conversion workers load only the components needed for a task. ONNX telemetry disabling remains before conversion dependency initialization.
-- Importing files is independent of backend readiness. The existing queue starts pending files when the connection becomes ready. A startup error leaves the workspace and files intact; retry restarts the service without reloading the page.
-- Health checks use a 200 ms initial interval, backing off to 1 s, with the existing overall deadline and native child-exit checks. This implementation uses polling; process readiness event delivery is not implemented.
-- The UI shows elapsed waiting time, a message after 15 seconds, and a retry action after failure; it does not display an invented percentage.
+## Startup behavior
 
-## Measurements
+| Stage | Implementation |
+|---|---|
+| Bundle launch | Tauri starts the complete directory-based Python runtime from application resources |
+| Basic service readiness | Startup avoids importing heavy conversion/OCR engines |
+| File selection | The UI accepts files before service readiness and retains them on startup failure |
+| Conversion | Pending tasks run once ready; workers load the dependencies needed by their tasks |
+| Retry | Restarts the service without reloading the page or clearing the selection |
 
-`service-startup.log` captures process output. `service-timings.jsonl` in the app log directory records only stage, elapsed time and PID. The native launcher records spawn duration. Python records entry, base imports, application readiness and component-load timings. Diagnostics do not transmit data and do not record document text, file names or credentials.
+The bundle contains `runtime/markalldown-server[.exe]` and its dependencies. macOS nested native files are signed before the outer application is sealed. Basic startup does not eagerly initialize MarkItDown, AnyDoc, ONNX Runtime, OpenCV, or RapidOCR.
 
-`GET /api/startup` requires the session token and returns Python stage timings. The public health endpoint remains compatible. `scripts/benchmark_startup.py` measures packaged process start to authenticated API readiness and reports five individual samples, median and maximum. The first sample is retained separately; the report explicitly does not claim OS-cold performance or a statistically meaningful P95 from five runs.
+Readiness uses polling, starting at 200 ms and backing off to 1 second, with the overall deadline and native child-exit checks. The UI shows elapsed time, a delayed-start message, and retry after failure. It does not claim a percentage of work completed.
 
-## Validation completed locally
+## Diagnostics
 
-- Frontend tests: 60 passed, including pre-readiness queue handling and startup failure/retry preserving selected files.
-- TypeScript and Vite production build passed.
-- Startup dependency-isolation tests: 2 passed, with heavy conversion dependencies blocked from importing.
-- Conversion responsiveness/engine-isolation tests: 4 passed, with deterministic mocked conversion components.
-- Redaction tests: 13 passed.
-- Python compilation checks passed.
-- PyInstaller successfully built the actual Linux x86_64 directory distribution.
-- Packaged-service smoke passed with Python removed from PATH: old Office, text PDF, Markdown, OCR, PDF pause/resume/checkpoints, redaction/export/restoration and encrypted recovery library.
-- Five packaged starts: median 520.27 ms, maximum 589.28 ms on this Linux host. These are service readiness measurements, not window rendering, first-task latency or Windows/macOS results.
-- Copied the complete runtime into the configured Tauri staging directory, checked executable permission and dependencies, and measured five additional starts from that relocated directory.
-- Windows and merged macOS configuration shapes passed the installed Tauri JSON schema (custom numeric/URI formats were not validated by the generic validator).
+| Record | Contents |
+|---|---|
+| `service-startup.log` | Process/loader output |
+| `service-timings.jsonl` | Instrumented stages, elapsed times, and PID |
+| Native application log | Service spawn timing |
+| Authenticated `GET /api/startup` | Python startup-stage timings |
 
-Raw synthetic timing evidence: `docs/desktop-startup-linux-acceptance.json`.
+Instrumented timing records exclude document text, filenames, and credentials. General process output is a separate diagnostic stream; review logs before sharing.
 
-The earlier complete Python runs were interrupted by automatic approval review because ONNX Runtime telemetry could initialize before its Python API disabled it. Official ONNX Runtime documentation specifies `ORT_DISABLE_TELEMETRY=1` before initialization. The runtime, build and test entrypoints and CI now set it before loading ONNX; the Python API disable call remains for older Windows providers. The full local backend suite subsequently passed: 92 tests. See the official privacy documentation at https://github.com/microsoft/onnxruntime/blob/main/docs/Privacy.md.
+`ORT_DISABLE_TELEMETRY=1` is set before ONNX initialization in runtime, build, test, and CI entrypoints. The Python disable call remains for older providers. Keep the environment setting before imports when changing entrypoints.
 
-## Pending native acceptance
+## Measure packaged readiness
 
-Windows x64, macOS arm64 and Intel installation, upgrades, actual executable permissions, signing, startup timings, first conversion, OCR, pause/resume and process cleanup still require native CI/target-machine results. This environment has no native Rust toolchain or Windows/macOS runner. No installer, release or performance improvement percentage is claimed.
+```bash
+python scripts/benchmark_startup.py /path/to/markalldown-server --runs 5 --output startup-benchmark.json
+```
 
-The existing native workflow has been updated for directory paths and startup benchmark artifacts. It is manually dispatchable for the review branch; no release publication trigger is added.
+Use the packaged executable, including `.exe` on Windows. The script reports individual runs, first sample, median, and maximum.
 
-Suggested provisional acceptance goals: interactive import UI within 2 seconds and basic service within 3 seconds on a defined reference machine. Measure system-cold and repeated launches separately. Compare first-task completion as well as startup, including text, Office, scanned PDF and old Office samples. Adjust goals after obtaining baseline data.
+| Measurement | Meaning |
+|---|---|
+| Process start → authenticated API ready | Bundled service readiness |
+| First conversion / OCR | Separate engine/model-load and task latency |
+| Window rendering | Requires separate UI instrumentation |
+| OS-cold launch | Requires a defined machine/cache protocol |
 
-## Acceptance fixes
+Five repeated starts do not establish a meaningful P95 or an OS-cold performance claim. Moving dependencies to lazy loading can increase the first task's latency even when API readiness improves.
 
-- Excluded dependency test-suite modules from PyInstaller collection.
-- Corrected the benchmark session-directory prefix to satisfy the service's existing validation; loader failures now retain diagnostic output.
-- Corrected workspace flex sizing so the startup banner does not push controls outside the available height, and used the existing macOS surface variables for dark appearance.
-- The sidecar-only build no longer requires Rust merely to print its target name.
+## Verified release state
 
-## Deliberately deferred
+Windows x64, Apple Silicon, and Intel native acceptance passed for [3.0.0](https://github.com/TuSiV/markalldown/actions/runs/38850938759), including installed-app/service checks and packaged startup reports. Native CI uploads per-platform measurements; UI tests also cover queuing before readiness and preserving files on retry.
 
-Conversion jobs currently use disposable subprocesses for cancellation and failure isolation. Warming OCR in the parent would not allow those workers to reuse its model. Persistent warm workers, readiness events, and native first-window instrumentation are deferred; they need separate lifecycle and cancellation validation. No background service is left running after application exit.
+Native smoke does not establish every Finder/browser first-launch path, physical-device behavior, or a before/after speedup percentage.
+
+## Historical evidence
+
+The earlier Linux five-run sample had a median of 520.27 ms and maximum of 589.28 ms. It measured service readiness on that development host, not Windows/macOS startup or first conversion.
+
+[Raw Linux report](desktop-startup-linux-acceptance.json) · [Original development snapshot](archive/DESKTOP_STARTUP-development-history.md)
+
+## Future measurement work
+
+Persistent warm workers, readiness events, OS-cold comparisons, and native first-window timing require separate lifecycle and measurement work. Current conversion workers are disposable subprocesses; warming a model only in the parent would not make it shared by those workers.
+
+[Build guide](../BUILDING.md) · [Security and privacy](../SECURITY.md)
