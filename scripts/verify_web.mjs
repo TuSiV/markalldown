@@ -50,7 +50,7 @@ try{
  await englishNav.getByRole('button',{name:'Restore files',exact:true}).click();await page.getByRole('button',{name:'Choose recovery JSON',exact:true}).waitFor();
  await englishNav.getByRole('button',{name:'Settings',exact:true}).click();await page.getByLabel('Maximum file size (MB)').waitFor();
  await page.getByRole('button',{name:'中文',exact:true}).click();await page.getByRole('navigation').getByRole('button',{name:'文件转换',exact:true}).click();
- await footer.getByRole('link',{name:'第三方许可',exact:true}).waitFor();await footer.getByText('完整安全与隐私说明',{exact:true}).waitFor();await footer.getByText('数据处理说明',{exact:true}).click();
+ await footer.getByRole('link',{name:'第三方许可',exact:true}).waitFor();await footer.getByText('数据处理说明',{exact:true}).click();await footer.getByText('完整安全与隐私说明',{exact:true}).waitFor();await footer.getByText('数据处理说明',{exact:true}).click();
  checks.push('Chinese/English all-workspace controls, persistent language and responsive English layout');
  for(const width of [390,768]){await page.setViewportSize({width,height:844});await shot('landing-'+width);}
  await page.setViewportSize({width:1440,height:1000});
