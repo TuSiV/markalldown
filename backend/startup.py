@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 import json
 import os
+os.environ["ORT_DISABLE_TELEMETRY"] = "1"
 import sys
 import threading
 import time

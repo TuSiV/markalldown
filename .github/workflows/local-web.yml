@@ -4,6 +4,8 @@ on:
     branches: [feature/local-web-conversion]
   workflow_dispatch:
   workflow_call:
+env:
+  ORT_DISABLE_TELEMETRY: "1"
 permissions:
   contents: read
 jobs:

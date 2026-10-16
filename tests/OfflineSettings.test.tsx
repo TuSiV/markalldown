@@ -1,4 +1,5 @@
-import {afterEach,it,expect,vi} from 'vitest';
+import {useI18n} from '../src/i18n';
+import {beforeEach,afterEach,it,expect,vi} from 'vitest';
 import {render,screen,fireEvent,cleanup,waitFor} from '@testing-library/react';
 import WebApp from '../src/web/WebApp';
 import {ensureOfflineService,offlineUnavailableReason} from '../src/web/offlineService';
@@ -20,3 +21,6 @@ it('shows startup failure and lets the user retry preparation successfully',asyn
 it('explains a capability restriction beside the disabled button',()=>{
  vi.mocked(offlineUnavailableReason).mockReturnValue('当前浏览环境没有提供离线缓存');render(<WebApp/>);fireEvent.click(screen.getByRole('button',{name:'设置'}));expect((screen.getByRole('button',{name:'准备全部离线资源'}) as HTMLButtonElement).disabled).toBe(true);expect(screen.getByText('当前浏览环境没有提供离线缓存')).toBeTruthy();expect(ensureOfflineService).not.toHaveBeenCalled();
 });
+
+
+beforeEach(()=>useI18n.setState({locale:'zh-CN'}));

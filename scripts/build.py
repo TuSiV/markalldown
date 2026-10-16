@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+os.environ["ORT_DISABLE_TELEMETRY"] = "1"
 from pathlib import Path
 import platform
 import shutil

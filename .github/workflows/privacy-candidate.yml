@@ -3,6 +3,8 @@ on:
   push:
     branches: [feature/redaction-ai, feature/local-web-conversion, perf/desktop-startup]
   workflow_dispatch:
+env:
+  ORT_DISABLE_TELEMETRY: "1"
 permissions:
   contents: read
 concurrency:

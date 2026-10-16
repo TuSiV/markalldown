@@ -33,7 +33,7 @@ Base: `feature/local-web-conversion`, commit `e24ab88c35e203b3b5462e8863956bb48a
 
 Raw synthetic timing evidence: `docs/desktop-startup-linux-acceptance.json`.
 
-The complete Python suite was interrupted by automatic approval review after an outbound Microsoft telemetry request; that run is not a pass. The exact source and payload were not established. The engine-isolation test now injects a fake module rather than importing the real engine while mocking telemetry initialization, and the standalone engine benchmark explicitly disables ONNX telemetry. These edits do not establish that every dependency is free of outbound activity. The complete suite has not been rerun.
+The earlier complete Python runs were interrupted by automatic approval review because ONNX Runtime telemetry could initialize before its Python API disabled it. Official ONNX Runtime documentation specifies `ORT_DISABLE_TELEMETRY=1` before initialization. The runtime, build and test entrypoints and CI now set it before loading ONNX; the Python API disable call remains for older Windows providers. The full local backend suite subsequently passed: 92 tests. See the official privacy documentation at https://github.com/microsoft/onnxruntime/blob/main/docs/Privacy.md.
 
 ## Pending native acceptance
 

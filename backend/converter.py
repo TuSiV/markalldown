@@ -8,6 +8,7 @@ from startup import timed_stage
 
 # Import heavy conversion dependencies only in the worker that needs them.
 def prepare_onnx():
+    os.environ["ORT_DISABLE_TELEMETRY"] = "1"
     import onnxruntime
     onnxruntime.disable_telemetry_events()
 

@@ -2,6 +2,7 @@
 
 import sys
 import os
+os.environ["ORT_DISABLE_TELEMETRY"] = "1"
 from pathlib import Path
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 

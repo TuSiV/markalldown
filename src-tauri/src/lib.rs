@@ -131,6 +131,7 @@ fn start_sidecar(app: &AppHandle) -> Result<(u16, String), String> {
     std::fs::File::create(&timings).map_err(|error| error.to_string())?;
     let mut command = Command::new(&sidecar_path);
     command.env("MAD_STARTUP_LOG", &timings);
+    command.env("ORT_DISABLE_TELEMETRY", "1");
     command.stdout(Stdio::from(startup_log)).stderr(Stdio::from(startup_stderr));
     command.args(["--port", &port.to_string(), "--token", &token, "--session-dir", &session_dir.to_string_lossy()])
         .current_dir(sidecar_path.parent().unwrap_or(std::path::Path::new(".")));

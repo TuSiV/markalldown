@@ -1,5 +1,6 @@
 """Reproducible local corpus benchmark. Synthetic data, no hosted OCR/AI."""
 import argparse,json,statistics,subprocess,sys,time,threading,os
+os.environ["ORT_DISABLE_TELEMETRY"] = "1"
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'backend'))

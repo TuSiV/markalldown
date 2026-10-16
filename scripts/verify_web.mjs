@@ -13,6 +13,7 @@ const server=createServer((req,res)=>{const path=decodeURIComponent(new URL(req.
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{}),args:['--no-sandbox','--disable-dev-shm-usage']});
 const context=await browser.newContext({acceptDownloads:true,viewport:{width:1440,height:1000}}),page=await context.newPage(),errors=[],external=[];
+await context.addInitScript(()=>{if(!localStorage.getItem('markitdown.locale'))localStorage.setItem('markitdown.locale','zh-CN');});
 page.on('pageerror',e=>errors.push(e.message));
 context.on('request',r=>{if(!r.url().startsWith('http://127.0.0.1:')&&!r.url().startsWith('blob:')&&!r.url().startsWith('data:'))external.push(r.url());});
 const base=`http://127.0.0.1:${server.address().port}`;
@@ -25,11 +26,27 @@ try{
  await page.goto(base);await page.getByRole('heading',{name:/把文件，变成/}).waitFor();
  if(await page.getByRole('heading',{name:/转换队列/}).count())throw Error('Empty landing exposes queue');
  await shot('landing-desktop');
+ await page.getByRole('button',{name:'English',exact:true}).click();
+ await page.getByRole('button',{name:'Choose files',exact:true}).waitFor();
+ if(await page.locator('html').getAttribute('lang')!=='en-US')throw Error('English document language missing');
+ for(const width of [390,768,1440]){await page.setViewportSize({width,height:1000});await shot('english-'+width);}
+ await page.reload();await page.getByRole('button',{name:'Choose files',exact:true}).waitFor();
+ const englishNav=page.getByRole('navigation',{name:'Workspace'});
+ await englishNav.getByRole('button',{name:'Redaction review',exact:true}).click();await page.getByLabel('Recovery password (at least 8 characters)').waitFor();
+ await englishNav.getByRole('button',{name:'Restore files',exact:true}).click();await page.getByRole('button',{name:'Choose recovery JSON',exact:true}).waitFor();
+ await englishNav.getByRole('button',{name:'Settings',exact:true}).click();await page.getByLabel('Maximum file size (MB)').waitFor();
+ await page.getByRole('button',{name:'中文',exact:true}).click();await page.getByRole('navigation').getByRole('button',{name:'文件转换',exact:true}).click();
+ checks.push('Chinese/English all-workspace controls, persistent language and responsive English layout');
  for(const width of [390,768]){await page.setViewportSize({width,height:844});await shot('landing-'+width);}
  await page.setViewportSize({width:1440,height:1000});
  await upload('/tmp/mad-web-fixtures/中文合同.docx');await page.locator('[data-engine="anydoc-wasm"][data-format="docx"]').waitFor({timeout:30000});
  const zip=await downloaded(page.getByRole('button',{name:'下载 ZIP'}),resolve(out,'contract.zip'));const files=unzipSync(zip);const original=strFromU8(files['中文合同.md']);
  if(!original.includes('13800138000')||!original.includes('125000.50')||!Object.keys(files).some(k=>k.startsWith('assets/')))throw Error('Document text or resource missing');
+ const unchanged=await page.locator('.web-prose').innerText();
+ await page.getByRole('button',{name:'English',exact:true}).click();
+ if(await page.locator('.web-prose').innerText()!==unchanged)throw Error('Language switching changed converted document content');
+ await page.getByRole('button',{name:'中文',exact:true}).click();
+ checks.push('Switching language preserves converted Chinese document content');
  checks.push('DOCX Chinese, money, table and resource ZIP');await shot('conversion-desktop');
  for(const [name,fmt] of [['sample.doc','doc'],['sample.ppt','ppt'],['sample.xls','xlsx'],['sample.xlsb','xlsx'],['chinese.doc','doc'],['chinese.ppt','ppt']]){
   await upload('tests/fixtures/local-engines/'+name);await page.getByRole('button',{name:new RegExp(name.replaceAll('.','\\.'))}).first().click();
@@ -71,6 +88,7 @@ try{
  try{
   let release;const held=new Promise(r=>release=r);let started;const entered=new Promise(r=>started=r);
   await cancelContext.route('**/ocr/**',async route=>{started();await held;await route.abort().catch(()=>{});});
+  await cancelContext.addInitScript(()=>localStorage.setItem('markitdown.locale','zh-CN'));
   await cancelPage.goto(base);await cancelPage.getByLabel('扫描件 / 图片使用本地 OCR').check();
   await cancelPage.locator('input[type=file]').first().setInputFiles('/tmp/mad-web-fixtures/scan.png');await entered;
   await cancelPage.getByRole('button',{name:'取消',exact:true}).click();release();
@@ -83,3 +101,4 @@ try{
  if(external.length)throw Error('Unexpected external requests: '+external.join('\n'));if(errors.length)throw Error('Browser errors: '+errors.join('\n'));
  writeFileSync(resolve(out,'checks.json'),JSON.stringify({checks,externalRequests:external,pageErrors:errors},null,2));console.log(`Passed ${checks.length} browser checks.`);
 }catch(e){console.error(await page.locator('body').innerText());await shot('failure');throw e;}finally{clearInterval(monitor);await browser.close();server.close();}
+

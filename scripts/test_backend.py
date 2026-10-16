@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Run synthetic backend tests with ONNX telemetry disabled before discovery."""
+import os
+os.environ["ORT_DISABLE_TELEMETRY"] = "1"
 from pathlib import Path
 import sys
 import unittest

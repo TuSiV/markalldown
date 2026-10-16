@@ -4,7 +4,8 @@ import { dict, Locale, MessageKey } from "./dict";
 const STORAGE_KEY = "markitdown.locale";
 
 function detectLocale(): Locale {
-  const saved = localStorage.getItem(STORAGE_KEY);
+  let saved: string | null = null;
+  try { saved = localStorage.getItem(STORAGE_KEY); } catch { /* Storage may be unavailable. */ }
   if (saved === "zh-CN" || saved === "en-US") return saved;
   const nav = navigator.language || "zh-CN";
   return nav.toLowerCase().startsWith("zh") ? "zh-CN" : "en-US";
@@ -19,7 +20,7 @@ interface I18nState {
 export const useI18n = create<I18nState>((set, get) => ({
   locale: detectLocale(),
   setLocale: (locale) => {
-    localStorage.setItem(STORAGE_KEY, locale);
+    try { localStorage.setItem(STORAGE_KEY, locale); } catch { /* Keep language switching usable without storage. */ }
     document.documentElement.lang = locale;
     set({ locale });
   },
@@ -45,3 +46,4 @@ export function useT() {
 }
 
 export type { Locale, MessageKey };
+
