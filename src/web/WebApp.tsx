@@ -33,6 +33,7 @@ export default function WebApp(){
  const recoveryInput=useRef<HTMLInputElement>(null),packInput=useRef<HTMLInputElement>(null);
  const input=useRef<HTMLInputElement>(null),active=useRef<{id:string;controller:AbortController}|null>(null),job=useRef<AbortController|null>(null),tasksRef=useRef(tasks),alive=useRef(true);
  const [dragging,setDragging]=useState(false);
+ const [footerPrivacyOpen,setFooterPrivacyOpen]=useState(false);
  const [offlineProgress,setOfflineProgress]=useState<OfflineProgress|null>(null),[preparingOffline,setPreparingOffline]=useState(false);
  const [offline,setOffline]=useState(false),[offlineService,setOfflineService]=useState(tr("正在检查离线服务…")),[offlineUnavailable,setOfflineUnavailable]=useState<string|null>(null),[online,setOnline]=useState(navigator.onLine);
  const task=tasks.find(t=>t.id===selected);
@@ -137,13 +138,14 @@ export default function WebApp(){
     <a href="https://github.com/TuSiV/markalldown/issues" target="_blank" rel="noopener noreferrer">{tr("问题反馈")}</a>
     <a href={import.meta.env.BASE_URL+'LICENSE.txt'} target="_blank" rel="noopener noreferrer">{tr("开源许可")}</a>
     <a href={import.meta.env.BASE_URL+'THIRD_PARTY_NOTICES.txt'} target="_blank" rel="noopener noreferrer">{tr("第三方许可")}</a>
+    <button type="button" className="web-footer-data-toggle" aria-expanded={footerPrivacyOpen} aria-controls="web-footer-data" onClick={()=>setFooterPrivacyOpen(open=>!open)}><span>{tr("数据处理说明")}</span><span aria-hidden="true">{footerPrivacyOpen?'−':'+'}</span></button>
    </div></div>
-   <details className="web-footer-privacy"><summary>{tr("数据处理说明")}</summary><div>
+   <div id="web-footer-data" className="web-footer-privacy" hidden={!footerPrivacyOpen}><div>
     <p>{tr("文件转换、OCR、脱敏与恢复在当前浏览器中处理；文档内容不会上传到本站服务器。首次使用和离线准备会从本站下载引擎与模型。")}</p>
     <p>{tr("文档、映射明文与口令仅保留在当前页面内存；刷新或关闭页面后清除。离线缓存保存应用、引擎和模型，浏览器可能清理缓存。界面语言偏好保存在本机。")}</p>
     <p>{tr("下载结果与恢复包由你自行保管。普通导出包含原文，脱敏结果须人工检查；恢复包不能重建原始 Word 或 PDF。")}</p>
     <a href="https://github.com/TuSiV/markalldown/blob/main/SECURITY.md" target="_blank" rel="noopener noreferrer">{tr("完整安全与隐私说明")}</a>
-   </div></details>
+   </div></div>
   </footer>
  </div>;
 }
