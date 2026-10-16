@@ -39,7 +39,7 @@ def digest(path):
 
 
 def prepare(version, installers, screenshots, output):
-    assert re.fullmatch(r'\d+\.\d+\.\d+-rc\.\d+', version), 'Expected an explicit RC version'
+    assert re.fullmatch(r'\d+\.\d+\.\d+(?:-rc\.\d+)?', version), 'Expected a release or RC version'
     expected = {
         f'MarkAllDown_{version}_x64-setup.exe',
         f'MarkAllDown_{version}_aarch64.dmg',
@@ -107,7 +107,7 @@ def main():
             return
     else:
         gh('release', 'create', tag, '--target', commit, '--draft', '--prerelease', '--latest=false',
-           '--title', f'MarkAllDown {tag} · 桌面视觉优化预发布', '--notes-file', 'RELEASE_NOTES.md')
+           '--title', f'MarkAllDown {tag} · 预发布', '--notes-file', 'RELEASE_NOTES.md')
     for attempt in range(8):
         release = find_release(repository, tag)
         if release: break
@@ -129,3 +129,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

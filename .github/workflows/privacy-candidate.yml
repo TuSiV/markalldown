@@ -1,7 +1,7 @@
 name: Desktop builds
 on:
   push:
-    branches: [feature/redaction-ai, feature/local-web-conversion]
+    branches: [feature/redaction-ai, feature/local-web-conversion, perf/desktop-startup]
   workflow_dispatch:
 permissions:
   contents: read
@@ -44,7 +44,7 @@ jobs:
         env:
           MAD_PYTHON: python
         run: |
-          python -m unittest discover -s tests -v
+          python scripts/test_backend.py
           npm test
           npm run build
           npm audit --audit-level=high
@@ -69,6 +69,8 @@ jobs:
           hdiutil detach "$mount"
           python scripts/check_macos_bundle.py "$RUNNER_TEMP/Previous-MarkAllDown.app" --inspect-only --quarantine --report "macos-evidence/previous-${{ matrix.label }}.json"
       - name: Native sidecar and installer build
+        env:
+          MAD_PRERELEASE: ${{ github.ref == 'refs/heads/perf/desktop-startup' && '1' || '0' }}
         run: python scripts/build.py --skip-install
       - name: Packaged sidecar smoke (Windows)
         if: runner.os == 'Windows'
@@ -153,6 +155,8 @@ jobs:
           name: UI-render-evidence
           path: ui-screenshots/*.png
           if-no-files-found: error
+  browser-acceptance:
+    uses: ./.github/workflows/local-web.yml
   candidate-release:
     if: github.ref == 'refs/heads/feature/redaction-ai'
     needs: [native, ui-visual]
@@ -178,8 +182,8 @@ jobs:
           gh release create "$tag" --target "${{ github.sha }}" --title "MarkAllDown $tag" --notes-file RELEASE_NOTES.md
           gh release upload "$tag" release-assets/*
   visual-prerelease:
-    if: github.ref == 'refs/heads/feature/local-web-conversion' && contains(github.event.head_commit.message, '[prerelease]')
-    needs: [native, ui-visual]
+    if: (github.ref == 'refs/heads/feature/local-web-conversion' || github.ref == 'refs/heads/perf/desktop-startup') && contains(github.event.head_commit.message, '[prerelease]')
+    needs: [native, ui-visual, browser-acceptance]
     runs-on: ubuntu-latest
     permissions:
       contents: write

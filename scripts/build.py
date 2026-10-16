@@ -16,6 +16,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--skip-install", action="store_true")
     parser.add_argument("--sidecar-only", action="store_true")
+    parser.add_argument("--prerelease", action="store_true", default=os.environ.get("MAD_PRERELEASE") == "1")
     args = parser.parse_args()
     if not args.skip_install:
         run([sys.executable,"-m","pip","install","-r",str(BACKEND/"requirements.txt"),"pyinstaller"])
@@ -41,7 +42,7 @@ def main():
         if not args.skip_install: run([npm,"ci"])
         command = [npm,"run","tauri","--","build"]
         version = json.loads((ROOT/"package.json").read_text(encoding="utf-8"))["version"]
-        if platform.system() == "Windows" and "-" in version:
+        if platform.system() == "Windows" and (args.prerelease or "-" in version):
             # MSI accepts only numeric prerelease components. Use NSIS for RC;
             # stable 2.0.0 retains both configured NSIS and MSI bundles.
             command += ["--bundles", "nsis"]

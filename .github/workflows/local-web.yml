@@ -3,6 +3,7 @@ on:
   push:
     branches: [feature/local-web-conversion]
   workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 jobs:
@@ -30,7 +31,7 @@ jobs:
       - name: Check local protocol, conversion and build
         run: |
           npm test
-          python -m unittest discover -s tests -v
+          python scripts/test_backend.py
           npm run build:web
           npm audit --audit-level=high
       - name: Actual WASM, offline OCR and recovery checks
@@ -49,3 +50,4 @@ jobs:
         with:
           name: MarkAllDown-Web
           path: dist-web/
+
