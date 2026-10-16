@@ -8,6 +8,7 @@ import { VitePWA } from "vite-plugin-pwa";
 const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig(({ mode }) => ({
+  base: mode === "web" ? (process.env.WEB_BASE_PATH || "/") : "/",
   publicDir: mode === "web" ? "public-web" : "public",
   plugins: [react(), tailwindcss(), ...(mode === "web" ? [VitePWA({
     strategies: "injectManifest", srcDir: "src/web", filename: "sw.ts",

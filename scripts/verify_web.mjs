@@ -9,14 +9,16 @@ const python=process.env.MAD_PYTHON||'.venv/bin/python';
 execFileSync(python,['scripts/web_fixtures.py']);
 const out=resolve('web-evidence');mkdirSync(out,{recursive:true});
 const root=resolve('dist-web'),types={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.wasm':'application/wasm','.json':'application/json','.png':'image/png','.gz':'application/gzip','.webmanifest':'application/manifest+json'};
-const server=createServer((req,res)=>{const path=decodeURIComponent(new URL(req.url,'http://test').pathname);let file=resolve(root,'.'+path);if(!file.startsWith(root+sep)&&file!==root){res.writeHead(403);return res.end();}if(path==='/'||path.endsWith('/index.html'))file=resolve(root,'index.html');if(!existsSync(file)||!statSync(file).isFile()){res.writeHead(404);return res.end();}res.setHeader('Content-Type',types[extname(file)]||'application/octet-stream');res.end(readFileSync(file));});
+const mount=process.env.WEB_BASE_PATH||'/';
+if(!/^\/(?:[a-zA-Z0-9_-]+\/)*$/.test(mount))throw Error('Invalid WEB_BASE_PATH');
+const server=createServer((req,res)=>{const requested=decodeURIComponent(new URL(req.url,'http://test').pathname);if(!requested.startsWith(mount)){res.writeHead(404);return res.end();}const path='/'+requested.slice(mount.length);let file=resolve(root,'.'+path);if(!file.startsWith(root+sep)&&file!==root){res.writeHead(403);return res.end();}if(path==='/'||path.endsWith('/index.html'))file=resolve(root,'index.html');if(!existsSync(file)||!statSync(file).isFile()){res.writeHead(404);return res.end();}res.setHeader('Content-Type',types[extname(file)]||'application/octet-stream');res.end(readFileSync(file));});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{}),args:['--no-sandbox','--disable-dev-shm-usage']});
 const context=await browser.newContext({acceptDownloads:true,viewport:{width:1440,height:1000}}),page=await context.newPage(),errors=[],external=[];
 await context.addInitScript(()=>{if(!localStorage.getItem('markitdown.locale'))localStorage.setItem('markitdown.locale','zh-CN');});
 page.on('pageerror',e=>errors.push(e.message));
 context.on('request',r=>{if(!r.url().startsWith('http://127.0.0.1:')&&!r.url().startsWith('blob:')&&!r.url().startsWith('data:'))external.push(r.url());});
-const base=`http://127.0.0.1:${server.address().port}`;
+const base=`http://127.0.0.1:${server.address().port}${mount}`;
 const checks=[];checks.push=(...items)=>{console.log(...items);return Array.prototype.push.apply(checks,items);};
 const monitor=setInterval(()=>{void page.locator('body').innerText().then(t=>console.log('Browser status:',t.slice(-280))).catch(()=>{});},15000);
 async function shot(name){await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await page.screenshot({path:resolve(out,name+'.png'),fullPage:true});if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Horizontal overflow '+name);}
