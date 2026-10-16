@@ -7,6 +7,8 @@ import time
 import tempfile
 import zipfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import Mock
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 import httpx
@@ -53,7 +55,7 @@ class EngineIsolation(unittest.TestCase):
         converter=Converter();barrier=threading.Barrier(2)
         def worker():
             md=converter.md;barrier.wait(2);return md,converter.md
-        with patch('converter.MarkItDown',side_effect=lambda **kw:object()):
+        with patch('converter.prepare_onnx'), patch.dict(sys.modules, {'markitdown': SimpleNamespace(MarkItDown=Mock(side_effect=lambda **kw:object()))}):
             with ThreadPoolExecutor(max_workers=2) as pool:
                 results=list(pool.map(lambda _:worker(),range(2)))
         self.assertIs(results[0][0],results[0][1]);self.assertIs(results[1][0],results[1][1]);self.assertIsNot(results[0][0],results[1][0])
@@ -66,3 +68,4 @@ class EngineIsolation(unittest.TestCase):
         engine._ocr=recognize
         with ThreadPoolExecutor(max_workers=2) as pool:results=list(pool.map(engine.ocr_image_file,['one.png','two.png']))
         self.assertEqual(peak,1);self.assertEqual(results,['Local fixture','Local fixture'])
+

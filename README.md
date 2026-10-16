@@ -58,19 +58,14 @@ npm run tauri dev
 python scripts/build.py
 ```
 
-或手动：
+仅准备内置运行环境：
 
 ```bash
-# 1) Python sidecar
-cd backend
-python -m PyInstaller markalldown_server.spec --clean --noconfirm
-
-# 2) 拷贝 sidecar 到 Tauri 外部二进制目录
-#    src-tauri/binaries/markalldown-server-<host-triple>.exe
-
-# 3) 构建桌面安装包
-npm run tauri build
+python scripts/build.py --sidecar-only
+# 生成 src-tauri/binaries/runtime/ 完整目录，之后再运行 npm run tauri build。
 ```
+
+后端使用目录式打包，必须分发整个运行环境，不能单独拷贝可执行文件。
 
 产物：
 
@@ -79,7 +74,7 @@ npm run tauri build
 | `src-tauri/target/release/bundle/nsis/MarkAllDown_*_x64-setup.exe` | NSIS 安装包（中/英向导） |
 | `src-tauri/target/release/bundle/msi/MarkAllDown_*_x64_en-US.msi` | MSI 安装包（en-US） |
 | `src-tauri/target/release/markalldown.exe` | 主程序 |
-| `src-tauri/target/release/markalldown-server.exe` | 转换服务 sidecar |
+| `src-tauri/binaries/runtime/` | 打包前的完整转换运行环境；安装后位于应用资源目录 `runtime/` |
 
 ## 使用说明
 
@@ -221,3 +216,11 @@ macOS 遵循 Apple 对导航层与内容层的区分：侧栏使用克制的自�
 检查点包含原始文档与已提取文字，仅保存在本机当前会话的私有临时目录。移除任务或正常退出会清理；不支持关闭应用后恢复。OCR 线程按并发数量限制，每页渲染最多约 2000 万像素。异常断电或强制杀死应用时不能保证临时目录立即清理。
 
 `scripts/benchmark_queue.py` 使用合成的文字、扫描和混合 PDF 分别测量 1/2/4 并发的总耗时及可读取时的进程峰值内存；CI 保存各平台结果。单次合成测试不代表所有真实文档的加速比。
+
+
+
+### 桌面启动优化（待原生安装包验收）
+
+后端改用 PyInstaller 目录式打包，避免每次启动释放单文件运行环境。转换依赖按实际任务延迟导入；启动期间可先选择文件，服务就绪后自动处理队列。启动失败可原地重试，保留已选文件与设置。
+
+阶段耗时记录在应用日志目录 `service-timings.jsonl`，只含阶段、耗时和进程号。`service-startup.log` 继续收集加载器错误。性能测量方法、验证边界和待验收项见 [启动优化记录](docs/DESKTOP_STARTUP.md)。

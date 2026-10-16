@@ -1,4 +1,6 @@
 import os
+from startup import record_stage, snapshot
+record_stage("python_entry")
 import asyncio
 import sys
 import json
@@ -46,6 +48,7 @@ logging.basicConfig(
     handlers=[logging.FileHandler(log_file, encoding='utf-8')]
 )
 logger = logging.getLogger(__name__)
+record_stage("base_imports_complete")
 
 
 def tr(zh: str, en: str, locale: str = "zh-CN") -> str:
@@ -95,6 +98,16 @@ async def shutdown():
         result_cache.clear()
     except Exception:
         logger.exception("Failed to clear result cache")
+
+
+@app.on_event("startup")
+async def startup_ready():
+    record_stage("application_ready")
+
+
+@app.get("/api/startup")
+async def startup_details(_: None = Depends(require_token)):
+    return {"stages": snapshot()}
 
 
 @app.get("/api/health")
@@ -332,3 +345,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

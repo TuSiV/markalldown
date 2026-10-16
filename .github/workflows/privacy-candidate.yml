@@ -72,10 +72,20 @@ jobs:
         run: python scripts/build.py --skip-install
       - name: Packaged sidecar smoke (Windows)
         if: runner.os == 'Windows'
-        run: python scripts/smoke_service.py backend/dist/markalldown-server.exe
+        run: python scripts/smoke_service.py backend/dist/markalldown-server/markalldown-server.exe
       - name: Packaged sidecar smoke (macOS)
         if: runner.os == 'macOS'
-        run: python scripts/smoke_service.py backend/dist/markalldown-server
+        run: python scripts/smoke_service.py backend/dist/markalldown-server/markalldown-server
+      - name: Measure packaged startup (Windows)
+        if: runner.os == 'Windows'
+        run: python scripts/benchmark_startup.py backend/dist/markalldown-server/markalldown-server.exe --output startup-benchmark.json
+      - name: Measure packaged startup (macOS)
+        if: runner.os == 'macOS'
+        run: python scripts/benchmark_startup.py backend/dist/markalldown-server/markalldown-server --output startup-benchmark.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Startup-benchmark-${{ matrix.label }}
+          path: startup-benchmark.json
       - name: Install and smoke Windows app
         if: runner.os == 'Windows'
         shell: pwsh
@@ -190,3 +200,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python scripts/publish_prerelease.py
+

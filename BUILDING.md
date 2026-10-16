@@ -3,8 +3,8 @@
 Use Node.js 22.12+ (CI: 24), Python 3.12 and stable Rust on the target OS. Windows needs the Visual Studio C++ build tools/WebView2; macOS needs Xcode command line tools. Install backend and developer requirements, then run `python scripts/build.py`.
 
 - Stable versions use NSIS/MSI Windows bundles; prereleases use NSIS because MSI rejects nonnumeric prerelease identifiers. `tauri.macos.conf.json` overrides bundles to APP/DMG for macOS.
-- PyInstaller creates a native service with OCR, converter and cryptography dependencies; its target-triple name is copied to Tauri `externalBin`.
-- The desktop locates platform-specific service binaries beside the application or in resources. Source checkout paths are only searched in debug builds.
+- PyInstaller creates an `onedir` service with OCR, converter and cryptography dependencies. The entire directory is copied to `src-tauri/binaries/runtime/` and bundled as resources at `runtime/`. Never distribute only its executable.
+- The desktop first locates `runtime/markalldown-server[.exe]` in the application resource directory; source checkout paths are only searched in debug builds. macOS Mach-O dependencies and the hardened service executable are signed before the outer app is sealed.
 - CI builds Windows x64, macOS arm64 and macOS x64, runs source tests, exercises the frozen service, installs/copies the actual bundle, then launches the installed app and tests its service. The launched process PATH excludes installed Python, establishing that the packaged service is standalone.
 - These checks exercise actual main-process and sidecar startup, conversion API logic and recovery workflow. They are not automated visual clicks of every desktop control. React interaction tests exercise review and consent state.
 - Release upload runs only if all native jobs succeed. It creates the v2.1.0 release on the feature commit; main is untouched. macOS apps use ad-hoc signatures and are not Developer ID signed or notarized.
@@ -42,3 +42,7 @@ The frozen-service and installed-desktop smoke checks also exercise version-2 ex
 
 
 2.2.0 adds workspace/settings/preview interaction tests, bounded frontend conversion-queue coverage and backend concurrency/health plus shared-engine isolation checks. Native build smoke exercises the unchanged conversion/export/recovery endpoints and the rebuilt full application.
+
+
+
+Startup measurement: `python scripts/benchmark_startup.py backend/dist/markalldown-server/markalldown-server[.exe] --runs 5 --output startup-benchmark.json`. This measures process launch to authenticated API readiness, not window rendering or true OS-cold starts. Native CI uploads one report per architecture. See `docs/DESKTOP_STARTUP.md` for pending acceptance criteria.

@@ -10,7 +10,7 @@ import { useUIStore,defaultPreferences } from "../src/stores/uiStore";
 import { useI18n } from "../src/i18n";
 import { api } from "../src/lib/api";
 vi.mock("../src/components/DropZone",()=>({DropZone:()=> <div>Import documents</div>}));
-vi.mock("../src/lib/api",()=>({api:{waitForServer:vi.fn(),readCachedText:vi.fn(),exportFiles:vi.fn()},localizeError:(s:string)=>s}));
+vi.mock("../src/lib/api",()=>({api:{waitForServer:vi.fn(),restartServer:vi.fn(),readCachedText:vi.fn(),exportFiles:vi.fn()},localizeError:(s:string)=>s}));
 vi.mock("../src/lib/privacyApi",()=>({privacyApi:{listLibrary:vi.fn(async()=>({packs:[]})),exportReviewed:vi.fn()}}));
 vi.mock("@tauri-apps/plugin-dialog",()=>({confirm:vi.fn(async()=>true),save:vi.fn(),open:vi.fn()}));
 vi.mock("sonner",()=>({Toaster:()=>null,toast:{success:vi.fn(),error:vi.fn(),warning:vi.fn()}}));
@@ -53,4 +53,22 @@ it("settings tabs expose working controls only in the selected section",()=>{
  expect(screen.queryByRole("combobox",{name:"默认格式"})).toBeNull();
  fireEvent.click(screen.getByRole("tab",{name:"导出"}));expect(screen.getByRole("combobox",{name:"默认格式"})).toBeTruthy();
  expect(screen.queryByRole("combobox",{name:"界面语言"})).toBeNull();
+});
+
+
+it("keeps the workspace and selected files when retrying startup",async()=>{
+ useAppStore.setState({isReady:false,port:null,files:[{id:"waiting",name:"waiting.md",size:1,type:"text/markdown",status:"pending",progress:0}]});
+ vi.mocked(api.waitForServer).mockRejectedValueOnce(new Error("service exited")).mockResolvedValueOnce({port:4321,token:"new-token"});
+ vi.mocked(api.restartServer).mockResolvedValue(undefined);
+ render(<App/>);
+ await screen.findByRole("alert");
+ const nav=within(screen.getByRole("navigation",{name:"工作空间"}));
+ fireEvent.click(nav.getByRole("button",{name:"设置"}));
+ expect(screen.getByRole("combobox",{name:"界面语言"})).toBeTruthy();
+ fireEvent.click(screen.getByRole("button",{name:"重试",exact:true}));
+ await waitFor(()=>expect(useAppStore.getState().isReady).toBe(true));
+ expect(api.restartServer).toHaveBeenCalledOnce();
+ expect(useAppStore.getState().files[0].name).toBe("waiting.md");
+ expect(useAppStore.getState().port).toBe(4321);
+ expect(screen.queryByRole("alert")).toBeNull();
 });

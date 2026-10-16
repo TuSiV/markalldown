@@ -39,3 +39,14 @@ it('uses one global concurrency limit across separately added batches',async()=>
  useUIStore.setState({concurrency:2});enqueueConversions([entry('a'),entry('b')]);enqueueConversions([entry('c'),entry('d')]);
  expect(api.convertFile).toHaveBeenCalledTimes(2);finish[0]();await waitFor(()=>expect(api.convertFile).toHaveBeenCalledTimes(3));finish[1]();await waitFor(()=>expect(api.convertFile).toHaveBeenCalledTimes(4));finish[2]();finish[3]();await waitFor(()=>expect(useAppStore.getState().isConverting).toBe(false));
 });
+
+
+it('keeps imported files waiting and starts them automatically when the service becomes ready', async () => {
+  vi.mocked(api.convertFile).mockResolvedValue(result('startup-wait'));
+  useAppStore.setState({port:null, token:'', isReady:false});
+  enqueueConversions([entry('startup-wait')]);
+  expect(api.convertFile).not.toHaveBeenCalled();
+  expect(useAppStore.getState().files.find(f=>f.id==='startup-wait')?.status).toBe('pending');
+  useAppStore.setState({port:1,token:'test',isReady:true});
+  await waitFor(()=>expect(useAppStore.getState().files.find(f=>f.id==='startup-wait')?.status).toBe('done'));
+});

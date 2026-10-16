@@ -1,7 +1,7 @@
 import brandMark from "../assets/brand.svg";
 import { useCallback, useState, useRef } from "react";
 import { FolderOpen, FileArchive, FileText, Loader2, AlertCircle, ArrowRight } from "lucide-react";
-import { useAppStore, FileEntry } from "../stores/appStore";
+import { FileEntry } from "../stores/appStore";
 import { localizeError } from "../lib/api";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readFile, readDir } from "@tauri-apps/plugin-fs";
@@ -44,7 +44,7 @@ async function collectFilesFromDir(dir: string, root: string, out: PickedFile[])
 }
 
 export function DropZone({ compact = false }: DropZoneProps) {
-  const { port, isReady } = useAppStore();
+
   const t = useT();
   const locale = useI18n((s) => s.locale);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -86,10 +86,6 @@ export function DropZone({ compact = false }: DropZoneProps) {
   }, [locale, t]);
 
   const pickFiles = useCallback(async () => {
-    if (!port || !isReady) {
-      toast.error(t("serviceWait"));
-      return;
-    }
     setPicking(true);
     try {
       const selected = await open({ multiple: true, title: t("selectFiles") });
@@ -108,13 +104,9 @@ export function DropZone({ compact = false }: DropZoneProps) {
     } finally {
       setPicking(false);
     }
-  }, [port, isReady, locale, buildEntries, runConvert, t]);
+  }, [locale, buildEntries, runConvert, t]);
 
   const pickFolder = useCallback(async () => {
-    if (!port || !isReady) {
-      toast.error(t("serviceWait"));
-      return;
-    }
     setPicking(true);
     try {
       const selected = await open({ directory: true, multiple: false, title: t("selectFolder") });
@@ -134,11 +126,11 @@ export function DropZone({ compact = false }: DropZoneProps) {
     } finally {
       setPicking(false);
     }
-  }, [port, isReady, locale, buildEntries, runConvert, t]);
+  }, [locale, buildEntries, runConvert, t]);
 
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = e.target.files;
-    if (!list || list.length === 0 || !port || !isReady) {
+    if (!list || list.length === 0) {
       if (fileInputRef.current) fileInputRef.current.value = "";
       if (folderInputRef.current) folderInputRef.current.value = "";
       return;
@@ -175,21 +167,7 @@ export function DropZone({ compact = false }: DropZoneProps) {
     if (entries.length > 0) await runConvert(entries);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (folderInputRef.current) folderInputRef.current.value = "";
-  }, [port, isReady, locale, runConvert]);
-
-  if (!isReady) {
-    return (
-      <div className="w-full max-w-2xl p-12 border-2 border-dashed rounded-xl border-[rgba(55,53,47,0.09)] bg-[#f7f6f3]">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <Loader2 className="w-8 h-8 text-[#2563eb] animate-spin" />
-          <div>
-            <p className="text-lg font-medium text-[#37352f]">{t("serviceStarting")}</p>
-            <p className="mt-1 text-sm text-[#787774]">{t("serviceStartHint")}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  }, [locale, runConvert]);
 
   const fileInput = (
     <input ref={fileInputRef} type="file" multiple onChange={handleFileChange} className="hidden" />
@@ -278,3 +256,4 @@ export function DropZone({ compact = false }: DropZoneProps) {
     </div>
   );
 }
+

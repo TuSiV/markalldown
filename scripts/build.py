@@ -12,9 +12,6 @@ ROOT = Path(__file__).resolve().parents[1]
 BACKEND = ROOT / "backend"
 def run(args, cwd=ROOT):
     subprocess.run(args, cwd=cwd, check=True)
-def host_target():
-    output = subprocess.check_output(["rustc", "-vV"], text=True)
-    return next(line.removeprefix("host: ") for line in output.splitlines() if line.startswith("host: "))
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--skip-install", action="store_true")
@@ -24,10 +21,21 @@ def main():
         run([sys.executable,"-m","pip","install","-r",str(BACKEND/"requirements.txt"),"pyinstaller"])
     run([sys.executable,"-m","PyInstaller","markalldown_server.spec","--clean","--noconfirm","--distpath",str(BACKEND/"dist")], BACKEND)
     suffix = ".exe" if platform.system() == "Windows" else ""
-    source = BACKEND/"dist"/("markalldown-server"+suffix)
-    dest = ROOT/"src-tauri/binaries"/("markalldown-server-"+host_target()+suffix)
+    source = BACKEND/"dist/markalldown-server"
+    # Sign nested native dependencies before Tauri seals the outer .app.
+    if platform.system() == "Darwin":
+        macho = {b"\xfe\xed\xfa\xce", b"\xce\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xcf\xfa\xed\xfe", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"}
+        for path in sorted(source.rglob("*")):
+            if path.is_symlink() or not path.is_file(): continue
+            with path.open("rb") as stream: magic = stream.read(4)
+            if magic in macho:
+                run(["codesign", "--force", "--sign", "-", str(path)])
+        run(["codesign", "--force", "--sign", "-", "--options", "runtime", "--entitlements", str(ROOT/"src-tauri/Entitlements.plist"), str(source/"markalldown-server")])
+    dest = ROOT/"src-tauri/binaries/runtime"
+    if dest.exists(): shutil.rmtree(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source,dest)
+    # Dereference PyInstaller symlinks so installer copying cannot strand targets.
+    shutil.copytree(source, dest, symlinks=False)
     if not args.sidecar_only:
         npm = "npm.cmd" if platform.system() == "Windows" else "npm"
         if not args.skip_install: run([npm,"ci"])
@@ -38,5 +46,6 @@ def main():
             # stable 2.0.0 retains both configured NSIS and MSI bundles.
             command += ["--bundles", "nsis"]
         run(command)
-    print("Native build completed for " + host_target())
+    print("Native build completed for " + platform.system() + " " + platform.machine())
 if __name__ == "__main__": main()
+

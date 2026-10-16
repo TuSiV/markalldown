@@ -86,6 +86,7 @@ fn find_sidecar(app: &AppHandle) -> Result<PathBuf, String> {
     let basename = format!("markalldown-server{}", suffix);
     let mut candidates = vec![exe_dir.join(&basename)];
     if let Ok(resources) = app.path().resource_dir() {
+        candidates.insert(0, resources.join("runtime").join(&basename));
         candidates.push(resources.join(&basename));
         // Some macOS distributions place executable resources in MacOS.
         candidates.push(resources.join("../MacOS").join(&basename));
@@ -95,7 +96,8 @@ fn find_sidecar(app: &AppHandle) -> Result<PathBuf, String> {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let target = env!("MARKALLDOWN_TARGET");
         candidates.push(root.join("binaries").join(format!("markalldown-server-{}{}", target, suffix)));
-        candidates.push(root.join("../backend/dist").join(&basename));
+        candidates.push(root.join("binaries/runtime").join(&basename));
+        candidates.push(root.join("../backend/dist/markalldown-server").join(&basename));
     }
     for candidate in candidates {
         if candidate.is_file() {
@@ -106,6 +108,7 @@ fn find_sidecar(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 fn start_sidecar(app: &AppHandle) -> Result<(u16, String), String> {
+    let started = std::time::Instant::now();
     let port = pick_port();
     let token = generate_token();
     let sidecar_path = find_sidecar(app)?;
@@ -124,7 +127,10 @@ fn start_sidecar(app: &AppHandle) -> Result<(u16, String), String> {
         use std::os::unix::fs::PermissionsExt;
         std::fs::set_permissions(&session_dir, std::fs::Permissions::from_mode(0o700)).map_err(|error| error.to_string())?;
     }
+    let timings = log_dir.join("service-timings.jsonl");
+    std::fs::File::create(&timings).map_err(|error| error.to_string())?;
     let mut command = Command::new(&sidecar_path);
+    command.env("MAD_STARTUP_LOG", &timings);
     command.stdout(Stdio::from(startup_log)).stderr(Stdio::from(startup_stderr));
     command.args(["--port", &port.to_string(), "--token", &token, "--session-dir", &session_dir.to_string_lossy()])
         .current_dir(sidecar_path.parent().unwrap_or(std::path::Path::new(".")));
@@ -139,7 +145,7 @@ fn start_sidecar(app: &AppHandle) -> Result<(u16, String), String> {
     })?;
     *app.state::<AppState>().session_dir.lock().unwrap() = Some(session_dir);
 
-    log::info!("Sidecar started, PID: {}, port: {}", child.id(), port);
+    log::info!("startup stage=sidecar_spawn elapsed_ms={} pid={}", started.elapsed().as_millis(), child.id());
 
     let state = app.state::<AppState>();
     *state.sidecar_child.lock().unwrap() = Some(child);
@@ -243,3 +249,4 @@ pub fn run() {
         }
     });
 }
+

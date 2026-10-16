@@ -4,12 +4,12 @@ import tempfile
 import time
 from pathlib import Path
 from typing import Optional
-# ONNX is used by both file-type detection and OCR. Disable its runtime
-# telemetry before any model session is created (including in PDF workers).
-import onnxruntime
-onnxruntime.disable_telemetry_events()
-from markitdown import MarkItDown
-import anydoc
+from startup import timed_stage
+
+# Import heavy conversion dependencies only in the worker that needs them.
+def prepare_onnx():
+    import onnxruntime
+    onnxruntime.disable_telemetry_events()
 
 # Modern formats keep their established MarkItDown path until corpus testing
 # justifies switching. No hosted OCR option is ever passed to anydoc.
@@ -45,9 +45,12 @@ class Converter:
         self._pdf_lock = threading.Lock()
 
     @property
-    def md(self) -> MarkItDown:
+    def md(self):
         if not hasattr(self._local, "md"):
-            self._local.md = MarkItDown(enable_plugins=False)
+            with timed_stage("markitdown_load"):
+                prepare_onnx()
+                from markitdown import MarkItDown
+                self._local.md = MarkItDown(enable_plugins=False)
         return self._local.md
 
     def check_format(self, filename: str) -> None:
@@ -87,6 +90,9 @@ class Converter:
                 self._local.report = {"engine": "anydoc", "warnings": [
                     "旧格式正文已提取；复杂表格、图片和嵌入对象请对照原件检查。桌面此路径未导出图片资源，可使用浏览器版资源打包。"
                 ]}
+                with timed_stage("anydoc_load"):
+                    prepare_onnx()
+                    import anydoc
                 text = anydoc.to_markdown(file_path)
                 if not text.strip():
                     raise ConversionError('转换未提取到正文，请检查原文件')
@@ -153,3 +159,4 @@ class ConversionError(Exception):
     pass
 
 converter = Converter()
+

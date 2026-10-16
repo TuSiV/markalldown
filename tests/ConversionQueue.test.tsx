@@ -21,3 +21,17 @@ it("limits concurrent conversion calls and advances the next pending file when a
  resolve[0]();await waitFor(()=>expect(api.convertFile).toHaveBeenCalledTimes(3));resolve[1]();resolve[2]();
  await waitFor(()=>expect(useAppStore.getState().isConverting).toBe(false));expect(useAppStore.getState().files.every(f=>f.status==="done")).toBe(true);
 });
+
+
+it("allows native file selection before service readiness and queues all files",async()=>{
+ useAppStore.setState({port:null,token:"",isReady:false});
+ render(<DropZone/>);
+ fireEvent.click(screen.getByRole("button",{name:"选择文件"}));
+ await waitFor(()=>expect(useAppStore.getState().files).toHaveLength(3));
+ expect(open).toHaveBeenCalledOnce();
+ expect(api.convertFile).not.toHaveBeenCalled();
+ expect(useAppStore.getState().files.every(file=>file.status==="pending")).toBe(true);
+ vi.mocked(api.convertFile).mockResolvedValue({kind:"single",filename:"file.md",cachePath:"/cache/file",preview:"text",charCount:4});
+ useAppStore.setState({port:1234,token:"token",isReady:true});
+ await waitFor(()=>expect(useAppStore.getState().files.every(file=>file.status==="done")).toBe(true));
+});

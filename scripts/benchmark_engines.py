@@ -5,6 +5,8 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'backend'))
 def worker(engine,path):
  import psutil
+ from converter import prepare_onnx
+ prepare_onnx()
  import anydoc
  from markitdown import MarkItDown
  md=MarkItDown(enable_plugins=False) if engine=='markitdown' else None
@@ -44,3 +46,4 @@ def main():
  report={'method':'5 in-process conversions, median including first cold conversion. Each engine/file in fresh process. RSS delta sampled at 1ms; initialization/process launch excluded. Not a fidelity score or mobile benchmark.','platform':sys.platform,'versions':{k:importlib.metadata.version(k) for k in ['firecrawl-anydoc','markitdown']},'pythonModuleBytes':sum(p.stat().st_size for p in module.rglob('*') if p.is_file()),'sizes':sizes,'results':reports}
  out=Path(a.output);out.parent.mkdir(parents=True,exist_ok=True);out.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf8')
 if __name__=='__main__':main()
+

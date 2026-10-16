@@ -1,0 +1,187 @@
+{
+  "platform": "Linux x86_64",
+  "packaged": {
+    "mode": "repeated-process-starts-not-OS-cold",
+    "samples": [
+      {
+        "readyMs": 589.28,
+        "stages": [
+          {
+            "stage": "python_entry",
+            "sinceEntryMs": 0.01
+          },
+          {
+            "stage": "base_imports_complete",
+            "sinceEntryMs": 342.72
+          },
+          {
+            "stage": "application_ready",
+            "sinceEntryMs": 402.27
+          }
+        ]
+      },
+      {
+        "readyMs": 469.75,
+        "stages": [
+          {
+            "stage": "python_entry",
+            "sinceEntryMs": 0.01
+          },
+          {
+            "stage": "base_imports_complete",
+            "sinceEntryMs": 233.17
+          },
+          {
+            "stage": "application_ready",
+            "sinceEntryMs": 315.14
+          }
+        ]
+      },
+      {
+        "readyMs": 414.86,
+        "stages": [
+          {
+            "stage": "python_entry",
+            "sinceEntryMs": 0.01
+          },
+          {
+            "stage": "base_imports_complete",
+            "sinceEntryMs": 225.21
+          },
+          {
+            "stage": "application_ready",
+            "sinceEntryMs": 273.55
+          }
+        ]
+      },
+      {
+        "readyMs": 571.79,
+        "stages": [
+          {
+            "stage": "python_entry",
+            "sinceEntryMs": 0.02
+          },
+          {
+            "stage": "base_imports_complete",
+            "sinceEntryMs": 294.25
+          },
+          {
+            "stage": "application_ready",
+            "sinceEntryMs": 388.06
+          }
+        ]
+      },
+      {
+        "readyMs": 520.27,
+        "stages": [
+          {
+            "stage": "python_entry",
+            "sinceEntryMs": 0.01
+          },
+          {
+            "stage": "base_imports_complete",
+            "sinceEntryMs": 245.64
+          },
+          {
+            "stage": "application_ready",
+            "sinceEntryMs": 304.54
+          }
+        ]
+      }
+    ],
+    "medianMs": 520.27,
+    "maxMs": 589.28
+  },
+  "staged": {
+    "mode": "repeated-process-starts-not-OS-cold",
+    "samples": [
+      {
+        "readyMs": 473.06,
+        "stages": [
+          {
+            "stage": "python_entry",
+            "sinceEntryMs": 0.01
+          },
+          {
+            "stage": "base_imports_complete",
+            "sinceEntryMs": 247.12
+          },
+          {
+            "stage": "application_ready",
+            "sinceEntryMs": 299.41
+          }
+        ]
+      },
+      {
+        "readyMs": 469.67,
+        "stages": [
+          {
+            "stage": "python_entry",
+            "sinceEntryMs": 0.01
+          },
+          {
+            "stage": "base_imports_complete",
+            "sinceEntryMs": 245.23
+          },
+          {
+            "stage": "application_ready",
+            "sinceEntryMs": 299.22
+          }
+        ]
+      },
+      {
+        "readyMs": 472.41,
+        "stages": [
+          {
+            "stage": "python_entry",
+            "sinceEntryMs": 0.01
+          },
+          {
+            "stage": "base_imports_complete",
+            "sinceEntryMs": 261.04
+          },
+          {
+            "stage": "application_ready",
+            "sinceEntryMs": 320.99
+          }
+        ]
+      },
+      {
+        "readyMs": 467.44,
+        "stages": [
+          {
+            "stage": "python_entry",
+            "sinceEntryMs": 0.01
+          },
+          {
+            "stage": "base_imports_complete",
+            "sinceEntryMs": 237.81
+          },
+          {
+            "stage": "application_ready",
+            "sinceEntryMs": 290.73
+          }
+        ]
+      },
+      {
+        "readyMs": 679.85,
+        "stages": [
+          {
+            "stage": "python_entry",
+            "sinceEntryMs": 0.01
+          },
+          {
+            "stage": "base_imports_complete",
+            "sinceEntryMs": 439.54
+          },
+          {
+            "stage": "application_ready",
+            "sinceEntryMs": 498.03
+          }
+        ]
+      }
+    ],
+    "medianMs": 472.41,
+    "maxMs": 679.85
+  }
+}

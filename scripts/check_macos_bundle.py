@@ -12,10 +12,11 @@ def main():
     app=Path(a.app).resolve()
     with (app/'Contents/Info.plist').open('rb') as f:info=plistlib.load(f)
     checks={'bundle':command(['codesign','--verify','--deep','--strict','--verbose=2',str(app)])}
-    for name in [info['CFBundleExecutable'],'markalldown-server']:
-        checks[name]=command(['codesign','--verify','--strict','--verbose=2',str(app/'Contents/MacOS'/name)])
+    checks['main']=command(['codesign','--verify','--strict','--verbose=2',str(app/'Contents/MacOS'/info['CFBundleExecutable'])])
     identity=command(['codesign','--display','--verbose=4',str(app)])
-    sidecar=app/'Contents/MacOS/markalldown-server'
+    sidecar=app/'Contents/Resources/runtime/markalldown-server'
+    if not sidecar.exists(): sidecar=app/'Contents/MacOS/markalldown-server'
+    checks['sidecar']=command(['codesign','--verify','--strict','--verbose=2',str(sidecar)])
     sidecar_identity=command(['codesign','--display','--verbose=4',str(sidecar)])
     sidecar_entitlements=command(['codesign','--display','--entitlements','-','--xml',str(sidecar)])
     if sidecar_entitlements['status'] != 0:
@@ -40,3 +41,4 @@ def main():
         assert loader_compatible, 'Frozen Python loader is missing its library-validation entitlement'
         if a.version:assert result['version']==a.version, 'Bundle version does not match manifest'
 if __name__=='__main__':main()
+

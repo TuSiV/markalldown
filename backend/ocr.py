@@ -3,6 +3,7 @@ import os
 import threading
 from pathlib import Path
 from typing import Optional
+from startup import timed_stage
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,10 @@ class OcrEngine:
 
     @property
     def ocr(self):
+        with self._lock:
+            return self._load_ocr()
+
+    def _load_ocr(self):
         if self._ocr is None:
             try:
                 import onnxruntime
@@ -34,7 +39,8 @@ class OcrEngine:
             except ImportError as e:
                 raise OcrError(f"OCR 引擎未安装: {e}") from e
             threads = max(1, min(4, int(os.environ.get('MAD_OCR_THREADS', '2'))))
-            self._ocr = RapidOCR(intra_op_num_threads=threads, inter_op_num_threads=1)
+            with timed_stage("ocr_model_load"):
+                self._ocr = RapidOCR(intra_op_num_threads=threads, inter_op_num_threads=1)
         return self._ocr
 
     def ocr_image_file(self, image_path: str) -> str:
@@ -105,3 +111,4 @@ ocr_engine = OcrEngine()
 def should_ocr_pdf(extracted_text: Optional[str]) -> bool:
     text = (extracted_text or "").strip()
     return len(text) < PDF_MIN_TEXT_CHARS
+

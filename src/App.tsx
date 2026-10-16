@@ -26,6 +26,9 @@ function App() {
   const [panel, setPanel] = useState<Workspace>("convert");
   const [initError, setInitError] = useState<string | null>(null);
   const [restarting, setRestarting] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const isReady = useAppStore(s => s.isReady);
+  const en = locale === "en-US";
 
   const colorMode = useUIStore(s => s.macAppearance);
   useEffect(() => {
@@ -55,38 +58,28 @@ function App() {
 
 
 
-  if (initError) {
-    return (
-      <div className="flex flex-col h-screen bg-white items-center justify-center">
-        <div className="text-center space-y-4 max-w-md">
-          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto">
-            <span className="text-3xl">!</span>
-          </div>
-          <h2 className="text-xl font-medium text-[#37352f]">{t("serviceFailed")}</h2>
-          <p className="text-sm text-[#787774] bg-red-50 p-3 rounded-lg text-left">
-            {initError}
-          </p>
-          <button
-            disabled={restarting}
-            onClick={async () => {
-              setRestarting(true);
-              try {
-                await api.restartServer();
-                window.location.reload();
-              } catch (error) {
-                setInitError(error instanceof Error ? error.message : String(error));
-                setRestarting(false);
-              }
-            }}
-            className="flex items-center gap-2 px-6 py-2.5 text-sm bg-[#2eaadc] text-white rounded-lg hover:bg-[#2eaadc]/90 mx-auto"
-          >
-            <RefreshCw className="w-4 h-4" />
-            {t("retry")}
-          </button>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (isReady || initError) return;
+    const started = performance.now();
+    const timer = setInterval(() => setElapsed(Math.floor((performance.now() - started) / 1000)), 1000);
+    return () => clearInterval(timer);
+  }, [isReady, initError]);
+
+  const retryService = async () => {
+    setRestarting(true);
+    try {
+      await api.restartServer();
+      setInitError(null);
+      setElapsed(0);
+      const conn = await api.waitForServer();
+      setConnection(conn.port, conn.token);
+      setReady(true);
+    } catch (error) {
+      setInitError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setRestarting(false);
+    }
+  };
 
   return (
     <div className="desktop-app" data-platform={appearance.platform} data-reduce-transparency={appearance.reduceTransparency} data-increase-contrast={appearance.increaseContrast} data-reduce-motion={appearance.reduceMotion}>
@@ -95,6 +88,13 @@ function App() {
       <main className="desktop-main">
         <Sidebar page={panel} onNavigate={setPanel} />
         <div className="desktop-content">
+          {!isReady && <div role={initError ? "alert" : "status"} className="service-status">
+            <div><strong>{initError ? t("serviceFailed") : t("serviceStarting")}</strong>
+              <p>{initError || (en ? `You can select files now. Conversion starts when the service is ready. Waiting ${elapsed}s.` : `可先选择文件，服务就绪后自动转换。已等待 ${elapsed} 秒。`)}</p>
+              {!initError && elapsed >= 15 && <p>{en ? "Startup is taking longer than expected. See service-startup.log in the app logs." : "启动时间超出预期，可查看应用日志中的 service-startup.log。"}</p>}
+            </div>
+            {initError && <button className="ui-secondary" disabled={restarting} onClick={retryService}><RefreshCw size={16} />{t("retry")}</button>}
+          </div>}
           <div hidden={panel !== "convert"} className="h-full"><ConversionWorkspace /></div>
           <div hidden={panel !== "redaction"} className="h-full"><RedactionPanel onClose={() => setPanel("convert")} onExport={() => setPanel("export")} /></div>
           <div hidden={panel !== "recovery"} className="h-full"><RecoveryPanel onClose={() => setPanel("convert")} /></div>
@@ -116,3 +116,4 @@ function App() {
 }
 
 export default App;
+

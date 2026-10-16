@@ -1,8 +1,8 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { ExportOptions } from "../stores/appStore";
 
-const MAX_RETRIES = 120;
-const RETRY_INTERVAL = 1000;
+const MAX_RETRIES = 600;
+const RETRY_INTERVAL = 200;
 
 export interface ConversionCheckpoint {completed?: number; total?: number; current?: number | null; resumed?: number; checkpoint?: boolean}
 export interface ConversionControl {signal?: AbortSignal; jobId?: string; concurrency?: number; resume?: boolean}
@@ -118,6 +118,7 @@ export const api = {
       try {
         const response = await fetch(`http://127.0.0.1:${info.port}/api/health`, {
           signal: controller.signal,
+          headers: authHeaders(info.token),
         });
 
         if (response.ok) {
@@ -128,7 +129,7 @@ export const api = {
       } finally {
         clearTimeout(timeout);
       }
-      await new Promise(resolve => setTimeout(resolve, RETRY_INTERVAL));
+      await new Promise(resolve => setTimeout(resolve, Math.min(1000, RETRY_INTERVAL * (1 + Math.floor(i / 10)))));
     }
 
     throw new Error(
@@ -335,3 +336,4 @@ export const api = {
     return data.content ?? "";
   },
 };
+
