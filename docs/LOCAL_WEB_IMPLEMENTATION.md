@@ -2,7 +2,7 @@
 
 [中文首页](../README.md) · [English](../README.en.md) · [Documentation](README.md)
 
-[Try the browser app](https://markalldown-preview.ardentpeach129.chatgpt.site) · [Build from source](../BUILDING.md)
+[Try the browser app](https://tusiv.github.io/markalldown/) · [Build from source](../BUILDING.md)
 
 The browser workspace is a separate build mode. It processes documents locally without connecting to the desktop Python service.
 
@@ -57,7 +57,7 @@ Preparation reports resource progress and can be cancelled/retried. Browser cach
 - No native iOS/Android app, system-share import registration, or print/PDF-output feature.
 - Markdown conversion does not reproduce the original page layout or guarantee OCR accuracy.
 - English/Chinese UI switching preserves tasks and content; it does not translate documents.
-- Web deployment is independent of repository pushes; a source change does not itself redeploy the hosted app.
+- The production browser app is hosted on GitHub Pages. The Pages workflow builds and verifies `/markalldown/` on pushes to `main` (documentation-only changes are skipped), then deploys after the browser checks pass. Failed checks leave the previous deployment intact.
 
 ## Verification
 

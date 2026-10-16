@@ -10,7 +10,7 @@ Local OCR · Batch processing · Redaction · Encrypted recovery
 
 [简体中文](README.md) · **English**
 
-**[Try the web app](https://markalldown-preview.ardentpeach129.chatgpt.site)** · **[Download v3.0.0](https://github.com/TuSiV/markalldown/releases/tag/v3.0.0)** · [Quick start](#quick-start) · [Documentation](docs/README.md)
+**[Try the web app](https://tusiv.github.io/markalldown/)** · **[Download v3.0.0](https://github.com/TuSiV/markalldown/releases/tag/v3.0.0)** · [Quick start](#quick-start) · [Documentation](docs/README.md)
 
 Windows x64 · macOS Apple Silicon / Intel · Web · English / Chinese UI
 
@@ -35,7 +35,7 @@ Windows x64 · macOS Apple Silicon / Intel · Web · English / Chinese UI
 
 | | Browser | Desktop |
 |---|---|---|
-| **Start** | [Open the web app](https://markalldown-preview.ardentpeach129.chatgpt.site) | Install a Windows or macOS package |
+| **Start** | [Open the web app](https://tusiv.github.io/markalldown/) | Install a Windows or macOS package |
 | **Processing** | Browser-local engines and OCR | Bundled local service and OCR models |
 | **Files / output** | File selection or drag-and-drop; Markdown/resource ZIP downloads | Files, folders, batch queues, and local export directories |
 | **Privacy workflow** | Reviewed redaction and independent encrypted recovery packs | Also offers an optional local encrypted recovery library |

@@ -58,6 +58,19 @@ npm run preview:web
 
 Deploy `dist-web/` to HTTPS static hosting. Localhost is suitable for desktop development. See [browser implementation](docs/LOCAL_WEB_IMPLEMENTATION.md) for offline-resource and mobile limits.
 
+### GitHub Pages deployment
+
+The production app is served at https://tusiv.github.io/markalldown/. Repository Settings → Pages uses **GitHub Actions**; `.github/workflows/pages.yml` builds, verifies, and deploys it after code changes reach `main`. Documentation-only changes do not trigger the Pages workflow; a manual dispatch is also available.
+
+To reproduce the project-path build and browser verification locally (Bash / zsh):
+
+```bash
+WEB_BASE_PATH=/markalldown/ npm run build:web
+WEB_BASE_PATH=/markalldown/ MAD_PYTHON=python npm run test:web
+```
+
+Keep the trailing slash. The default build still uses `/` for other HTTPS static hosts. The browser checks exercise real WASM conversion, OCR, encrypted recovery, language switching, and offline reload under the configured path. The verification environment needs the fixture dependencies and Chrome specified in the workflow.
+
 ## Source checks
 
 After activating the Python environment, select its interpreter for frontend interoperability tests:

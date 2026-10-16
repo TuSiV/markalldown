@@ -10,7 +10,7 @@
 
 **简体中文** · [English](README.en.md)
 
-**[立即网页试用](https://markalldown-preview.ardentpeach129.chatgpt.site)**　|　**[下载 3.0.0 正式版](https://github.com/TuSiV/markalldown/releases/tag/v3.0.0)**　|　[快速开始](#快速开始)　|　[文档导航](docs/README.md)
+**[立即网页试用](https://tusiv.github.io/markalldown/)**　|　**[下载 3.0.0 正式版](https://github.com/TuSiV/markalldown/releases/tag/v3.0.0)**　|　[快速开始](#快速开始)　|　[文档导航](docs/README.md)
 
 Windows · macOS Apple Silicon / Intel · 浏览器 · 中文 / English
 
@@ -50,7 +50,7 @@ Windows · macOS Apple Silicon / Intel · 浏览器 · 中文 / English
 
 | | 浏览器版 | 桌面版 |
 |---|---|---|
-| **开始使用** | [打开网页](https://markalldown-preview.ardentpeach129.chatgpt.site)，无需安装 | 安装 Windows / macOS 应用 |
+| **开始使用** | [打开网页](https://tusiv.github.io/markalldown/)，无需安装 | 安装 Windows / macOS 应用 |
 | **转换位置** | 当前浏览器中的本地处理引擎 | 本机内置转换服务与 OCR |
 | **导入与导出** | 文件选择或拖入；下载 Markdown / 资源 ZIP | 文件、文件夹与批量队列；保存到本机目录 |
 | **脱敏与恢复** | 全文审核、独立加密恢复包 | 全文审核、独立恢复，另有可选本机加密恢复库 |
@@ -77,7 +77,7 @@ macOS 包使用临时签名，未作 Apple Developer ID 签名或公证；首次
 
 ### 转换文件
 
-1. 打开 [网页版](https://markalldown-preview.ardentpeach129.chatgpt.site) 或桌面应用，选择文件；桌面版还可导入文件夹。
+1. 打开 [网页版](https://tusiv.github.io/markalldown/) 或桌面应用，选择文件；桌面版还可导入文件夹。
 2. 等待转换完成，检查阅读预览或 Markdown 源文。
 3. 网页版下载结果；桌面版选择保存位置与导出格式。包含提取资源的网页结果以 ZIP 打包。
 
