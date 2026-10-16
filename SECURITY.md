@@ -1,6 +1,6 @@
 # Security and privacy
 
-[Home](README.md) · [简体中文](README.zh-CN.md) · [Documentation](docs/README.md)
+[中文首页](README.md) · [English](README.en.md) · [Documentation](docs/README.md)
 
 This document describes data handling and the limits of conversion, redaction, and recovery.
 

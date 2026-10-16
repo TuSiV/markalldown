@@ -1,6 +1,6 @@
 # Build and verification guide
 
-[Home](README.md) · [简体中文](README.zh-CN.md) · [Documentation](docs/README.md)
+[中文首页](README.md) · [English](README.en.md) · [Documentation](docs/README.md)
 
 Run the desktop app from source, build native installers, or verify the browser workspace.
 

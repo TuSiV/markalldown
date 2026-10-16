@@ -1,6 +1,6 @@
 # MarkAllDown 3.0.0
 
-[Home](README.md) · [简体中文](README.zh-CN.md) · [Documentation](docs/README.md)
+[中文首页](README.md) · [English](README.en.md) · [Documentation](docs/README.md)
 
 **Stable release · Windows x64 · macOS Apple Silicon / Intel**
 

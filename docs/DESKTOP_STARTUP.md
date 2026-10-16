@@ -1,6 +1,6 @@
 # Desktop startup
 
-[Home](../README.md) · [中文](../README.zh-CN.md) · [Documentation](README.md)
+[中文首页](../README.md) · [English](../README.en.md) · [Documentation](README.md)
 
 This guide explains current startup behavior, diagnostics, and what the measurements establish.
 

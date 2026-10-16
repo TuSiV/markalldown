@@ -1,6 +1,6 @@
 # Documentation
 
-[English home](../README.md) · [中文首页](../README.zh-CN.md) · [Web app](https://markalldown-preview.ardentpeach129.chatgpt.site)
+[English home](../README.en.md) · [中文首页](../README.md) · [Web app](https://markalldown-preview.ardentpeach129.chatgpt.site)
 
 Current documentation describes the unified `main` source and the 3.0.0 stable release. Historical records are separated below.
 
@@ -8,7 +8,7 @@ Current documentation describes the unified `main` source and the 3.0.0 stable r
 
 | Need | Document |
 |---|---|
-| Product overview and download | [English README](../README.md) / [中文 README](../README.zh-CN.md) |
+| Product overview and download | [English README](../README.en.md) / [中文 README](../README.md) |
 | Changes, upgrade, and release assets | [Release notes](../RELEASE_NOTES.md) |
 | Data flow, encryption, consent, and recovery limits | [Security and privacy](../SECURITY.md) |
 
@@ -45,4 +45,4 @@ These are retained evidence, not current instructions or pending work.
 
 ## Documentation conventions
 
-The root README defaults to English and links to its Chinese counterpart. Technical guides are maintained in English. Prefer stable release/commit references for evidence, label historical measurements, and keep user instructions separate from development history.
+The root README defaults to Chinese and links to its English counterpart. Technical guides are maintained in English. Prefer stable release/commit references for evidence, label historical measurements, and keep user instructions separate from development history.

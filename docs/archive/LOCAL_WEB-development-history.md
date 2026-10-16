@@ -1,6 +1,6 @@
 # Web implementation development snapshot
 
-[Current documentation](../README.md) · [English home](../../README.md) · [中文首页](../../README.zh-CN.md)
+[Current documentation](../README.md) · [English home](../../README.en.md) · [中文首页](../../README.md)
 
 > Historical snapshot, not current instructions. Old branch names, test counts, and pending items reflect the original writing stage.
 

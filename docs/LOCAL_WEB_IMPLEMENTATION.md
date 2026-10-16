@@ -1,6 +1,6 @@
 # Browser and local conversion engines
 
-[Home](../README.md) · [中文](../README.zh-CN.md) · [Documentation](README.md)
+[中文首页](../README.md) · [English](../README.en.md) · [Documentation](README.md)
 
 [Try the browser app](https://markalldown-preview.ardentpeach129.chatgpt.site) · [Build from source](../BUILDING.md)
 
