@@ -1,125 +1,82 @@
 # MarkAllDown
 
-MarkAllDown 是一款本地桌面应用，可将 PDF / Office / 图片 / 压缩包等多种文件批量转换为 Markdown。转换引擎基于 [Microsoft MarkItDown](https://github.com/microsoft/markitdown)，并内置中文优先 OCR（扫描件与图片）。
+将 PDF、Office、图片等文件转换为 Markdown，支持批量处理、中文 OCR。
 
-> 产品名：**MarkAllDown** · 版本 **1.2.0** · 纯本地运行，不上传文件到外部服务（OCR 亦在本地）
+**[立即网页试用](https://markalldown-preview.ardentpeach129.chatgpt.site) · [下载本分支桌面版 v1.2.0](https://github.com/TuSiV/markalldown/releases/tag/v1.2.0) · [3.0.0 预发布](https://github.com/TuSiV/markalldown/releases/tag/v3.0.0) · [全部版本](https://github.com/TuSiV/markalldown/releases)**
 
-## 功能
+> 当前分支：`main` · 版本：**1.2.0** · 桌面转换版。网页试用为独立部署的 3.0.0 浏览器版，支持中文 / English；该入口不代表本分支包含浏览器版源码。
 
-- **多格式转换**：PDF、DOCX、PPTX、XLSX、HTML、CSV、Markdown、epub、ipynb、音频元数据等
-- **中文 OCR**：图片与扫描 PDF 自动识别文字（RapidOCR / PaddleOCR ONNX 模型）
-- **批量与文件夹**：选择多个文件或整个文件夹，保留相对目录结构
-- **导出方式**
-  - 单文件 → **存到原位置**（源文件旁生成 `.md`）
-  - 文件夹 → 导出到指定目录：**合并为一个 .md** / **按原目录结构生成** / ZIP
-- **转换结果磁盘缓存**：全文写入本地缓存目录，预览/导出时按需读取，降低内存占用
-- **中 / 英切换**：应用内一键切换；NSIS 安装向导支持简体中文 / English
-- **本地 API 鉴权**：sidecar 使用随机 token，避免浏览器页面误调本机服务
+## 选择使用方式
 
-## 架构
+| 使用方式 | 适用场景 | 入口 |
+|---|---|---|
+| 浏览器版 | 无需安装，文件在当前浏览器中处理；支持转换、OCR、脱敏与恢复 | [打开网页试用](https://markalldown-preview.ardentpeach129.chatgpt.site) |
+| 桌面版 | 本机批量文件与文件夹转换、目录导出 | [下载 v1.2.0](https://github.com/TuSiV/markalldown/releases/tag/v1.2.0) |
 
-```text
-┌─────────────────────┐     ┌──────────────────────────┐
-│  Tauri UI (React)   │────▶│  markalldown-server.exe  │
-│  markalldown.exe    │     │  FastAPI + MarkItDown    │
-│  dialog/fs/i18n     │     │  + OCR + 缓存/导出        │
-└─────────────────────┘     └──────────────────────────┘
-         │ WebSocket/HTTP (127.0.0.1 + X-API-Token)
-```
+桌面安装包包含转换服务与 OCR 模型，无需另装 Python。Windows 选择 `x64-setup.exe`；Mac 按芯片选择 Apple Silicon `aarch64.dmg` 或 Intel `x64.dmg`。校验文件为同一发布页的 `SHA256SUMS.txt`。
 
-- **前端**：React 18 + TypeScript + Vite + Tailwind + Zustand
-- **壳**：Tauri 2（启动/回收 Python sidecar，文件对话框）
-- **后端**：Python FastAPI + MarkItDown + RapidOCR + pypdfium2
+macOS 安装包使用临时签名，未经过 Apple Developer ID 签名及公证；首次打开可能需要在“系统设置 → 隐私与安全性”中允许打开。
 
-## 开发
+## 主要功能
 
-### 前置要求
+- **文件转换**：PDF、DOCX、PPTX、XLSX、HTML、CSV、Markdown 等常用文档转为 Markdown。
+- **中文 OCR**：识别图片与扫描 PDF；带文字层的 PDF 优先提取文字。
+- **批量与预览**：导入多个文件或文件夹，查看处理状态、阅读全文及 Markdown 源文。
+- **导出**：单文件保存、合并 Markdown、保留目录结构或 ZIP。
+- **界面语言**：桌面版可在设置中切换中文 / English。在线浏览器版通过页眉切换，保留当前任务；语言切换不翻译文档正文或文件名。
 
-- Node.js 22.12+（CI 使用 24）
-- Python 3.11+
-- Rust stable；Windows 需 C++ 构建工具，macOS 需 Xcode Command Line Tools
+## 快速开始
 
-### 安装依赖
+### 网页试用
+
+1. 打开 [MarkAllDown 网页版](https://markalldown-preview.ardentpeach129.chatgpt.site)，按需要选择“中文”或“English”。
+2. 选择或拖入文件，等待转换完成后预览。
+3. 下载转换结果；包含提取资源时以 ZIP 打包 Markdown 与资源。
+4. 如需分享脱敏内容，进入脱敏审核，检查全文，先保存加密恢复包并确认，再下载脱敏 Markdown。
+
+网页文件处理在浏览器中完成，不连接桌面 Python 服务。首次使用需下载页面与引擎资源；文档及口令不写入离线缓存。刷新或关闭页面会清除会话中的文档与口令，请先下载结果并单独保管恢复包。浏览器可能回收离线缓存。
+
+### 桌面使用
+
+1. 下载并安装对应系统的安装包。
+2. 打开应用，选择文件或文件夹；转换完成后预览全文。
+3. 在导出工作区选择保存位置与格式，或将单个 Markdown 存到原文件旁。
+
+## 支持范围与数据处理
+
+本分支桌面版不支持旧格式 `.doc` / `.ppt`，请先转为 `.docx` / `.pptx`。在线浏览器版采用独立引擎，支持范围与本分支不同。复杂表格、公式和 OCR 结果应对照原件检查；转换目标是 Markdown 内容，不是原始版面的完整复刻。
+
+桌面转换与 OCR 在本机进行，本地服务仅监听回环地址并使用随机令牌鉴权。转换缓存正常退出时清理，异常退出可能残留。
+
+## 从源码运行
+
+Node.js 22.12+、Python 3.12、Rust stable；Windows 需要 C++ 构建工具，macOS 需要 Xcode Command Line Tools。
 
 ```bash
-npm install
-pip install -r backend/requirements.txt
-```
-
-### 开发模式
-
-```bash
+npm ci
+python -m pip install -r backend/requirements.txt
+python scripts/build.py --sidecar-only
 npm run tauri dev
 ```
 
-### 完整打包
+桌面完整打包：
 
 ```bash
 python scripts/build.py
 ```
 
-或手动：
+## 文档与分支
 
-```bash
-# 1) Python sidecar
-cd backend
-python -m PyInstaller markalldown_server.spec --clean --noconfirm
+| 分支 | 版本 | 范围 |
+|---|---|---|
+| [main](https://github.com/TuSiV/markalldown/tree/main) | 1.2.0 | 桌面转换、OCR、导出 |
+| [feature/redaction-ai](https://github.com/TuSiV/markalldown/tree/feature/redaction-ai) | 2.2.1 | 桌面脱敏、恢复、可选 AI |
+| [feature/local-web-conversion](https://github.com/TuSiV/markalldown/tree/feature/local-web-conversion) | 2.3.0-rc.5 | 桌面旧格式、浏览器转换与离线资源 |
+| [perf/desktop-startup](https://github.com/TuSiV/markalldown/tree/perf/desktop-startup) | 3.0.0 预发布 | 桌面启动优化、浏览器中英切换 |
 
-# 2) 拷贝 sidecar 到 Tauri 外部二进制目录
-#    Windows: src-tauri/binaries/markalldown-server-<host-triple>.exe
-#    macOS: src-tauri/binaries/markalldown-server-<host-triple>
-
-# 3) 构建桌面安装包
-npm run tauri build
-```
-
-产物：
-
-| 路径 | 说明 |
-|------|------|
-| `src-tauri/target/release/bundle/nsis/MarkAllDown_*_x64-setup.exe` | NSIS 安装包（中/英向导） |
-| `src-tauri/target/release/bundle/msi/MarkAllDown_*_x64_en-US.msi` | MSI 安装包（en-US） |
-| `src-tauri/target/release/markalldown.exe` | 主程序 |
-| `src-tauri/target/release/markalldown-server.exe` | 转换服务 sidecar |
-
-### macOS 安装包
-
-1.2.0 同时提供 Apple Silicon（aarch64）与 Intel（x64）DMG。转换服务与 OCR 模型随应用内置，无需另装 Python。请在 [1.1.1 发布页](https://github.com/TuSiV/markalldown/releases/tag/v1.2.0) 选择对应架构；Windows EXE/MSI 位于同一发布页，并附 SHA256SUMS.txt。
-
-macOS 包使用 ad-hoc 临时签名，未获 Developer ID 签名及公证。CI 已验证 DMG 复制安装、实际桌面启动及内置服务转换/OCR/导出；未逐控件做人工界面验收。主分支保留文件转换功能，2.0.0 脱敏/AI 功能在独立功能分支。
-
-## 使用说明
-
-1. 启动应用后选择**文件**或**文件夹**
-2. 转换完成后可**预览**（按需读缓存全文）
-3. 单文件：点「存到原位置」；批量：点「导出」选择目录与格式
-4. 右上角 **中 / EN** 切换界面语言
-
-### 支持与限制
-
-| 类型 | 说明 |
-|------|------|
-| 旧版 `.doc` / `.ppt` | 不支持，请先转为 `.docx` / `.pptx` |
-| 图片 / 扫描 PDF | 走 OCR；无文字时会提示「未识别到文字」 |
-| 带文字层的 PDF | 优先抽文字层（更快） |
-
-## 安全与隐私
-
-- 所有转换与 OCR 在本机完成
-- 本机服务绑定 `127.0.0.1`，并要求随机 token（`X-API-Token`）
-- 解压与导出路径做了穿越防护
-- 转换结果缓存于 `%LOCALAPPDATA%\com.markalldown.app\cache`，退出时清空
+- [版本说明](RELEASE_NOTES.md)
+- [历史 README 与开发过程归档](docs/archive/README-development-history.md)（历史快照，不作为当前使用说明）
 
 ## 许可证
 
-MIT（转换能力依赖 Microsoft MarkItDown，详见其仓库许可）
-
-### Mac 下载后显示“损坏”
-
-1.1.1 / 2.0.0 缺少完整应用包签名；此前直接启动验收没有覆盖浏览器下载后的 Gatekeeper 检查。请改用 1.2.0 / 2.0.1。新版本对应用包、主程序和内置转换服务验证签名，并记录下载隔离状态下的系统评估。
-
-临时签名不是 Apple Developer ID 签名或公证，首次启动仍可能被拦截。确认下载来源与 SHA256SUMS.txt 一致后，按 macOS 的“系统设置 → 隐私与安全性 → 仍要打开”处理。不要关闭系统整体 Gatekeeper。若仍显示损坏，检查 `codesign --verify --deep --strict --verbose=2 /Applications/MarkAllDown.app`，保留输出以区分签名失效与信任策略拦截。
-
-## main 1.2.0 界面更新
-
-转换、导出、设置使用独立工作区，细化文件图标、状态、选中反馈、按钮、表单和预览排版。语言、全文预览方式、字号、自动预览、并发转换和导出默认值均实际生效。导出显示后端返回的真实保存路径。main 保留转换、OCR 和导出功能；脱敏审核与恢复在 feature/redaction-ai 分支。
+MIT。转换能力基于 [Microsoft MarkItDown](https://github.com/microsoft/markitdown)，第三方依赖分别遵循其许可证。
