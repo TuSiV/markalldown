@@ -216,5 +216,16 @@ export const webMessages: Record<string,string> = {
   "恢复结果未通过原文校验": "The restored result failed original-content verification",
   "未知操作": "Unknown operation",
   "处理超时，请拆分文件": "Processing timed out. Split the file.",
-  "本地加密引擎加载失败": "Local encryption engine failed to load"
+  "本地加密引擎加载失败": "Local encryption engine failed to load",
+  "基于 MIT 许可证开源": "Open source under the MIT License",
+  "项目链接": "Project links",
+  "下载桌面版": "Download desktop app",
+  "问题反馈": "Report an issue",
+  "开源许可": "License",
+  "第三方许可": "Third-party notices",
+  "数据处理说明": "Data handling",
+  "完整安全与隐私说明": "Full security and privacy details",
+  "文件转换、OCR、脱敏与恢复在当前浏览器中处理；文档内容不会上传到本站服务器。首次使用和离线准备会从本站下载引擎与模型。": "Conversion, OCR, redaction, and recovery run in this browser; document contents are not uploaded to this site’s server. Initial use and offline preparation download engines and models from this site.",
+  "文档、映射明文与口令仅保留在当前页面内存；刷新或关闭页面后清除。离线缓存保存应用、引擎和模型，浏览器可能清理缓存。界面语言偏好保存在本机。": "Documents, plaintext mappings, and passwords stay in page memory and are cleared on refresh or close. Offline caches store the app, engines, and models and may be cleared by the browser. Your language preference is stored locally.",
+  "下载结果与恢复包由你自行保管。普通导出包含原文，脱敏结果须人工检查；恢复包不能重建原始 Word 或 PDF。": "Keep downloaded results and recovery packs safe. Standard exports contain original text; review redaction results manually. Recovery packs cannot recreate the original Word or PDF."
 };

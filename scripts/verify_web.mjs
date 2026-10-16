@@ -30,6 +30,18 @@ try{
  await shot('landing-desktop');
  await page.getByRole('button',{name:'English',exact:true}).click();
  await page.getByRole('button',{name:'Choose files',exact:true}).waitFor();
+ const footer=page.locator('footer');
+ for(const [name,href] of [['GitHub','https://github.com/TuSiV/markalldown'],['Download desktop app','https://github.com/TuSiV/markalldown/releases'],['Report an issue','https://github.com/TuSiV/markalldown/issues'],['License',mount+'LICENSE.txt'],['Third-party notices',mount+'THIRD_PARTY_NOTICES.txt']]){
+  if(await footer.getByRole('link',{name,exact:true}).getAttribute('href')!==href)throw Error('Incorrect footer link: '+name);
+ }
+ if(!(await footer.innerText()).includes('© 2026 YONGZHE CHEN'))throw Error('Copyright missing');
+ for(const [path,text] of [['LICENSE.txt','MIT License'],['THIRD_PARTY_NOTICES.txt','@firecrawl/anydoc-wasm']]){
+  const response=await fetch(base+path);if(!response.ok||!(await response.text()).includes(text))throw Error('Missing legal asset: '+path);
+ }
+ await footer.getByText('Data handling',{exact:true}).click();
+ await footer.getByText('Full security and privacy details',{exact:true}).waitFor();
+ checks.push('Copyright, project/download/issue links, local license/notices and bilingual data handling');
+
  if(await page.locator('html').getAttribute('lang')!=='en-US')throw Error('English document language missing');
  for(const width of [390,768,1440]){await page.setViewportSize({width,height:1000});await shot('english-'+width);}
  await page.reload();await page.getByRole('button',{name:'Choose files',exact:true}).waitFor();
@@ -38,6 +50,7 @@ try{
  await englishNav.getByRole('button',{name:'Restore files',exact:true}).click();await page.getByRole('button',{name:'Choose recovery JSON',exact:true}).waitFor();
  await englishNav.getByRole('button',{name:'Settings',exact:true}).click();await page.getByLabel('Maximum file size (MB)').waitFor();
  await page.getByRole('button',{name:'中文',exact:true}).click();await page.getByRole('navigation').getByRole('button',{name:'文件转换',exact:true}).click();
+ await footer.getByRole('link',{name:'第三方许可',exact:true}).waitFor();await footer.getByText('完整安全与隐私说明',{exact:true}).waitFor();await footer.getByText('数据处理说明',{exact:true}).click();
  checks.push('Chinese/English all-workspace controls, persistent language and responsive English layout');
  for(const width of [390,768]){await page.setViewportSize({width,height:844});await shot('landing-'+width);}
  await page.setViewportSize({width:1440,height:1000});

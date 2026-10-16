@@ -18,6 +18,7 @@ for(const [src,dest] of [['cmaps','cmaps'],['standard_fonts','fonts'],['wasm','w
 await writeFile(join(root,'offline-resources.json'),JSON.stringify(resources));
 await copyFile('src/assets/brand.svg',join(root,'icon.svg'));
 await copyFile('src/assets/brand.svg',join(root,'favicon.svg'));
+await copyFile('LICENSE',join(root,'LICENSE.txt'));
 const notices=[];
 for(const pkg of ['@firecrawl/anydoc-wasm','tesseract.js','tesseract.js-core','@tesseract.js-data/eng','@tesseract.js-data/chi_sim','pdfjs-dist','@noble/hashes','fflate']){
  const path='node_modules/'+pkg;const metadata=JSON.parse(await readFile(path+'/package.json','utf8'));
