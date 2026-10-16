@@ -72,3 +72,26 @@ it("keeps the workspace and selected files when retrying startup",async()=>{
  expect(useAppStore.getState().port).toBe(4321);
  expect(screen.queryByRole("alert")).toBeNull();
 });
+
+it("disables irrelevant combined-export options and restores them for ZIP", async () => {
+ const { ExportPanel } = await import("../src/components/ExportPanel");
+ render(<ExportPanel workspace onClose={vi.fn()} onRedact={vi.fn()}/>);
+ fireEvent.click(screen.getByRole("radio", {name:/合并为/}));
+ expect((screen.getByRole("checkbox", {name:/保留原始文件名/}) as HTMLInputElement).disabled).toBe(true);
+ expect((screen.getByRole("radio", {name:/平铺/}) as HTMLInputElement).disabled).toBe(true);
+ expect(screen.getByText(/合并文件固定为 combined.md/)).toBeTruthy();
+ fireEvent.click(screen.getByRole("radio", {name:/ZIP/}));
+ expect((screen.getByRole("checkbox", {name:/保留原始文件名/}) as HTMLInputElement).disabled).toBe(false);
+ expect((screen.getByRole("radio", {name:/平铺/}) as HTMLInputElement).disabled).toBe(false);
+});
+
+it("retains redaction naming restrictions when switching export formats", async () => {
+ useAppStore.setState({privacyEnabled:true});
+ usePrivacyStore.setState({anonymousNames:true});
+ const { ExportPanel } = await import("../src/components/ExportPanel");
+ render(<ExportPanel workspace onClose={vi.fn()} onRedact={vi.fn()}/>);
+ fireEvent.click(screen.getByRole("radio", {name:/合并为/}));
+ fireEvent.click(screen.getByRole("radio", {name:/ZIP/}));
+ expect((screen.getByRole("checkbox", {name:/保留原始文件名/}) as HTMLInputElement).disabled).toBe(true);
+ expect((screen.getByRole("radio", {name:/平铺/}) as HTMLInputElement).disabled).toBe(true);
+});

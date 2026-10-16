@@ -1,14 +1,16 @@
 name: Desktop and browser acceptance
 on:
   push:
-    branches: [feature/redaction-ai, feature/local-web-conversion, perf/desktop-startup]
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 env:
   ORT_DISABLE_TELEMETRY: "1"
 permissions:
   contents: read
 concurrency:
-  group: privacy-candidate-${{ github.ref }}
+  group: desktop-browser-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   native:
@@ -72,7 +74,7 @@ jobs:
           python scripts/check_macos_bundle.py "$RUNNER_TEMP/Previous-MarkAllDown.app" --inspect-only --quarantine --report "macos-evidence/previous-${{ matrix.label }}.json"
       - name: Native sidecar and installer build
         env:
-          MAD_PRERELEASE: ${{ github.ref == 'refs/heads/perf/desktop-startup' && '1' || '0' }}
+          MAD_PRERELEASE: "1"
         run: python scripts/build.py --skip-install
       - name: Packaged sidecar smoke (Windows)
         if: runner.os == 'Windows'
@@ -159,32 +161,8 @@ jobs:
           if-no-files-found: error
   browser-acceptance:
     uses: ./.github/workflows/local-web.yml
-  candidate-release:
-    if: github.ref == 'refs/heads/feature/redaction-ai'
-    needs: [native, ui-visual]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: MarkAllDown-*
-          path: installers
-      - name: Prepare checksums
-        run: |
-          mkdir -p release-assets
-          find installers -type f -exec cp {} release-assets/ \;
-          (cd release-assets && sha256sum * > SHA256SUMS.txt)
-      - name: Create release only after all platforms pass
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          tag="v$(node -p "require('./package.json').version")"
-          gh release create "$tag" --target "${{ github.sha }}" --title "MarkAllDown $tag" --notes-file RELEASE_NOTES.md
-          gh release upload "$tag" release-assets/*
   visual-prerelease:
-    if: (github.ref == 'refs/heads/feature/local-web-conversion' || github.ref == 'refs/heads/perf/desktop-startup') && contains(github.event.head_commit.message, '[prerelease]')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[prerelease]')
     needs: [native, ui-visual, browser-acceptance]
     runs-on: ubuntu-latest
     permissions:
@@ -207,3 +185,44 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: python scripts/publish_prerelease.py
 
+  consolidate-branches:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[consolidate]')
+    needs: [native, ui-visual, browser-acceptance]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Close superseded PRs and remove verified old branch heads
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const expected = {
+              'feature/redaction-ai': '39da8e1b1209f14e238653840b8c1c12f09ee8b0',
+              'feature/local-web-conversion': '781310bb095208b6fe3d96fccb3d8696c9fad162',
+              'perf/desktop-startup': '97226cdbb0ca34a2c1bc0b422f67046cfc95d1af'
+            };
+            const repository = (await github.rest.repos.get({owner, repo})).data;
+            if (repository.default_branch !== 'main') throw new Error('Default branch must be main');
+            const main = (await github.rest.git.getRef({owner, repo, ref:'heads/main'})).data;
+            if (main.object.sha !== context.sha) throw new Error('Main moved; inspect before cleanup');
+            const tag = (await github.rest.git.getRef({owner, repo, ref:'tags/v3.0.0'})).data;
+            if (tag.object.sha !== '6090b7a12d939377edd323fe39cf93b65b97bd0e') throw new Error('Released tag changed');
+            const existing = [];
+            for (const [branch, sha] of Object.entries(expected)) {
+              let ref;
+              try { ref = (await github.rest.git.getRef({owner, repo, ref:'heads/'+branch})).data; }
+              catch (error) { if (error.status === 404) continue; throw error; }
+              if (ref.object.sha !== sha) throw new Error('Branch moved: '+branch);
+              existing.push(branch);
+            }
+            for (const pull_number of [1, 2]) {
+              const pull = (await github.rest.pulls.get({owner, repo, pull_number})).data;
+              if (!(pull.head.ref in expected) || pull.head.sha !== expected[pull.head.ref]) throw new Error('Unexpected PR head');
+              if (pull.state === 'open') await github.rest.pulls.update({owner, repo, pull_number, state:'closed'});
+            }
+            for (const branch of existing) {
+              await github.rest.git.deleteRef({owner, repo, ref:'heads/'+branch});
+              core.info('Deleted '+branch);
+            }

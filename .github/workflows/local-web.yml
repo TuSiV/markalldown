@@ -1,7 +1,5 @@
 name: Local browser conversion
 on:
-  push:
-    branches: [feature/local-web-conversion]
   workflow_dispatch:
   workflow_call:
 env:

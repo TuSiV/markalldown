@@ -2,9 +2,9 @@
 
 将 PDF、Office、图片等文件转换为 Markdown，支持批量处理、中文 OCR、脱敏审核与加密恢复。
 
-**[立即网页试用](https://markalldown-preview.ardentpeach129.chatgpt.site) · [下载本分支桌面版 v3.0.0](https://github.com/TuSiV/markalldown/releases/tag/v3.0.0) · [3.0.0 预发布](https://github.com/TuSiV/markalldown/releases/tag/v3.0.0) · [全部版本](https://github.com/TuSiV/markalldown/releases)**
+**[立即网页试用](https://markalldown-preview.ardentpeach129.chatgpt.site) · [下载桌面预发布 v3.0.0](https://github.com/TuSiV/markalldown/releases/tag/v3.0.0) · [3.0.0 预发布](https://github.com/TuSiV/markalldown/releases/tag/v3.0.0) · [全部版本](https://github.com/TuSiV/markalldown/releases)**
 
-> 当前分支：`perf/desktop-startup` · 版本：**3.0.0（预发布）** · 桌面启动优化与浏览器双语预发布版。网页试用为独立部署的 3.0.0 浏览器版，支持中文 / English；线上部署不会随分支提交自动更新。
+> 当前分支：`main` · 版本：**3.0.0（预发布）** · 桌面启动优化与浏览器双语预发布版。网页试用为独立部署的 3.0.0 浏览器版，支持中文 / English；线上部署不会随分支提交自动更新。
 
 ## 选择使用方式
 
@@ -92,14 +92,11 @@ npm run preview:web
 
 静态产物为 `dist-web/`，可部署到 HTTPS 托管；电脑本地开发可使用 localhost。
 
-## 文档与分支
+## 文档与开发
 
-| 分支 | 版本 | 范围 |
-|---|---|---|
-| [main](https://github.com/TuSiV/markalldown/tree/main) | 1.2.0 | 桌面转换、OCR、导出 |
-| [feature/redaction-ai](https://github.com/TuSiV/markalldown/tree/feature/redaction-ai) | 2.2.1 | 桌面脱敏、恢复、可选 AI |
-| [feature/local-web-conversion](https://github.com/TuSiV/markalldown/tree/feature/local-web-conversion) | 2.3.0-rc.5 | 桌面旧格式、浏览器转换与离线资源 |
-| [perf/desktop-startup](https://github.com/TuSiV/markalldown/tree/perf/desktop-startup) | 3.0.0 预发布 | 桌面启动优化、浏览器中英切换 |
+`main` 是唯一长期维护分支，包含桌面转换、脱敏与恢复、浏览器工作台和启动优化。后续功能通过临时分支与 PR 开发，完成后删除临时分支。历史版本通过 [Release 与标签](https://github.com/TuSiV/markalldown/releases) 获取。
+
+分支代码可能晚于已发布的安装包；下载 v3.0.0 不会自动包含其后提交的修复。当前 3.0.0 保持预发布状态。
 
 - [版本说明](RELEASE_NOTES.md)
 - [桌面构建与验证](BUILDING.md)

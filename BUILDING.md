@@ -7,7 +7,7 @@ Use Node.js 22.12+ (CI: 24), Python 3.12 and stable Rust on the target OS. Windo
 - The desktop first locates `runtime/markalldown-server[.exe]` in the application resource directory; source checkout paths are only searched in debug builds. macOS Mach-O dependencies and the hardened service executable are signed before the outer app is sealed.
 - CI builds Windows x64, macOS arm64 and macOS x64, runs source tests, exercises the frozen service, installs/copies the actual bundle, then launches the installed app and tests its service. The launched process PATH excludes installed Python, establishing that the packaged service is standalone.
 - These checks exercise actual main-process and sidecar startup, conversion API logic and recovery workflow. They are not automated visual clicks of every desktop control. React interaction tests exercise review and consent state.
-- Release upload runs only if all native jobs succeed. It creates the v2.1.0 release on the feature commit; main is untouched. macOS apps use ad-hoc signatures and are not Developer ID signed or notarized.
+- `main` is the maintained desktop and browser source. Pushes and pull requests run all native, UI and browser checks; browser verification is reused without a second push-triggered run. Prerelease publication requires an explicit `[prerelease]` push on main after all checks succeed. Normal pushes do not publish or promote releases. CI sets `MAD_PRERELEASE=1` so candidate Windows builds contain NSIS only. macOS apps use ad-hoc signatures and are not Developer ID signed or notarized.
 - The local AI protocol test uses a real loopback HTTP server with deterministic synthetic replies. A production model/provider requires its own endpoint, model and credentials. No third-party production AI verification is claimed.
 
 Required source checks:
@@ -45,4 +45,4 @@ The frozen-service and installed-desktop smoke checks also exercise version-2 ex
 
 
 
-Startup measurement: `python scripts/benchmark_startup.py backend/dist/markalldown-server/markalldown-server[.exe] --runs 5 --output startup-benchmark.json`. This measures process launch to authenticated API readiness, not window rendering or true OS-cold starts. Native CI uploads one report per architecture. See `docs/DESKTOP_STARTUP.md` for pending acceptance criteria.
+Startup measurement: `python scripts/benchmark_startup.py backend/dist/markalldown-server/markalldown-server[.exe] --runs 5 --output startup-benchmark.json`. This measures process launch to authenticated API readiness, not window rendering or true OS-cold starts. Native CI uploads one report per architecture. See `docs/DESKTOP_STARTUP.md` for the measurement method and acceptance scope.

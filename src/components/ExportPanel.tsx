@@ -179,14 +179,14 @@ export function ExportPanel({ onClose, onRedact, workspace = false }: ExportPane
 
         <div>
           <label className="text-xs font-medium text-[#787774] uppercase tracking-wider">
-            {t("fileNaming")}
+            {t("fileNaming")} {exportOptions.format === "combined" && <span>{locale === "en-US" ? "(combined.md)" : "（合并文件固定为 combined.md）"}</span>}
           </label>
           <div className="mt-2">
             <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-[#f7f6f3] transition-colors">
               <input
                 type="checkbox"
                 checked={privacyEnabled ? !settings.anonymousNames : exportOptions.preserveNames}
-                disabled={exporting || privacyEnabled}
+                disabled={exporting || privacyEnabled || exportOptions.format === "combined"}
                 onChange={(e) => setExportOptions({ preserveNames: e.target.checked })}
                 className="w-4 h-4 rounded border-[rgba(55,53,47,0.09)]"
               />
@@ -218,7 +218,7 @@ export function ExportPanel({ onClose, onRedact, workspace = false }: ExportPane
                   type="radio"
                   name="structure"
                   value={value}
-                  disabled={exporting || (privacyEnabled && settings.anonymousNames)}
+                  disabled={exporting || exportOptions.format === "combined" || (privacyEnabled && settings.anonymousNames)}
                   checked={exportOptions.structure === value}
                   onChange={(e) => setExportOptions({ structure: e.target.value as any })}
                   className="sr-only"
