@@ -1,167 +1,94 @@
 # MarkAllDown
 
-MarkAllDown 是一款本地桌面应用，可将 PDF / Office / 图片 / 压缩包等多种文件批量转换为 Markdown。转换引擎基于 [Microsoft MarkItDown](https://github.com/microsoft/markitdown)，并内置中文优先 OCR（扫描件与图片）。
+将 PDF、Office、图片等文件转换为 Markdown，支持批量处理、中文 OCR、脱敏审核与加密恢复。
 
-> 产品名：**MarkAllDown** · 版本 **2.1.0** · 默认纯本地运行；仅启用可选 AI 且明确同意后，会向所选 AI 服务发送脱敏稿（OCR 始终在本地）
+**[立即网页试用](https://markalldown-preview.ardentpeach129.chatgpt.site) · [下载本分支桌面版 v2.2.1](https://github.com/TuSiV/markalldown/releases/tag/v2.2.1) · [3.0.0 预发布](https://github.com/TuSiV/markalldown/releases/tag/v3.0.0) · [全部版本](https://github.com/TuSiV/markalldown/releases)**
 
-## 功能
+> 当前分支：`feature/redaction-ai` · 版本：**2.2.1** · 桌面脱敏与恢复版。网页试用为独立部署的 3.0.0 浏览器版，支持中文 / English；该入口不代表本分支包含浏览器版源码。
 
-- **多格式转换**：PDF、DOCX、PPTX、XLSX、HTML、CSV、Markdown、epub、ipynb、音频元数据等
-- **中文 OCR**：图片与扫描 PDF 自动识别文字（RapidOCR / PaddleOCR ONNX 模型）
-- **批量与文件夹**：选择多个文件或整个文件夹，保留相对目录结构
-- **导出方式**
-  - 单文件 → **存到原位置**（源文件旁生成 `.md`）
-  - 文件夹 → 导出到指定目录：**合并为一个 .md** / **按原目录结构生成** / ZIP
-- **转换结果磁盘缓存**：全文写入本地缓存目录，预览/导出时按需读取，降低内存占用
-- **中 / 英切换**：应用内一键切换；NSIS 安装向导支持简体中文 / English
-- **本地 API 鉴权**：sidecar 使用随机 token，避免浏览器页面误调本机服务
+## 选择使用方式
 
-## 架构
+| 使用方式 | 适用场景 | 入口 |
+|---|---|---|
+| 浏览器版 | 无需安装，文件在当前浏览器中处理；支持转换、OCR、脱敏与恢复 | [打开网页试用](https://markalldown-preview.ardentpeach129.chatgpt.site) |
+| 桌面版 | 本机批量文件与文件夹转换、目录导出、可选 AI 辅助识别 | [下载 v2.2.1](https://github.com/TuSiV/markalldown/releases/tag/v2.2.1) |
 
-```text
-┌─────────────────────┐     ┌──────────────────────────┐
-│  Tauri UI (React)   │────▶│  markalldown-server.exe  │
-│  markalldown.exe    │     │  FastAPI + MarkItDown    │
-│  dialog/fs/i18n     │     │  + OCR + 缓存/导出        │
-└─────────────────────┘     └──────────────────────────┘
-         │ WebSocket/HTTP (127.0.0.1 + X-API-Token)
-```
+桌面安装包包含转换服务与 OCR 模型，无需另装 Python。Windows 选择 `x64-setup.exe`；Mac 按芯片选择 Apple Silicon `aarch64.dmg` 或 Intel `x64.dmg`。校验文件为同一发布页的 `SHA256SUMS.txt`。
 
-- **前端**：React 18 + TypeScript + Vite + Tailwind + Zustand
-- **壳**：Tauri 2（启动/回收 Python sidecar，文件对话框）
-- **后端**：Python FastAPI + MarkItDown + RapidOCR + pypdfium2
+macOS 安装包使用临时签名，未经过 Apple Developer ID 签名及公证；首次打开可能需要在“系统设置 → 隐私与安全性”中允许打开。
 
-## 开发
+## 主要功能
 
-### 前置要求
+- **文件转换**：PDF、DOCX、PPTX、XLSX、HTML、CSV、Markdown 等常用文档转为 Markdown。
+- **中文 OCR**：识别图片与扫描 PDF；带文字层的 PDF 优先提取文字。
+- **批量与预览**：导入多个文件或文件夹，查看处理状态、阅读全文及 Markdown 源文。
+- **导出**：单文件保存、合并 Markdown、保留目录结构或 ZIP。
+- **界面语言**：桌面版可在设置中切换中文 / English。在线浏览器版通过页眉切换，保留当前任务；语言切换不翻译文档正文或文件名。
+- **脱敏审核**：规则、自定义敏感词与白名单，逐文件检查全文并确认后导出。
+- **独立恢复**：使用脱敏 Markdown、加密 JSON 恢复包与口令恢复文本；桌面版可选用本机加密恢复库。
+- **可选 AI**：仅桌面版提供辅助候选识别，默认关闭，须配置服务并明确同意外发脱敏稿。
 
-- Node.js 18+
-- Python 3.11+
-- Rust 1.77+
+## 快速开始
 
-### 安装依赖
+### 网页试用
+
+1. 打开 [MarkAllDown 网页版](https://markalldown-preview.ardentpeach129.chatgpt.site)，按需要选择“中文”或“English”。
+2. 选择或拖入文件，等待转换完成后预览。
+3. 下载转换结果；包含提取资源时以 ZIP 打包 Markdown 与资源。
+4. 如需分享脱敏内容，进入脱敏审核，检查全文，先保存加密恢复包并确认，再下载脱敏 Markdown。
+
+网页文件处理在浏览器中完成，不连接桌面 Python 服务。首次使用需下载页面与引擎资源；文档及口令不写入离线缓存。刷新或关闭页面会清除会话中的文档与口令，请先下载结果并单独保管恢复包。浏览器可能回收离线缓存。
+
+### 桌面使用
+
+1. 下载并安装对应系统的安装包。
+2. 打开应用，选择文件或文件夹；转换完成后预览全文。
+3. 在导出工作区选择保存位置与格式，或将单个 Markdown 存到原文件旁。
+4. 需要脱敏时，先在“脱敏审核”中配置规则、填写至少 8 字符的口令，逐文件审核并确认，再导出脱敏版。
+5. 需要恢复时，在“文件恢复”中选择脱敏 Markdown、对应恢复包及口令，检查预览后另存。
+
+## 支持范围与数据处理
+
+本分支桌面版不支持旧格式 `.doc` / `.ppt`，请先转为 `.docx` / `.pptx`。在线浏览器版采用独立引擎，支持范围与本分支不同。复杂表格、公式和 OCR 结果应对照原件检查；转换目标是 Markdown 内容，不是原始版面的完整复刻。
+
+桌面转换与 OCR 在本机进行，本地服务仅监听回环地址并使用随机令牌鉴权。转换缓存正常退出时清理，异常退出可能残留。
+
+**脱敏与恢复为实验性功能。** 普通预览、复制及普通导出仍包含原文；需要分享时请使用“导出脱敏版”。自动规则可能漏检，图片像素、链接目标与来源元数据不保证清除，须人工检查。
+
+恢复包包含加密的敏感映射，须与脱敏正文分开保管；不要连同父目录一起分享。恢复只能还原转换后的 Markdown 文本，不能重建原始 Word / PDF。桌面本机恢复库默认关闭，启用后保存加密恢复数据；原文缓存不会因启用脱敏而被加密。
+
+可选 AI 仅在明确同意后向所配置服务发送脱敏稿，最多前 20,000 字符；候选须人工采用。浏览器版不提供云端 AI。
+
+## 从源码运行
+
+Node.js 22.12+、Python 3.12、Rust stable；Windows 需要 C++ 构建工具，macOS 需要 Xcode Command Line Tools。
 
 ```bash
-npm install
-pip install -r backend/requirements.txt
-```
-
-### 开发模式
-
-```bash
+npm ci
+python -m pip install -r backend/requirements.txt
+python scripts/build.py --sidecar-only
 npm run tauri dev
 ```
 
-### 完整打包
+桌面完整打包：
 
 ```bash
 python scripts/build.py
 ```
 
-或手动：
+## 文档与分支
 
-```bash
-# 1) Python sidecar
-cd backend
-python -m PyInstaller markalldown_server.spec --clean --noconfirm
+| 分支 | 版本 | 范围 |
+|---|---|---|
+| [main](https://github.com/TuSiV/markalldown/tree/main) | 1.2.0 | 桌面转换、OCR、导出 |
+| [feature/redaction-ai](https://github.com/TuSiV/markalldown/tree/feature/redaction-ai) | 2.2.1 | 桌面脱敏、恢复、可选 AI |
+| [feature/local-web-conversion](https://github.com/TuSiV/markalldown/tree/feature/local-web-conversion) | 2.3.0-rc.5 | 桌面旧格式、浏览器转换与离线资源 |
+| [perf/desktop-startup](https://github.com/TuSiV/markalldown/tree/perf/desktop-startup) | 3.0.0 预发布 | 桌面启动优化、浏览器中英切换 |
 
-# 2) 拷贝 sidecar 到 Tauri 外部二进制目录
-#    src-tauri/binaries/markalldown-server-<host-triple>.exe
-
-# 3) 构建桌面安装包
-npm run tauri build
-```
-
-产物：
-
-| 路径 | 说明 |
-|------|------|
-| `src-tauri/target/release/bundle/nsis/MarkAllDown_*_x64-setup.exe` | NSIS 安装包（中/英向导） |
-| `src-tauri/target/release/bundle/msi/MarkAllDown_*_x64_en-US.msi` | MSI 安装包（en-US） |
-| `src-tauri/target/release/markalldown.exe` | 主程序 |
-| `src-tauri/target/release/markalldown-server.exe` | 转换服务 sidecar |
-
-## 使用说明
-
-1. 启动应用后选择**文件**或**文件夹**
-2. 转换完成后可**预览**（按需读缓存全文）
-3. 单文件：点「存到原位置」；批量：点「导出」选择目录与格式
-4. 右上角 **中 / EN** 切换界面语言
-
-### 支持与限制
-
-| 类型 | 说明 |
-|------|------|
-| 旧版 `.doc` / `.ppt` | 不支持，请先转为 `.docx` / `.pptx` |
-| 图片 / 扫描 PDF | 走 OCR；无文字时会提示「未识别到文字」 |
-| 带文字层的 PDF | 优先抽文字层（更快） |
-
-## 安全与隐私
-
-- 所有转换与 OCR 在本机完成
-- 本机服务绑定 `127.0.0.1`，并要求随机 token（`X-API-Token`）
-- 解压与导出路径做了穿越防护
-- 转换结果缓存于 `%LOCALAPPDATA%\com.markalldown.app\cache`，退出时清空
+- [版本说明](RELEASE_NOTES.md)
+- [桌面构建与验证](BUILDING.md)
+- [历史 README 与开发过程归档](docs/archive/README-development-history.md)（历史快照，不作为当前使用说明）
 
 ## 许可证
 
-MIT（转换能力依赖 Microsoft MarkItDown，详见其仓库许可）
-
-
-## 可选脱敏 / 恢复 / AI 辅助识别（实验性）
-
-1. 转换文件后打开导出设置，启用可选脱敏，选择规则及自定义敏感词、白名单，填写至少 8 字符的映射口令。
-2. 对整批每个文件分别检查完整原文及脱敏稿，排除误检并补充漏检，逐文件确认全文审核。调整规则或口令会清除审核状态。
-3. 选择导出目录及 individual / combined / zip 格式。默认保留原文件名；仅显式选择匿名化时使用 document_0001.md 等名称及平铺目录，可在脱敏审核或导出面板切换。使用“导出脱敏版”，后端先验证恢复后的原文 SHA-256，再写入并核验加密映射，最后生成独立批次目录。
-4. 脱敏输出保存在 `redacted-批次ID` 文件夹；恢复映射保存在其旁边的 `recovery-批次ID.json`。ZIP 内不包含映射。不要连同整个父目录一起分享。
-5. 恢复时选择 Markdown、对应映射及正确口令。恢复的是转换后的 Markdown 文本，不是原来的 Word/PDF 二进制文件。
-
-普通导出和普通预览的复制/下载/保存仍使用原文。脱敏开启时显示原文标识，并通过桌面确认对话框防止误导出。
-
-AI 默认关闭，需要指定兼容 Chat Completions 的接口、模型及会话 API Key。先预览并确认全文，再同意外发，AI 最多收到脱敏稿前 20,000 字符。换接口、模型、文件或规则会清除同意状态；请求完成也会清除。候选仅能人工加入词表，不自动修改文档。无实际外部 AI 调用参与本次验证。
-
-**边界**：这是 Markdown 文本替换功能。图片像素、OCR 漏识别、未列入词表的姓名/机构/项目、链接目的地及来源元数据不保证清除。人工检查必须涵盖这些内容。跨文件占位符仍隔离；同一文件中的相同项保持一致。白名单按词作用于全文，可能排除其重叠匹配。
-
-每批最多 100 个文件；请求正文最多 10 MB；单篇规则处理最多 5,000,000 字符及 20,000 个候选匹配；恢复最多 100 份映射。达到上限会报错而非静默截断。对原文已有 MAD 占位符的二次处理，导出恢复验证可能要求原有映射；先恢复后再脱敏。
-
-原文缓存不会被映射加密。新增缓存使用匿名文件名，POSIX 目录/文件权限为 700/600；Windows 权限依赖系统账户 ACL。正常退出清理缓存，异常退出仍可能残留。此功能不是安全删除工具。
-
-Node.js 需要 22.12+（本轮使用 24.19）。
-
-测试：`python -m pip install -r backend/requirements.txt -r backend/requirements-dev.txt`；`python -m unittest discover -s tests -v`；`npm ci`；`npm test`；`npm run build`。Windows/macOS 桌面启动、侧车打包和安装包仍需目标系统验证。
-
-### Mac 下载后显示“损坏”
-
-1.1.1 / 2.0.0 缺少完整应用包签名；此前直接启动验收没有覆盖浏览器下载后的 Gatekeeper 检查。请改用 1.1.2 / 2.0.1。新版本对应用包、主程序和内置转换服务验证签名，并记录下载隔离状态下的系统评估。
-
-临时签名不是 Apple Developer ID 签名或公证，首次启动仍可能被拦截。确认下载来源与 SHA256SUMS.txt 一致后，按 macOS 的“系统设置 → 隐私与安全性 → 仍要打开”处理。不要关闭系统整体 Gatekeeper。若仍显示损坏，检查 `codesign --verify --deep --strict --verbose=2 /Applications/MarkAllDown.app`，保留输出以区分签名失效与信任策略拦截。
-
-## 2.1.0：独立脱敏审核、导出与恢复
-
-- 主界面提供三个入口：**脱敏审核**、**导出**、**文件恢复**。先在脱敏审核中配置规则、逐文件检查全文并确认；导出只保存已经审核的脱敏结果。规则、口令、文件内容变化都会使原审核失效。
-- 每批最多 100 个文件，支持单文件、合并和 ZIP 导出。**一批一个加密 JSON 恢复包**，保存在脱敏输出目录旁边；分享文件时不要分享恢复包。
-- 文件正文带不包含姓名、原文件名等内容的随机文档/脱敏版本编号。复制或改名不会影响匹配。同一次导入的文档编号固定；重新脱敏产生新版本编号，重新导入原文则作为新的文档处理。
-- 恢复无需转换文件或查询导出历史。选任一脱敏 MD、该批恢复包与口令，即可单独恢复；不需要同时提供整批 MD。恢复前显示全文及校验状态，确认后另存新文件，不覆盖已有文件。
-- 新恢复包的映射和清单均加密认证，包含文档/版本关联、导出文件编号及内容哈希。原样导出文件显示“与导出清单一致”；编辑或截取后的内容只能恢复已知占位符，必须额外确认。旧版恢复包继续可用，但无法提供新清单的完整性校验。
-- **本机恢复库默认关闭**。可在导出时选择另存加密恢复包，也可在独立恢复界面明确导入、匹配和移除恢复包。库只存加密恢复数据、随机编号、数量与时间，不存原文、原文件路径或口令，不是云端备份。它在正常退出后保留，与退出清理的转换缓存分离。
-- 恢复输出仍是 Markdown 文本，不能重建原始 Word/PDF。高级跨文件主体统一和超长 AI 分段不包含在本次升级中。
-
-
-## 2.2.0 工作台与设置
-
-A+B 混合 UI 使用浅色侧边导航，转换、脱敏审核、文件恢复、导出中心和设置各自拥有独立页面。切换页面保留当前会话的文件、审核结果及恢复预览；不会因此把原文或口令写入偏好存储。
-
-- 转换：导入文件/目录，队列状态、全文阅读/Markdown 源文预览、原文复制/保存。读取全文失败时仅显示片段并禁用复制/下载。
-- 审核：实际文件队列、检测规则、全文对照、逐文件确认、下一份待审核及已有 AI 显式外发授权。规则或口令变化继续清除旧审核。
-- 恢复：MD + 加密 JSON 或本机库，实际匹配/预览结果、确认全文后另存。恢复包格式仍为 JSON，不引入概念稿中的 MRP。
-- 导出：实际批次、审核数量、格式/目录/命名选择与成功输出路径。匿名命名可选，默认保留原名。
-- 设置：语言、自动预览、阅读/源文模式、字号、下一批 1–4 个并发任务以及导出默认值，全部立即生效。偏好持久化只含这些非敏感字段；重置不删除文件或恢复库。PDF/OCR 共享引擎按资源情况排队。
-
-未实现的开机启动、自动更新、缓存占用和日志目录操作不作为按钮出现。取消/清理缓存也不冒充“从队列移除”。转换运行时暂时禁用移除及清空队列。
-
-
-### 2.2.1 细节 UI 与渲染检查
-
-统一文件类型图标、状态徽标、按钮、表单、开关、分段切换及文档排版。脱敏审核使用队列 / 全文对照 / 统计操作三栏；恢复提供真实进度提示；导出采用配置卡片与批次汇总；设置分类选项卡可实际切换。
-
-`npm run test:ui` 使用 Playwright 检查五个页面的 1440 / 800 像素渲染、高亮与审核操作，并输出截图。可用 `CHROME_PATH` 指定 Chrome，`UI_SCREENSHOT_DIR` 指定截图目录。截图使用标注的示例服务与文件选择器，不包含真实用户文档；后端及原生安装检查另行验证真实功能。发布流程同时要求 UI 渲染和三个原生平台通过。
+MIT。转换能力基于 [Microsoft MarkItDown](https://github.com/microsoft/markitdown)，第三方依赖分别遵循其许可证。
