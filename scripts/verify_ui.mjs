@@ -32,6 +32,12 @@ await page.getByRole('button',{name:'选择文件',exact:true}).click();await pa
 const nav=page.getByRole('navigation',{name:'工作空间'});
 await page.addStyleTag({content:'*,*::before,*::after{transition:none!important;animation:none!important;caret-color:transparent!important;}[data-sonner-toaster]{visibility:hidden!important;}'});
 const shot=async name=>{await page.evaluate(async()=>{for(const el of document.querySelectorAll('.workspace-page'))if(el.offsetParent)el.scrollTop=0;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));});await page.screenshot({path:`${out}/${name}.png`,fullPage:true});const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth);if(overflow)throw new Error(`Horizontal page overflow: ${name}`);
+const settingsBalance=await page.evaluate(()=>{
+ const rules=document.querySelector('.review-rules'),options=document.querySelector('.review-options');
+ if(!rules?.checkVisibility()||!options?.checkVisibility())return null;
+ const a=rules.getBoundingClientRect(),b=options.getBoundingClientRect();
+ return {top:Math.abs(a.top-b.top),bottom:Math.abs(a.bottom-b.bottom)};
+});if(settingsBalance&&(settingsBalance.top>1||settingsBalance.bottom>1))throw new Error(`Review settings columns must align: ${name} ${JSON.stringify(settingsBalance)}`);
 const overlap=await page.evaluate(()=>{
  const grid=document.querySelector('.desktop-conversion-grid');
  if(!grid || getComputedStyle(grid).display==='contents' || !grid.offsetParent || getComputedStyle(grid).gridTemplateColumns.split(' ').length!==1)return false;
@@ -76,9 +82,9 @@ await page.locator('.redaction-page').evaluate(el=>{el.scrollTop=0;});await shot
 const reviewLayout=await page.evaluate(()=>{
  const page=document.querySelector('.redaction-page'),rules=page.querySelector('.review-rules').getBoundingClientRect(),options=page.querySelector('.review-options').getBoundingClientRect(),doc=page.querySelector('.review-document').getBoundingClientRect();
  const style=getComputedStyle(page),available=page.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);
- return {rulesTop:rules.top,optionsTop:options.top,settingsBottom:Math.max(rules.bottom,options.bottom),docTop:doc.top,docLeft:doc.left,docRight:doc.right,rulesLeft:rules.left,optionsRight:options.right,height:doc.height,available};
+ return {rulesTop:rules.top,optionsTop:options.top,rulesBottom:rules.bottom,optionsBottom:options.bottom,settingsBottom:Math.max(rules.bottom,options.bottom),docTop:doc.top,docLeft:doc.left,docRight:doc.right,rulesLeft:rules.left,optionsRight:options.right,height:doc.height,available};
 });
-if(Math.abs(reviewLayout.rulesTop-reviewLayout.optionsTop)>1||reviewLayout.docTop<reviewLayout.settingsBottom||Math.abs(reviewLayout.docLeft-reviewLayout.rulesLeft)>1||Math.abs(reviewLayout.docRight-reviewLayout.optionsRight)>1||Math.abs(reviewLayout.height-reviewLayout.available)>2)throw new Error(`Review must occupy a full workspace screen below settings: ${JSON.stringify(reviewLayout)}`);
+if(Math.abs(reviewLayout.rulesTop-reviewLayout.optionsTop)>1||Math.abs(reviewLayout.rulesBottom-reviewLayout.optionsBottom)>1||reviewLayout.docTop<reviewLayout.settingsBottom||Math.abs(reviewLayout.docLeft-reviewLayout.rulesLeft)>1||Math.abs(reviewLayout.docRight-reviewLayout.optionsRight)>1||Math.abs(reviewLayout.height-reviewLayout.available)>2)throw new Error(`Review must occupy a full workspace screen below settings: ${JSON.stringify(reviewLayout)}`);
 await page.locator('.redaction-page').evaluate(el=>{const d=el.querySelector('.review-document');el.scrollTop+=d.getBoundingClientRect().top-el.getBoundingClientRect().top-parseFloat(getComputedStyle(el).paddingTop);});
 await page.screenshot({path:`${out}/redaction.png`,fullPage:false});
 await nav.getByRole('button',{name:'脱敏审核',exact:true}).waitFor();

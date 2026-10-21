@@ -10,7 +10,7 @@ Local OCR · Batch processing · Redaction · Encrypted recovery
 
 [简体中文](README.md) · **English**
 
-**[Try the web app](https://tusiv.github.io/markalldown/)** · **[Download v3.0.2](https://github.com/TuSiV/markalldown/releases/tag/v3.0.2)** · [Quick start](#quick-start) · [Documentation](docs/README.md)
+**[Try the web app](https://tusiv.github.io/markalldown/)** · **[Download v3.0.3](https://github.com/TuSiV/markalldown/releases/tag/v3.0.3)** · [Quick start](#quick-start) · [Documentation](docs/README.md)
 
 Windows x64 · macOS Apple Silicon / Intel · Web · English / Chinese UI
 
@@ -48,13 +48,13 @@ The versions use different engines and may produce different formatting or extra
 
 | Platform | Installer |
 |---|---|
-| Windows x64 | [EXE](https://github.com/TuSiV/markalldown/releases/download/v3.0.2/MarkAllDown_3.0.2_x64-setup.exe) · [MSI](https://github.com/TuSiV/markalldown/releases/download/v3.0.2/MarkAllDown_3.0.2_x64_en-US.msi) |
-| macOS · Apple Silicon | [ARM64 DMG](https://github.com/TuSiV/markalldown/releases/download/v3.0.2/MarkAllDown_3.0.2_aarch64.dmg) |
-| macOS · Intel | [x64 DMG](https://github.com/TuSiV/markalldown/releases/download/v3.0.2/MarkAllDown_3.0.2_x64.dmg) |
+| Windows x64 | [EXE](https://github.com/TuSiV/markalldown/releases/download/v3.0.3/MarkAllDown_3.0.3_x64-setup.exe) · [MSI](https://github.com/TuSiV/markalldown/releases/download/v3.0.3/MarkAllDown_3.0.3_x64_en-US.msi) |
+| macOS · Apple Silicon | [ARM64 DMG](https://github.com/TuSiV/markalldown/releases/download/v3.0.3/MarkAllDown_3.0.3_aarch64.dmg) |
+| macOS · Intel | [x64 DMG](https://github.com/TuSiV/markalldown/releases/download/v3.0.3/MarkAllDown_3.0.3_x64.dmg) |
 
-[Release notes](RELEASE_NOTES.md) · [SHA256 checksums](https://github.com/TuSiV/markalldown/releases/download/v3.0.2/SHA256SUMS.txt) · [All releases](https://github.com/TuSiV/markalldown/releases)
+[Release notes](RELEASE_NOTES.md) · [SHA256 checksums](https://github.com/TuSiV/markalldown/releases/download/v3.0.3/SHA256SUMS.txt) · [All releases](https://github.com/TuSiV/markalldown/releases)
 
-**Upgrading from 3.0.1?** Install 3.0.2 for full-column previews, a separate screen-height comparison and compact English placeholders. Restore new placeholders with 3.0.2 or newer; existing recovery packs remain supported.
+**Upgrading from 3.0.2?** Install 3.0.3 for aligned redaction settings columns and compact review statistics. Full-screen comparison, compact English placeholders and existing recovery packs remain supported.
 
 macOS packages are ad-hoc signed, without Apple Developer ID signing or notarization. First launch may require approval in System Settings → Privacy & Security.
 

@@ -228,9 +228,20 @@ html:has(.desktop-app), body:has(.desktop-app) { height: 100%; overflow: hidden;
 .redaction-page .privacy-workspace { display: flex; flex-direction: column; min-height: 100%; }
 .redaction-page .review-banner { flex-shrink: 0; margin-bottom: 12px; padding: 12px 16px; }
 .redaction-page .review-grid { min-height: 0; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: max-content max-content; gap: 12px; align-items: start; }
-.redaction-page .review-rules { grid-column: 1; grid-row: 1; min-height: 0; }
-.redaction-page .review-options { grid-column: 2; grid-row: 1; min-height: 0; }
-.redaction-page .review-word-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.redaction-page .review-rules { grid-column: 1; grid-row: 1; min-height: 0; align-self: stretch; display: flex; flex-direction: column; }
+.redaction-page .review-options { grid-column: 2; grid-row: 1; min-height: 0; align-self: stretch; display: flex; flex-direction: column; }
+.redaction-page .review-options > * { flex-shrink: 0; }
+.redaction-page .review-options > .notice { margin-top: auto; }
+.redaction-page .review-rules > :is(.card-title, .rule-details) { flex-shrink: 0; }
+.redaction-page .review-word-fields { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.redaction-page .review-word-fields .form-label { display: flex; flex-direction: column; min-height: 0; }
+.redaction-page .review-word-fields textarea { flex: 1; min-height: 110px; resize: vertical; }
+.redaction-page .review-summary { padding: 12px 16px; }
+.redaction-page .review-summary > :not(:last-child) { margin-bottom: 8px; }
+.redaction-page .review-summary .stat-card { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 12px; }
+.redaction-page .review-summary .stat-card strong { margin-top: 0; font-size: 20px; }
+.redaction-page .review-summary .finding-list { max-height: 120px; }
+.redaction-page .review-summary .finding-row { padding: 7px 0; }
 .redaction-page .review-document { grid-column: 1 / -1; grid-row: 2; display: flex; flex-direction: column; height: calc(100vh - 176px); min-height: 360px; }
 @supports (height: 100dvh) { .redaction-page .review-document { height: calc(100dvh - 176px); } }
 @supports (height: 100cqh) {

@@ -1,35 +1,33 @@
-# MarkAllDown 3.0.2
+# MarkAllDown 3.0.3
 
 [中文首页](README.md) · [English](README.en.md) · [Documentation](docs/README.md)
 
 **Stable patch release · Windows x64 · macOS Apple Silicon / Intel**
 
-[Download](https://github.com/TuSiV/markalldown/releases/tag/v3.0.2) · [Checksums](https://github.com/TuSiV/markalldown/releases/download/v3.0.2/SHA256SUMS.txt)
+[Download](https://github.com/TuSiV/markalldown/releases/tag/v3.0.3) · [Checksums](https://github.com/TuSiV/markalldown/releases/download/v3.0.3/SHA256SUMS.txt)
 
 ## 本次更新 / Changes
 
-- 文件预览占据整个右侧栏，从顶部延伸到页脚上方，单文件和多文件均可充分利用窗口空间。
-  Document previews use the entire right column from the top of the window to the footer, for both single and multiple files.
-- 脱敏审核的敏感词与密码设置在上方并排；文件与对照区移至下方独立一行，可单独占据一整屏工作区高度。
-  Sensitive terms and password settings sit side by side above a full-width document comparison that has its own workspace-screen height.
-- 可恢复脱敏替代词改为英文短格式，例如 `【PHONE_ab12cd34_01】`、`【ID_ab12cd34_01】` 和 `【TERM_ab12cd34_01】`。
-  Reversible placeholders use compact English codes, including PHONE, ID and TERM, with a short file identifier and sequence number.
-- 保留旧长格式恢复支持，并验证跨桌面与网页恢复、多文件合并、片段恢复及占位符冲突检查。
-  Existing long placeholders remain recoverable, with desktop/browser interoperability, combined files, excerpts and collision checks validated.
+- 脱敏审核左右设置列总高度对齐，敏感词与规则输入区延伸至右列底部。
+  Redaction settings columns align at both edges; sensitive-term and whitelist fields expand to match the full right column.
+- 缩小审核统计中的数字卡片、间距和明细高度，各张卡片保持自然高度与原有位置。
+  Review summary metrics, spacing and findings are more compact, while individual cards retain their natural heights and existing positions.
+- 修复深色模式下“敏感词与规则”标题颜色，保留独立整屏对照、同步滚动及英文短替代词。
+  Fix the sensitive-terms heading color in dark mode; full-screen comparison, optional scroll synchronization and compact English placeholders remain available.
 
 ## Upgrade
 
-Install 3.0.2 over 3.0.1. Use 3.0.2 or newer to restore newly generated short placeholders; existing recovery packs remain supported.
+Install 3.0.3 over 3.0.2. Existing recovery packs remain supported.
 
 ## Release contents
 
 | Asset | Purpose |
 |---|---|
-| `MarkAllDown_3.0.2_x64-setup.exe` | Windows x64 NSIS installer |
-| `MarkAllDown_3.0.2_x64_en-US.msi` | Windows x64 MSI installer |
-| `MarkAllDown_3.0.2_aarch64.dmg` | Apple Silicon Mac |
-| `MarkAllDown_3.0.2_x64.dmg` | Intel Mac |
-| `MarkAllDown_3.0.2_UI-screenshots.zip` | Synthetic UI acceptance screenshots |
+| `MarkAllDown_3.0.3_x64-setup.exe` | Windows x64 NSIS installer |
+| `MarkAllDown_3.0.3_x64_en-US.msi` | Windows x64 MSI installer |
+| `MarkAllDown_3.0.3_aarch64.dmg` | Apple Silicon Mac |
+| `MarkAllDown_3.0.3_x64.dmg` | Intel Mac |
+| `MarkAllDown_3.0.3_UI-screenshots.zip` | Synthetic UI acceptance screenshots |
 | `SHA256SUMS.txt` | SHA-256 checksums for installers and screenshots |
 
 ## Verification
