@@ -86,3 +86,21 @@ class PrereleaseTests(unittest.TestCase):
             release_module.assert_target(release, {'object': {'type': 'commit', 'sha': 'b' * 40}}, source)
         with self.assertRaises(AssertionError):
             release_module.assert_target(release, {'object': {'type': 'tag', 'sha': source}}, source)
+
+    def test_new_stable_waits_for_draft_visibility_and_stops_after_bounded_retries(self):
+        from unittest.mock import patch
+        module_spec = importlib.util.spec_from_file_location('release', Path(__file__).resolve().parents[1]/'scripts/publish_release.py')
+        release_module = importlib.util.module_from_spec(module_spec)
+        with patch.dict('sys.modules', {'publish_prerelease': publish}):
+            module_spec.loader.exec_module(release_module)
+        draft = {'draft': True}
+        with patch.object(release_module, 'find_release', side_effect=[None, None, draft]), patch.object(release_module.time, 'sleep') as sleep:
+            self.assertIs(release_module.wait_for_draft('owner/repo', 'v3.0.1'), draft)
+            self.assertEqual(sleep.call_count, 2)
+        with patch.object(release_module, 'find_release', return_value=None) as find, patch.object(release_module.time, 'sleep'):
+            with self.assertRaises(AssertionError):
+                release_module.wait_for_draft('owner/repo', 'v3.0.1')
+            self.assertEqual(find.call_count, 8)
+        with patch.object(release_module, 'find_release', return_value={'draft': False}), patch.object(release_module.time, 'sleep'):
+            with self.assertRaises(AssertionError):
+                release_module.wait_for_draft('owner/repo', 'v3.0.1')
