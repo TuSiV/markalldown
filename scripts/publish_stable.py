@@ -15,6 +15,9 @@ def assert_replacement_target(release, tag, source):
     assert tag['object']['sha'] in (OLD_SOURCE, source), 'Release tag moved unexpectedly'
 
 def main():
+    if json.loads(Path('package.json').read_text())['version'] != '3.0.0':
+        from publish_release import main as publish_release
+        return publish_release()
     repo, source = os.environ['GITHUB_REPOSITORY'], os.environ['GITHUB_SHA']
     run_id = os.environ['GITHUB_RUN_ID']
     assert json.loads(Path('package.json').read_text())['version'] == '3.0.0'

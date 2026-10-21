@@ -86,7 +86,15 @@ export function FileList({ onPreview, selectedId }: { onPreview?: (id: string) =
         <h2 className="font-semibold text-slate-700">
           {t("fileList", { n: files.length })}
         </h2>
-        <button className="ui-secondary" disabled={!files.some(file => file.status === 'error' && file.file)} onClick={retryFailedConversions}>{locale === 'en-US' ? 'Retry failed' : '重试失败项'}</button>
+        <button
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#787774]
+                     hover:text-[#2563eb] hover:bg-[rgba(37,99,235,0.1)] rounded-md transition-colors"
+          disabled={!files.some(file => file.status === 'error' && file.file)}
+          onClick={retryFailedConversions}
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          {locale === 'en-US' ? 'Retry failed' : '重试失败项'}
+        </button>
         <button
           onClick={() => void clearConversions().catch(error => toast.error(String(error)))}
           disabled={files.some(f => ["converting", "pending", "pausing"].includes(f.status))}

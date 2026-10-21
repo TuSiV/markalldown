@@ -32,6 +32,71 @@ async function setup() {
   await screen.findByText("我已检查所选文件的全文及替换结果");
 }
 describe("privacy review gates", () => {
+  it("allows independent scrolling when unchecked and resumes synchronization when checked", async () => {
+    await setup();
+    const original = screen.getByText("original one").closest("pre")!;
+    const masked = screen.getByText(/END_OF_FULL_TEXT/).closest("pre")!;
+    Object.defineProperties(original, { scrollHeight: { value: 1200 }, clientHeight: { value: 200 } });
+    Object.defineProperties(masked, { scrollHeight: { value: 2200 }, clientHeight: { value: 200 } });
+    const toggle = screen.getByRole("checkbox", { name: "同步滚动" }) as HTMLInputElement;
+    expect(toggle.checked).toBe(true);
+    fireEvent.click(toggle);
+    original.scrollTop = 400;
+    fireEvent.scroll(original);
+    expect(masked.scrollTop).toBe(0);
+    masked.scrollTop = 1200;
+    fireEvent.scroll(masked);
+    expect(original.scrollTop).toBe(400);
+    fireEvent.click(toggle);
+    original.scrollTop = 500;
+    fireEvent.scroll(original);
+    expect(masked.scrollTop).toBe(1000);
+    masked.scrollTop = 1600;
+    fireEvent.scroll(masked);
+    expect(original.scrollTop).toBe(800);
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole("button", { name: "标记原文" }));
+    expect(screen.queryByRole("checkbox", { name: "同步滚动" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "左右对照" }));
+    expect((screen.getByRole("checkbox", { name: "同步滚动" }) as HTMLInputElement).checked).toBe(false);
+  });
+  it("synchronizes compare panes in both directions despite different text heights", async () => {
+    await setup();
+    const original = screen.getByText("original one").closest("pre")!;
+    const masked = screen.getByText(/END_OF_FULL_TEXT/).closest("pre")!;
+    Object.defineProperties(original, { scrollHeight: { value: 1200 }, clientHeight: { value: 200 } });
+    Object.defineProperties(masked, { scrollHeight: { value: 2200 }, clientHeight: { value: 200 } });
+    original.scrollTop = 500;
+    fireEvent.scroll(original);
+    expect(masked.scrollTop).toBe(1000);
+    fireEvent.scroll(masked); // The programmatic follow-up must not move the source.
+    expect(original.scrollTop).toBe(500);
+    masked.scrollTop = 1500;
+    fireEvent.scroll(masked);
+    expect(original.scrollTop).toBe(750);
+    original.scrollTop = 1000;
+    fireEvent.scroll(original);
+    expect(masked.scrollTop).toBe(2000);
+    masked.scrollTop = 0;
+    fireEvent.scroll(masked);
+    expect(original.scrollTop).toBe(0);
+    fireEvent.click(screen.getByRole("button", { name: "标记原文" }));
+    fireEvent.click(screen.getByRole("button", { name: "左右对照" }));
+    expect(original.scrollTop).toBe(0);
+    expect(screen.getByText(/END_OF_FULL_TEXT/).closest("pre")!.scrollTop).toBe(0);
+  });
+  it("leaves a non-scrollable compare pane stable", async () => {
+    await setup();
+    const original = screen.getByText("original one").closest("pre")!;
+    const masked = screen.getByText(/END_OF_FULL_TEXT/).closest("pre")!;
+    Object.defineProperties(original, { scrollHeight: { value: 200 }, clientHeight: { value: 200 } });
+    Object.defineProperties(masked, { scrollHeight: { value: 1200 }, clientHeight: { value: 200 } });
+    masked.scrollTop = 500;
+    fireEvent.scroll(masked);
+    expect(original.scrollTop).toBe(0);
+    fireEvent.scroll(original);
+    expect(masked.scrollTop).toBe(500);
+  });
   it("shows full document beyond 20K and blocks unreviewed batch", async () => {
     await setup();
     expect(screen.getByText(/END_OF_FULL_TEXT/).textContent!.length).toBeGreaterThan(20000);

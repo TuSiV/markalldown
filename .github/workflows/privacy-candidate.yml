@@ -74,7 +74,7 @@ jobs:
           python scripts/check_macos_bundle.py "$RUNNER_TEMP/Previous-MarkAllDown.app" --inspect-only --quarantine --report "macos-evidence/previous-${{ matrix.label }}.json"
       - name: Native sidecar and installer build
         env:
-          MAD_PRERELEASE: ${{ contains(github.event.head_commit.message, '[stable-3.0.0]') && '0' || '1' }}
+          MAD_PRERELEASE: ${{ (contains(github.event.head_commit.message, '[stable-3.0.0]') || contains(github.event.head_commit.message, '[stable]')) && '0' || '1' }}
         run: python scripts/build.py --skip-install
       - name: Packaged sidecar smoke (Windows)
         if: runner.os == 'Windows'
@@ -186,7 +186,7 @@ jobs:
         run: python scripts/publish_prerelease.py
 
   stable-release:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[stable-3.0.0]')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (contains(github.event.head_commit.message, '[stable-3.0.0]') || contains(github.event.head_commit.message, '[stable]'))
     needs: [native, ui-visual, browser-acceptance]
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -206,7 +206,7 @@ jobs:
         with:
           name: UI-render-evidence
           path: ui-screenshots
-      - name: Stage verified fresh builds and replace the 3.0.0 prerelease
+      - name: Publish stable installers after full acceptance
         env:
           GH_TOKEN: ${{ github.token }}
         run: python scripts/publish_stable.py

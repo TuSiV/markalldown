@@ -80,11 +80,16 @@
 .desktop-task-summary .completed { color: #197d60; background: #e8f5ee; }
 .desktop-app .import-strip { padding: 13px 16px; border-style: solid; background: #fff; border-radius: 13px; margin-bottom: 18px; flex-shrink: 0; }
 .desktop-app .import-strip > div { justify-content: flex-start; gap: 10px; }
-.desktop-conversion-grid { display: grid; grid-template-columns: minmax(270px, .8fr) minmax(0, 1.7fr); gap: 20px; flex: 1; min-height: 0; overflow: auto; }
+.desktop-conversion-grid { display: grid; grid-template-columns: minmax(270px, .8fr) minmax(0, 1.7fr); grid-template-rows: max-content minmax(0, 1fr); grid-template-areas: "import result" "queue result"; gap: 20px; flex: 1; min-height: 0; overflow: auto; }
+.desktop-import { grid-area: import; min-width: 0; }
+.desktop-import .import-strip { margin-bottom: 0; }
+.desktop-import .import-strip > div { flex-wrap: wrap; }
+.desktop-queue { grid-area: queue; }
+.desktop-result { grid-area: result; }
 .desktop-queue { display: flex; flex-direction: column; min-height: 160px; min-width: 0; }
 .desktop-queue .queue-heading { flex-shrink: 0; padding-top: 0; }
 .desktop-result { min-height: 320px; min-width: 0; }
-.desktop-conversion-grid.single { grid-template-columns: minmax(0, 1fr); grid-template-rows: max-content minmax(320px, 1fr); gap: 16px; }
+.desktop-conversion-grid.single { grid-template-columns: minmax(0, 1fr); grid-template-rows: max-content max-content minmax(320px, 1fr); grid-template-areas: "import" "queue" "result"; gap: 16px; }
 .desktop-conversion-grid.single .desktop-queue { min-height: 0; }
 .desktop-conversion-grid.single .file-queue { flex: none; max-height: 128px; }
 .desktop-conversion-grid.single .file-row { padding: 10px 16px; }
@@ -196,7 +201,7 @@
 }
 @media (max-width: 900px) {
   .desktop-header .service-pill { display: none; }
-  .desktop-conversion-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: max-content minmax(320px, 1fr); }
+  .desktop-conversion-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: max-content max-content minmax(320px, 1fr); grid-template-areas: "import" "queue" "result"; }
   .desktop-queue { min-height: 0; }
   .desktop-queue .file-queue { flex: none; max-height: 160px; }
   .desktop-task-summary { width: 100%; }
