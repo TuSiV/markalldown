@@ -23,10 +23,20 @@ MAX_RECOVERY_TEXT = 8_000_000
 MAX_RECOVERY_OUTPUT = 32_000_000
 MAX_TERMS = 1000
 MAX_MATCHES = 20_000
-TOKEN_PATTERN = re.compile(r"【MAD_[^】\n]{1,150}】")
+CATEGORY_CODES = {"phone": "PHONE", "email": "EMAIL", "id_card": "ID", "bank_account": "BANK",
+                  "credit_code": "CREDIT", "case_number": "CASE", "date": "DATE", "amount": "AMOUNT",
+                  "address": "ADDR", "file_code": "FILE", "keyword": "TERM"}
+SHORT_TOKEN = r"【(?:PHONE|EMAIL|ID|BANK|CREDIT|CASE|DATE|AMOUNT|ADDR|FILE|TERM)_[a-f0-9]{8}_[0-9]{2,}】"
+TOKEN_PATTERN = re.compile(r"【MAD_[^】\n]{1,150}】|" + SHORT_TOKEN)
+
 MAX_TERM_LENGTH = 200
 VAULT_AAD = b"MarkAllDown:RedactionVault:v1"
 IDENTITY_PATTERN = re.compile(r"^<!-- MarkAllDown:document=([a-f0-9]{32});processing=([a-f0-9]{32}) -->\r?\n", re.M)
+
+
+def token_belongs_to(token: str, processing_id: str) -> bool:
+    return token.startswith("【MAD_" + processing_id + "_") or (
+        re.fullmatch(SHORT_TOKEN, token) is not None and token.split("_")[1] == processing_id[:8])
 
 
 def identity_header(document_id: str, processing_id: str) -> str:
@@ -97,7 +107,7 @@ def redact_markdown(text: str, options: dict[str, Any], processing_id: str | Non
     if set(options) - {"categories", "keywords", "whitelist"}:
         raise ValueError("Unsupported redaction option")
 
-    exclusions = [(m.start(), m.end()) for m in re.finditer(r"【MAD_[^】]{1,150}】", text)]
+    exclusions = [(m.start(), m.end()) for m in TOKEN_PATTERN.finditer(text)]
     for term in whitelist:
         exclusions.extend((m.start(), m.end()) for m in re.finditer(re.escape(term), text))
 
@@ -159,7 +169,7 @@ def redact_markdown(text: str, options: dict[str, Any], processing_id: str | Non
         if key not in used:
             while True:
                 counts[item.category] += 1
-                ident = f"【MAD_{run_id}_{item.category.upper()}_{counts[item.category]:04d}】"
+                ident = f"【{CATEGORY_CODES[item.category]}_{run_id[:8]}_{counts[item.category]:02d}】"
                 if ident not in text and ident not in mapping:
                     break
             used[key] = ident
@@ -207,7 +217,7 @@ def decrypt_mapping(vault: dict[str, Any], passphrase: str) -> dict[str, str]:
         mapping = json.loads(AESGCM(key).decrypt(nonce, data, VAULT_AAD))
     except Exception as e:
         raise ValueError("Incorrect passphrase or damaged vault") from e
-    if not isinstance(mapping, dict) or any(not isinstance(k, str) or not isinstance(v, str) or not k.startswith("【MAD_") for k, v in mapping.items()):
+    if not isinstance(mapping, dict) or any(not isinstance(k, str) or not isinstance(v, str) or TOKEN_PATTERN.fullmatch(k) is None for k, v in mapping.items()):
         raise ValueError("Invalid vault mapping")
     return mapping
 
@@ -221,11 +231,16 @@ def restore_markdown(text: str, vaults: list[dict[str, Any]], passphrase: str) -
         raise ValueError("At most 100 vaults per recovery request")
     combined: dict[str, str] = {}
     documents = {}
+    owners = {}
     for vault in vaults:
         if isinstance(vault, dict) and vault.get("version") == "MAD-R2":
             document = decrypt_document(vault, passphrase)
             documents[document["processingId"]] = document["documentId"]
             mapping = document["mapping"]
+            for token in mapping:
+                if token in owners:
+                    raise ValueError("Conflicting document placeholders; redact the files again")
+                owners[token] = document["processingId"]
         else:
             mapping = decrypt_mapping(vault, passphrase)
         for k, v in mapping.items():
@@ -236,7 +251,7 @@ def restore_markdown(text: str, vaults: list[dict[str, Any]], passphrase: str) -
     # Fail closed when the input carries placeholders not present in the vault.
     # A partial document is still allowed: some known tokens may simply not
     # occur in the input. Unknown tokens indicate a mismatched/missing vault.
-    unknown = [m.group(0) for m in re.finditer(r"【MAD_[^】\n]{1,150}】", text) if m.group(0) not in combined]
+    unknown = [m.group(0) for m in TOKEN_PATTERN.finditer(text) if m.group(0) not in combined]
     if unknown:
         raise ValueError("Redacted text contains unknown placeholders; check that all mapping vaults are provided")
     has_identity = False
@@ -301,6 +316,6 @@ def decrypt_document(vault: dict, passphrase: str) -> dict:
     if any(not isinstance(document.get(k), str) or not re.fullmatch(r"[a-f0-9]{64}", document[k]) for k in ("sourceHash", "redactedHash")):
         raise ValueError("Invalid document hashes")
     mapping = document.get("mapping")
-    if not isinstance(mapping, dict) or any(not isinstance(k, str) or not isinstance(v, str) or not k.startswith("【MAD_" + document["processingId"] + "_") for k, v in mapping.items()):
+    if not isinstance(mapping, dict) or any(not isinstance(k, str) or not isinstance(v, str) or not token_belongs_to(k, document["processingId"]) for k, v in mapping.items()):
         raise ValueError("Invalid document mapping")
     return document

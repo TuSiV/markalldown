@@ -2,7 +2,8 @@ import unittest
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
-from redaction import redact_markdown, encrypt_mapping, decrypt_mapping, restore_markdown
+from redaction import redact_markdown, encrypt_mapping, decrypt_mapping, restore_markdown, seal_payload
+from recovery import documents_from_vaults, build_pack, preview_recovery, digest
 
 class TestRedaction(unittest.TestCase):
     def test_roundtrip_and_repeated_identity(self):
@@ -15,6 +16,38 @@ class TestRedaction(unittest.TestCase):
         vault = encrypt_mapping(mapping, 'correct horse battery')
         self.assertNotIn('13800138000', str(vault))
         self.assertEqual(restore_markdown(masked, [vault], 'correct horse battery')[0], source)
+
+    def test_short_english_tokens_and_legacy_recovery(self):
+        masked, mapping, _ = redact_markdown('13800138000 张三 13800138000', {"keywords": ["张三"]}, 'abcdef01' + '0' * 24)
+        self.assertEqual(masked, '【PHONE_abcdef01_01】 【TERM_abcdef01_01】 【PHONE_abcdef01_01】')
+        old = '【MAD_' + 'a' * 32 + '_PHONE_0001】'
+        vault = encrypt_mapping({old: '13800138000'}, 'a long passphrase')
+        self.assertEqual(restore_markdown(old, [vault], 'a long passphrase')[0], '13800138000')
+
+    def test_short_namespace_collision_refused_even_for_same_original(self):
+        vaults = []
+        for suffix in ('0', '1'):
+            pid = 'abcdef01' + suffix * 24
+            _, mapping, _ = redact_markdown('13800138000', {}, pid)
+            document = {'documentId': suffix * 32, 'processingId': pid,
+                        'sourceHash': 'a' * 64, 'redactedHash': 'b' * 64, 'mapping': mapping}
+            vaults.append(seal_payload(document, 'a long passphrase', 'MAD-R2'))
+        with self.assertRaisesRegex(ValueError, 'Conflicting'):
+            documents_from_vaults(vaults, 'a long passphrase')
+        with self.assertRaisesRegex(ValueError, 'Conflicting'):
+            restore_markdown('【PHONE_abcdef01_01】', vaults, 'a long passphrase')
+
+    def test_short_token_excerpt_identifies_document(self):
+        pid = 'abcdef01' + '0' * 24
+        source = '13800138000 13900139000'
+        masked, mapping, _ = redact_markdown(source, {}, pid)
+        document = {'documentId': 'a' * 32, 'processingId': pid,
+                    'sourceHash': digest(source), 'redactedHash': digest(masked), 'mapping': mapping}
+        pack = build_pack([seal_payload(document, 'a long passphrase', 'MAD-R2')], 'a long passphrase')
+        result = preview_recovery('【PHONE_abcdef01_01】', pack, 'a long passphrase')
+        self.assertEqual(result['content'], '13800138000')
+        self.assertEqual(result['integrity'], 'edited')
+        self.assertEqual(result['processingIds'], [pid])
 
     def test_whitelist_and_nested(self):
         masked, mapping, _ = redact_markdown('13800138000 13900139000', {"whitelist": ["13800138000"]})
