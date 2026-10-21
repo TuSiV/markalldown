@@ -1,4 +1,5 @@
 /* Desktop-only presentation. WebApp intentionally keeps its independent stylesheet. */
+html:has(.desktop-app), body:has(.desktop-app) { height: 100%; overflow: hidden; }
 .desktop-app {
   --desktop-blue: #245df2;
   --desktop-ink: #22324b;
@@ -6,6 +7,7 @@
   --desktop-line: #dee5ef;
   --desktop-canvas: #f5f7fb;
   height: 100vh; /* Older WKWebView falls back before dynamic viewport units. */
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   color: var(--desktop-ink);
@@ -222,7 +224,7 @@
 /* Settings share the top row; the document below gets a full workspace viewport. */
 .redaction-page { display: flex; flex-direction: column; min-height: 0; overflow: auto; }
 .redaction-page .redaction-heading { padding: 0 0 12px; flex-shrink: 0; }
-.redaction-body { flex: 1; min-height: 0; margin-top: 12px; }
+.redaction-body { flex: 1; min-height: 0; margin-top: 12px; padding-bottom: inherit; }
 .redaction-page .privacy-workspace { display: flex; flex-direction: column; min-height: 100%; }
 .redaction-page .review-banner { flex-shrink: 0; margin-bottom: 12px; padding: 12px 16px; }
 .redaction-page .review-grid { min-height: 0; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: max-content max-content; gap: 12px; align-items: start; }
@@ -239,6 +241,7 @@
 .redaction-page .review-document-queue { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .redaction-page .review-document-queue .card-title { padding: 0; border: 0; flex-shrink: 0; }
 .redaction-page .review-file-list { display: flex; gap: 6px; min-width: 0; max-height: 64px; overflow: auto; }
+.redaction-page .review-document-queue .review-file-list { flex: 1; }
 .redaction-page .review-file { flex: 0 0 200px; margin: 0; padding: 6px 8px; min-width: 0; }
 .redaction-page .review-file strong { margin-bottom: 3px; }
 .redaction-page .review-file .file-glyph { width: 27px; height: 34px; }

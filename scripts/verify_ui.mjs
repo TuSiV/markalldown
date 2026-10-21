@@ -80,7 +80,7 @@ const reviewLayout=await page.evaluate(()=>{
 });
 if(Math.abs(reviewLayout.rulesTop-reviewLayout.optionsTop)>1||reviewLayout.docTop<reviewLayout.settingsBottom||Math.abs(reviewLayout.docLeft-reviewLayout.rulesLeft)>1||Math.abs(reviewLayout.docRight-reviewLayout.optionsRight)>1||Math.abs(reviewLayout.height-reviewLayout.available)>2)throw new Error(`Review must occupy a full workspace screen below settings: ${JSON.stringify(reviewLayout)}`);
 await page.locator('.redaction-page').evaluate(el=>{const d=el.querySelector('.review-document');el.scrollTop+=d.getBoundingClientRect().top-el.getBoundingClientRect().top-parseFloat(getComputedStyle(el).paddingTop);});
-await page.screenshot({path:`${out}/redaction.png`,fullPage:true});
+await page.screenshot({path:`${out}/redaction.png`,fullPage:false});
 await nav.getByRole('button',{name:'脱敏审核',exact:true}).waitFor();
 await page.getByRole('button',{name:'标记原文',exact:true}).click();if(await page.locator('mark').count()!==2)throw new Error('Expected both detected terms to be highlighted');
 await page.getByRole('button',{name:'左右对照',exact:true}).click();
