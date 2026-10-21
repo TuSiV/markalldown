@@ -71,7 +71,16 @@ for(const [width,height] of [[1470,930],[1000,720],[800,600],[1440,1000]]){
 }
 await nav.getByRole('button',{name:'脱敏审核',exact:true}).click();await page.getByRole('checkbox',{name:'启用脱敏',exact:true}).check();
 await page.getByLabel('映射文件加密口令（至少8字符，不会保存）').fill('synthetic-password');
-await page.getByRole('button',{name:'检查所选文件的脱敏内容',exact:true}).click();await page.getByRole('checkbox',{name:'我已检查所选文件的全文及替换结果',exact:true}).waitFor();await shot('redaction');
+await page.getByRole('button',{name:'检查所选文件的脱敏内容',exact:true}).click();await page.getByRole('checkbox',{name:'我已检查所选文件的全文及替换结果',exact:true}).waitFor();
+await page.locator('.redaction-page').evaluate(el=>{el.scrollTop=0;});await shot('redaction-settings');
+const reviewLayout=await page.evaluate(()=>{
+ const page=document.querySelector('.redaction-page'),rules=page.querySelector('.review-rules').getBoundingClientRect(),options=page.querySelector('.review-options').getBoundingClientRect(),doc=page.querySelector('.review-document').getBoundingClientRect();
+ const style=getComputedStyle(page),available=page.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);
+ return {rulesTop:rules.top,optionsTop:options.top,settingsBottom:Math.max(rules.bottom,options.bottom),docTop:doc.top,docLeft:doc.left,docRight:doc.right,rulesLeft:rules.left,optionsRight:options.right,height:doc.height,available};
+});
+if(Math.abs(reviewLayout.rulesTop-reviewLayout.optionsTop)>1||reviewLayout.docTop<reviewLayout.settingsBottom||Math.abs(reviewLayout.docLeft-reviewLayout.rulesLeft)>1||Math.abs(reviewLayout.docRight-reviewLayout.optionsRight)>1||Math.abs(reviewLayout.height-reviewLayout.available)>2)throw new Error(`Review must occupy a full workspace screen below settings: ${JSON.stringify(reviewLayout)}`);
+await page.locator('.redaction-page').evaluate(el=>{const d=el.querySelector('.review-document');el.scrollTop+=d.getBoundingClientRect().top-el.getBoundingClientRect().top-parseFloat(getComputedStyle(el).paddingTop);});
+await page.screenshot({path:`${out}/redaction.png`,fullPage:true});
 await nav.getByRole('button',{name:'脱敏审核',exact:true}).waitFor();
 await page.getByRole('button',{name:'标记原文',exact:true}).click();if(await page.locator('mark').count()!==2)throw new Error('Expected both detected terms to be highlighted');
 await page.getByRole('button',{name:'左右对照',exact:true}).click();

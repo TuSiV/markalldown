@@ -219,6 +219,45 @@
 .service-status p {margin:4px 0 0;overflow-wrap:anywhere;}
 .service-status[role="alert"] {border-color:#dc8d83;}
 
+/* Settings share the top row; the document below gets a full workspace viewport. */
+.redaction-page { display: flex; flex-direction: column; min-height: 0; overflow: auto; }
+.redaction-page .redaction-heading { padding: 0 0 12px; flex-shrink: 0; }
+.redaction-body { flex: 1; min-height: 0; margin-top: 12px; }
+.redaction-page .privacy-workspace { display: flex; flex-direction: column; min-height: 100%; }
+.redaction-page .review-banner { flex-shrink: 0; margin-bottom: 12px; padding: 12px 16px; }
+.redaction-page .review-grid { min-height: 0; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: max-content max-content; gap: 12px; align-items: start; }
+.redaction-page .review-rules { grid-column: 1; grid-row: 1; min-height: 0; }
+.redaction-page .review-options { grid-column: 2; grid-row: 1; min-height: 0; }
+.redaction-page .review-word-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.redaction-page .review-document { grid-column: 1 / -1; grid-row: 2; display: flex; flex-direction: column; height: calc(100vh - 176px); min-height: 360px; }
+@supports (height: 100dvh) { .redaction-page .review-document { height: calc(100dvh - 176px); } }
+@supports (height: 100cqh) {
+  .redaction-page { container-type: size; }
+  .redaction-page .review-document { height: 100cqh; }
+}
+.redaction-page .review-document > :is(.card-title, .review-document-queue, .review-document-footer, .flex) { flex-shrink: 0; }
+.redaction-page .review-document-queue { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.redaction-page .review-document-queue .card-title { padding: 0; border: 0; flex-shrink: 0; }
+.redaction-page .review-file-list { display: flex; gap: 6px; min-width: 0; max-height: 64px; overflow: auto; }
+.redaction-page .review-file { flex: 0 0 200px; margin: 0; padding: 6px 8px; min-width: 0; }
+.redaction-page .review-file strong { margin-bottom: 3px; }
+.redaction-page .review-file .file-glyph { width: 27px; height: 34px; }
+.redaction-page .segmented-controls { margin: 10px 0; }
+.redaction-page :is(.review-text-columns, .review-text-single) { flex: 1; min-height: 0; display: grid; gap: 10px; }
+.redaction-page .review-text-columns { grid-template-columns: 1fr 1fr; }
+.redaction-page :is(.review-text-columns, .review-text-single) > div { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.redaction-page .review-paper { flex: 1; min-height: 0; max-height: none; overflow: auto; }
+.redaction-page .pane-label { flex-shrink: 0; }
+.redaction-page .review-document > .empty-workspace { flex: 1; min-height: 0; }
+.redaction-page .review-document-footer { position: static; margin-top: 10px; padding-top: 10px; padding-bottom: 0; }
+.redaction-page .review-approval { flex-basis: auto; }
+@media (max-width: 900px) {
+  .redaction-page .review-document-queue { flex-wrap: wrap; gap: 6px; }
+  .redaction-page .review-document-queue .card-title { display: none; }
+  .redaction-page .review-file-list { width: 100%; }
+  .redaction-page .review-word-fields { grid-template-columns: 1fr; }
+}
+
 /* An open document owns the entire trailing column, including the header rows.
    Flatten only the visible conversion wrappers into this grid; other workspaces
    and the closed-preview layout keep their existing structure. */
