@@ -36,11 +36,12 @@ export function PrivacyPanel({ onExport }: { onExport: () => void }) {
   const setPassphrase = setter("passphrase"), setAnonymousNames = setter("anonymousNames");
   const [reviewedRedaction, setReviewedRedaction] = useState<PrivacyResult | null>(null);
   const [viewMode, setViewMode] = useState<"masked" | "compare" | "marked">("compare");
+  const [scrollSyncEnabled, setScrollSyncEnabled] = useState(true);
   const originalPane = useRef<HTMLPreElement>(null);
   const maskedPane = useRef<HTMLPreElement>(null);
   const syncedScroll = useRef(new WeakMap<HTMLPreElement, number>());
   const syncScroll = (source: HTMLPreElement, target: HTMLPreElement | null) => {
-    if (viewMode !== "compare" || !target) return;
+    if (viewMode !== "compare" || !scrollSyncEnabled || !target) return;
     const expected = syncedScroll.current.get(source);
     syncedScroll.current.delete(source);
     // Ignore the scroll event caused by moving the other pane, avoiding feedback.
@@ -173,7 +174,10 @@ export function PrivacyPanel({ onExport }: { onExport: () => void }) {
       </aside>
       <div className="ui-card review-document min-w-0">
         <div className="card-title"><div><h3>{selectedFile?.name || tr("全文审核", "Full review")}</h3><p className="hint">Markdown · {previewCount === null ? tr("等待识别", "Awaiting detection") : tr(`${previewCount} 处替换`, `${previewCount} replacements`)}</p></div></div>
-        <div className="segmented-controls" aria-label={tr("审核视图", "Review view")}><button type="button" aria-pressed={viewMode === "marked"} onClick={() => setViewMode("marked")}>{tr("标记原文", "Marked original")}</button><button type="button" aria-pressed={viewMode === "masked"} onClick={() => setViewMode("masked")}>{tr("脱敏稿", "Masked text")}</button><button type="button" aria-pressed={viewMode === "compare"} onClick={() => setViewMode("compare")}>{tr("左右对照", "Compare")}</button></div>
+        <div className="flex flex-wrap items-center gap-x-3">
+          <div className="segmented-controls flex-1 min-w-[240px]" aria-label={tr("审核视图", "Review view")}><button type="button" aria-pressed={viewMode === "marked"} onClick={() => setViewMode("marked")}>{tr("标记原文", "Marked original")}</button><button type="button" aria-pressed={viewMode === "masked"} onClick={() => setViewMode("masked")}>{tr("脱敏稿", "Masked text")}</button><button type="button" aria-pressed={viewMode === "compare"} onClick={() => setViewMode("compare")}>{tr("左右对照", "Compare")}</button></div>
+          {viewMode === "compare" && <label className="checkbox-row whitespace-nowrap"><input type="checkbox" checked={scrollSyncEnabled} onChange={e => { syncedScroll.current = new WeakMap(); setScrollSyncEnabled(e.target.checked); }} />{tr("同步滚动", "Sync scrolling")}</label>}
+        </div>
         {previewCount !== null ? <div className={viewMode === "compare" ? "review-text-columns" : "review-text-single"}>
           {viewMode !== "masked" && <div><p className="pane-label">{tr("原文 · 仅本地", "Original · local")}</p><pre ref={originalPane} onScroll={e => syncScroll(e.currentTarget, maskedPane.current)} className="review-paper"><HighlightedText text={sourceText} terms={findings}/></pre></div>}
           {viewMode !== "marked" && <div><p className="pane-label">{tr("脱敏后的完整文本", "Full masked text")}</p><pre ref={maskedPane} onScroll={e => syncScroll(e.currentTarget, originalPane.current)} className="review-paper">{previewText}</pre></div>}

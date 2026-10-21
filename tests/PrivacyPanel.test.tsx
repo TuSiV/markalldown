@@ -32,6 +32,34 @@ async function setup() {
   await screen.findByText("我已检查所选文件的全文及替换结果");
 }
 describe("privacy review gates", () => {
+  it("allows independent scrolling when unchecked and resumes synchronization when checked", async () => {
+    await setup();
+    const original = screen.getByText("original one").closest("pre")!;
+    const masked = screen.getByText(/END_OF_FULL_TEXT/).closest("pre")!;
+    Object.defineProperties(original, { scrollHeight: { value: 1200 }, clientHeight: { value: 200 } });
+    Object.defineProperties(masked, { scrollHeight: { value: 2200 }, clientHeight: { value: 200 } });
+    const toggle = screen.getByRole("checkbox", { name: "同步滚动" }) as HTMLInputElement;
+    expect(toggle.checked).toBe(true);
+    fireEvent.click(toggle);
+    original.scrollTop = 400;
+    fireEvent.scroll(original);
+    expect(masked.scrollTop).toBe(0);
+    masked.scrollTop = 1200;
+    fireEvent.scroll(masked);
+    expect(original.scrollTop).toBe(400);
+    fireEvent.click(toggle);
+    original.scrollTop = 500;
+    fireEvent.scroll(original);
+    expect(masked.scrollTop).toBe(1000);
+    masked.scrollTop = 1600;
+    fireEvent.scroll(masked);
+    expect(original.scrollTop).toBe(800);
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole("button", { name: "标记原文" }));
+    expect(screen.queryByRole("checkbox", { name: "同步滚动" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "左右对照" }));
+    expect((screen.getByRole("checkbox", { name: "同步滚动" }) as HTMLInputElement).checked).toBe(false);
+  });
   it("synchronizes compare panes in both directions despite different text heights", async () => {
     await setup();
     const original = screen.getByText("original one").closest("pre")!;
