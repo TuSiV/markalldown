@@ -51,8 +51,8 @@ export function ConversionWorkspace() {
         {pending > 0 && <span>{en ? `${pending} pending / processing` : `${pending} 待处理 / 处理中`}</span>}
       </div>
     </div>
-    <DropZone compact />
     <div className={`desktop-conversion-grid ${files.length === 1 ? "single" : ""}`}>
+      <div className="desktop-import"><DropZone compact /></div>
       <section className="desktop-queue" aria-label={en ? "File queue" : "文件队列"}>
         <FileList selectedId={selected} onPreview={id => { setSelected(id); setClosed(false); }} />
       </section>
