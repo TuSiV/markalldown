@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import re
+import time
 from publish_prerelease import gh, find_release, optional_api, prepare, verify_assets
 
 
@@ -13,6 +14,18 @@ def assert_target(release, tag, source):
     if release:
         assert release['target_commitish'] == source, 'Release belongs to another commit'
         assert not release['prerelease'], 'Refusing to replace a prerelease'
+
+
+def wait_for_draft(repo, tag):
+    # GitHub may not list a just-created draft immediately.
+    for attempt in range(8):
+        release = find_release(repo, tag)
+        if release:
+            assert release['draft'], 'Expected a draft release'
+            return release
+        if attempt < 7:
+            time.sleep(2)
+    raise AssertionError('Created release draft is not yet visible; retry publication')
 
 
 def main():
@@ -37,8 +50,7 @@ def main():
     if not release:
         gh('release', 'create', tag, '--target', source, '--draft', '--latest=false',
            '--title', f'MarkAllDown {version}', '--notes-file', 'RELEASE_NOTES.md')
-    release = find_release(repo, tag)
-    assert release and release['draft']
+    release = wait_for_draft(repo, tag)
     assert_target(release, optional_api(f'repos/{repo}/git/ref/tags/{tag}'), source)
     gh('release', 'upload', tag, *(str(p) for p in files), '--clobber')
     verify_assets(find_release(repo, tag), files)
