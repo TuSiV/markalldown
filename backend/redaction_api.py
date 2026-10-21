@@ -19,7 +19,7 @@ from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 from fastapi import APIRouter, HTTPException, Request as FastAPIRequest
 
-from redaction import redact_markdown, encrypt_mapping, restore_markdown, identity_header, attach_identity, seal_payload, decrypt_document
+from redaction import redact_markdown, encrypt_mapping, restore_markdown, identity_header, attach_identity, seal_payload, decrypt_document, TOKEN_PATTERN
 from recovery import RecoveryLibrary, build_pack, preview_recovery, export_record, digest, valid_id, documents_from_vaults
 
 router = APIRouter(prefix="/api", tags=["privacy"])
@@ -131,7 +131,7 @@ def _call_ai(url: str, model: str, key: str, text: str) -> list[dict]:
             continue
         term = item.get("text")
         category = item.get("category", "other")
-        if not isinstance(term, str) or not 2 <= len(term) <= 200 or term not in text or "【MAD_" in term or term in seen:
+        if not isinstance(term, str) or not 2 <= len(term) <= 200 or term not in text or "【MAD_" in term or TOKEN_PATTERN.search(term) or term in seen:
             continue
         if category not in ("person", "organization", "location", "project", "other"):
             category = "other"

@@ -47,13 +47,13 @@ class ExtendedAcceptanceTests(unittest.TestCase):
             def do_POST(self):
                 body=json.loads(self.rfile.read(int(self.headers['Content-Length'])))
                 received.append((self.path,body))
-                answer=json.dumps({'suggestions':[{'text':'Synthetic person','category':'person'}, {'text':'Invented unavailable person','category':'person'}, {'text':'Synthetic person','category':'person'}, {'text':'【MAD_fake】','category':'other'}]})
+                answer=json.dumps({'suggestions':[{'text':'Synthetic person','category':'person'}, {'text':'Invented unavailable person','category':'person'}, {'text':'Synthetic person','category':'person'}, {'text':'【MAD_fake】','category':'other'}, {'text':'【PHONE_ab123456_01】','category':'other'}]})
                 raw=json.dumps({'choices':[{'message':{'content':answer}}]}).encode()
                 self.send_response(200);self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(raw)));self.end_headers();self.wfile.write(raw)
         server=HTTPServer(('127.0.0.1',0),Handler)
         thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
         try:
-            text='Synthetic person 【MAD_safe_PHONE_0001】'
+            text='Synthetic person 【MAD_safe_PHONE_0001】 【PHONE_ab123456_01】'
             result=_call_ai(f'http://127.0.0.1:{server.server_port}/v1/chat/completions','synthetic-model','synthetic-key',text)
             self.assertEqual(result,[{'text':'Synthetic person','category':'person'}])
             self.assertEqual(received[0][1]['messages'][1]['content'],text)

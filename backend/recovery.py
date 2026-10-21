@@ -9,12 +9,16 @@ import time
 from uuid import uuid4
 
 from redaction import (IDENTITY_PATTERN, decrypt_document, decrypt_mapping,
-                       open_payload, restore_markdown, seal_payload, MAX_RECOVERY_TEXT)
+                       open_payload, restore_markdown, seal_payload, MAX_RECOVERY_TEXT, TOKEN_PATTERN, SHORT_TOKEN)
 
 FORMAT = 'MarkAllDownEncryptedVaultPack'
 UUID = re.compile(r'[a-f0-9]{32}')
 HASH = re.compile(r'[a-f0-9]{64}')
 PROCESSING_PATTERN = re.compile(r'【MAD_([a-f0-9]{12}|[a-f0-9]{32})_')
+def short_refs(text):
+    return {'short:' + m.group().split('_')[1] for m in re.finditer(SHORT_TOKEN, text)}
+
+
 MAX_PACK_BYTES = 10_000_000
 
 
@@ -33,6 +37,12 @@ def documents_from_vaults(vaults, password):
     ids = [d['processingId'] for d in documents]
     if len(set(ids)) != len(ids):
         raise ValueError('Duplicate processing identities')
+    owners = {}
+    for document in documents:
+        for token in document['mapping']:
+            if token in owners:
+                raise ValueError('Conflicting document placeholders; redact the files again')
+            owners[token] = document['processingId']
     return documents
 
 
@@ -56,7 +66,7 @@ def validate_pack(pack, password):
         refs = []
         for vault in vaults:
             mapping = decrypt_mapping(vault,password)
-            refs.extend({'documentId':'', 'processingId':p} for p in sorted(set(PROCESSING_PATTERN.findall(' '.join(mapping)))))
+            refs.extend({'documentId':'', 'processingId':p} for p in sorted(set(PROCESSING_PATTERN.findall(' '.join(mapping))) | short_refs(' '.join(mapping))))
         if len({r['processingId'] for r in refs})>100:
             raise ValueError('Too many document identities in the legacy pack')
         return {'documents':[], 'exports':[], 'refs':refs, 'vaults':vaults, 'legacy':True}
@@ -103,6 +113,8 @@ def preview_recovery(content, pack, password):
     headers = IDENTITY_PATTERN.findall(content)
     pids = set(PROCESSING_PATTERN.findall(content)) | {p for _,p in headers}
     known = {d['processingId']:d for d in data['documents']}
+    owners = {token:d['processingId'] for d in data['documents'] for token in d['mapping']}
+    pids.update(owners[m.group()] for m in TOKEN_PATTERN.finditer(content) if m.group() in owners)
     if not pids or not pids.issubset(known):
         raise ValueError('Cannot identify this document with the provided recovery pack')
     if any(known[p]['documentId']!=d for d,p in headers):
@@ -161,7 +173,10 @@ class RecoveryLibrary:
                 if db.execute('SELECT COUNT(*) FROM packs').fetchone()[0]>=1000:
                     raise ValueError('Recovery library is full; remove old packs first')
                 db.execute('INSERT INTO packs VALUES (?,?,?,?,?)',(pack_id,time.time(),len(pack['vaults']),int(data['legacy']),raw))
-                db.executemany('INSERT OR IGNORE INTO refs VALUES (?,?)',[(pack_id,r['processingId']) for r in data['refs']])
+                refs = {r['processingId'] for r in data['refs']}
+                for document in data['documents']:
+                    refs.update(short_refs(' '.join(document['mapping'])))
+                db.executemany('INSERT OR IGNORE INTO refs VALUES (?,?)',[(pack_id,p) for p in refs])
             return pack_id
         finally:db.close()
 
@@ -181,7 +196,10 @@ class RecoveryLibrary:
 
     def find(self, content):
         if not isinstance(content,str) or len(content)>MAX_RECOVERY_TEXT:raise ValueError('Invalid recovery text')
-        pids=set(PROCESSING_PATTERN.findall(content)) | {p for _,p in IDENTITY_PATTERN.findall(content)}
+        headers = IDENTITY_PATTERN.findall(content)
+        pids=set(PROCESSING_PATTERN.findall(content)) | {p for _,p in headers}
+        if not headers:
+            pids.update(short_refs(content))
         if not pids or len(pids)>100:return []
         db=self.connect()
         try:

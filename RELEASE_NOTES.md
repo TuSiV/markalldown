@@ -1,35 +1,35 @@
-# MarkAllDown 3.0.1
+# MarkAllDown 3.0.2
 
 [中文首页](README.md) · [English](README.en.md) · [Documentation](docs/README.md)
 
 **Stable patch release · Windows x64 · macOS Apple Silicon / Intel**
 
-[Download](https://github.com/TuSiV/markalldown/releases/tag/v3.0.1) · [Checksums](https://github.com/TuSiV/markalldown/releases/download/v3.0.1/SHA256SUMS.txt)
+[Download](https://github.com/TuSiV/markalldown/releases/tag/v3.0.2) · [Checksums](https://github.com/TuSiV/markalldown/releases/download/v3.0.2/SHA256SUMS.txt)
 
 ## 本次更新 / Changes
 
-- 多文件转换时，“选择文件 / 选择文件夹”只占左侧队列宽度，右侧预览向上延伸，增加可阅读空间。
-  In batch conversion, import controls occupy only the queue column so the preview can use the full height beside them.
-- “重试失败项”改为与“清空全部”一致的紧凑图标加文字样式，保留原有重试和禁用逻辑。
-  Retry failed uses the same compact icon-and-text treatment as Clear all, with existing retry behavior retained.
-- 脱敏审核“左右对照”支持双向同步滚动；按滚动进度跟随，适应替换后文本高度的变化。
-  Redaction comparison supports bidirectional scrolling by relative position, including texts of different heights.
-- 新增默认开启的“同步滚动”勾选项；取消后两侧独立滚动，重新勾选后恢复同步。
-  A Sync scrolling checkbox is enabled by default. Turn it off for independent scrolling and on to resume synchronization.
+- 文件预览占据整个右侧栏，从顶部延伸到页脚上方，单文件和多文件均可充分利用窗口空间。
+  Document previews use the entire right column from the top of the window to the footer, for both single and multiple files.
+- 脱敏审核的敏感词与密码设置在上方并排；文件与对照区移至下方独立一行，可单独占据一整屏工作区高度。
+  Sensitive terms and password settings sit side by side above a full-width document comparison that has its own workspace-screen height.
+- 可恢复脱敏替代词改为英文短格式，例如 `【PHONE_ab12cd34_01】`、`【ID_ab12cd34_01】` 和 `【TERM_ab12cd34_01】`。
+  Reversible placeholders use compact English codes, including PHONE, ID and TERM, with a short file identifier and sequence number.
+- 保留旧长格式恢复支持，并验证跨桌面与网页恢复、多文件合并、片段恢复及占位符冲突检查。
+  Existing long placeholders remain recoverable, with desktop/browser interoperability, combined files, excerpts and collision checks validated.
 
 ## Upgrade
 
-Install 3.0.1 over 3.0.0. This release uses a new version tag and newly built packages.
+Install 3.0.2 over 3.0.1. Use 3.0.2 or newer to restore newly generated short placeholders; existing recovery packs remain supported.
 
 ## Release contents
 
 | Asset | Purpose |
 |---|---|
-| `MarkAllDown_3.0.1_x64-setup.exe` | Windows x64 NSIS installer |
-| `MarkAllDown_3.0.1_x64_en-US.msi` | Windows x64 MSI installer |
-| `MarkAllDown_3.0.1_aarch64.dmg` | Apple Silicon Mac |
-| `MarkAllDown_3.0.1_x64.dmg` | Intel Mac |
-| `MarkAllDown_3.0.1_UI-screenshots.zip` | Synthetic UI acceptance screenshots |
+| `MarkAllDown_3.0.2_x64-setup.exe` | Windows x64 NSIS installer |
+| `MarkAllDown_3.0.2_x64_en-US.msi` | Windows x64 MSI installer |
+| `MarkAllDown_3.0.2_aarch64.dmg` | Apple Silicon Mac |
+| `MarkAllDown_3.0.2_x64.dmg` | Intel Mac |
+| `MarkAllDown_3.0.2_UI-screenshots.zip` | Synthetic UI acceptance screenshots |
 | `SHA256SUMS.txt` | SHA-256 checksums for installers and screenshots |
 
 ## Verification

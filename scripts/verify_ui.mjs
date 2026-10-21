@@ -1,11 +1,11 @@
 // Render real application components with synthetic local-service/native-dialog fixtures.
 // This complements backend/native tests; it does not claim to validate cryptography.
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 import { mkdirSync, readFileSync, existsSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { resolve, extname, sep } from 'node:path';
 const out=process.env.UI_SCREENSHOT_DIR || '/tmp/mad-ui-qa';mkdirSync(out,{recursive:true});
-const b=await chromium.launch({headless:true,...(process.env.CHROME_PATH ? {executablePath:process.env.CHROME_PATH} : {}),args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu']});
+const b=await (process.env.UI_BROWSER === 'webkit' ? webkit.launch({headless:true}) : chromium.launch({headless:true,...(process.env.CHROME_PATH ? {executablePath:process.env.CHROME_PATH} : {}),args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu']}));
 const page=await b.newPage({viewport:{width:1440,height:1000},locale:'zh-CN'});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 const source='# 采购合同审查意见\n\n## 一、审查范围\n本次审查涉及采购合同及相关附件。\n\n甲方：示例科技有限公司\n联系人：示例联系人\n联系电话：13800138000\n邮箱：sample@example.com\n\n## 二、主要风险\n1. 付款节点及验收标准需明确。\n2. 违约责任条款需进一步细化。\n\n## 三、审查结论\n请结合实际履约安排完善合同条款。' + '\n\n' + Array.from({length:60},(_,i)=>`第 ${i+1} 段：用于验证脱敏全文对照同步滚动的合成审查文字。`).join('\n\n');
@@ -34,18 +34,53 @@ await page.addStyleTag({content:'*,*::before,*::after{transition:none!important;
 const shot=async name=>{await page.evaluate(async()=>{for(const el of document.querySelectorAll('.workspace-page'))if(el.offsetParent)el.scrollTop=0;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));});await page.screenshot({path:`${out}/${name}.png`,fullPage:true});const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth);if(overflow)throw new Error(`Horizontal page overflow: ${name}`);
 const overlap=await page.evaluate(()=>{
  const grid=document.querySelector('.desktop-conversion-grid');
- if(!grid?.offsetParent || getComputedStyle(grid).gridTemplateColumns.split(' ').length!==1)return false;
+ if(!grid || getComputedStyle(grid).display==='contents' || !grid.offsetParent || getComputedStyle(grid).gridTemplateColumns.split(' ').length!==1)return false;
  const queue=grid.querySelector('.file-queue'), result=grid.querySelector('.desktop-result');
  return queue && result && queue.getBoundingClientRect().bottom>result.getBoundingClientRect().top+1;
-});if(overlap)throw new Error(`File queue overlaps conversion result: ${name}`);};
+});if(overlap)throw new Error(`File queue overlaps conversion result: ${name}`);
+const layout=await page.evaluate(()=>{
+ const app=document.querySelector('.desktop-app'), preview=document.querySelector('.desktop-preview');
+ const footer=document.querySelector('.desktop-footer');
+ if(!app||!footer)return null;
+ const a=app.getBoundingClientRect(), f=footer.getBoundingClientRect();
+ const visible=preview?.getClientRects().length;
+ const p=visible?preview.getBoundingClientRect():null;
+ const header=document.querySelector('.desktop-header').getBoundingClientRect();
+ const queue=document.querySelector('.desktop-queue')?.getBoundingClientRect();
+ return {height:innerHeight,appBottom:a.bottom,footerBottom:f.bottom,footerTop:f.top,preview:p?{top:p.top,bottom:p.bottom,left:p.left}:null,headerRight:header.right,queueRight:queue?.right};
+});
+if(layout){
+ if(Math.abs(layout.appBottom-layout.height)>1||Math.abs(layout.footerBottom-layout.height)>1)throw new Error(`Unused window height: ${name} ${JSON.stringify(layout)}`);
+ if(layout.preview&&(layout.preview.top>16||layout.footerTop-layout.preview.bottom>16||layout.preview.bottom>layout.footerTop||layout.preview.left<layout.headerRight||layout.preview.left<layout.queueRight))throw new Error(`Preview must fill the trailing column: ${name} ${JSON.stringify(layout)}`);
+}
+};
 await page.locator('.desktop-conversion-grid.single').waitFor();
 await shot('conversion');
+for(const [width,height] of [[1470,930],[1000,720],[800,600],[1440,1000]]){
+ await page.setViewportSize({width,height});await shot(`single-resize-${width}`);
+}
+await page.getByRole('button',{name:'关闭预览',exact:true}).click();await shot('conversion-preview-closed');
+await page.getByRole('button',{name:'预览 合同审查意见.md',exact:true}).click();await shot('conversion-preview-reopened');
 await page.getByRole('button',{name:'选择文件',exact:true}).click();
 await page.locator('.desktop-conversion-grid:not(.single)').waitFor();
 await shot('conversion-batch');
+for(const [width,height] of [[1470,930],[1000,720],[800,600],[1440,1000]]){
+ await page.setViewportSize({width,height});
+ await page.getByRole('button',{name:'Markdown 源文',exact:true}).click();await shot(`batch-source-resize-${width}`);
+ await page.getByRole('button',{name:'阅读预览',exact:true}).click();await shot(`batch-rendered-resize-${width}`);
+}
 await nav.getByRole('button',{name:'脱敏审核',exact:true}).click();await page.getByRole('checkbox',{name:'启用脱敏',exact:true}).check();
 await page.getByLabel('映射文件加密口令（至少8字符，不会保存）').fill('synthetic-password');
-await page.getByRole('button',{name:'检查所选文件的脱敏内容',exact:true}).click();await page.getByRole('checkbox',{name:'我已检查所选文件的全文及替换结果',exact:true}).waitFor();await shot('redaction');
+await page.getByRole('button',{name:'检查所选文件的脱敏内容',exact:true}).click();await page.getByRole('checkbox',{name:'我已检查所选文件的全文及替换结果',exact:true}).waitFor();
+await page.locator('.redaction-page').evaluate(el=>{el.scrollTop=0;});await shot('redaction-settings');
+const reviewLayout=await page.evaluate(()=>{
+ const page=document.querySelector('.redaction-page'),rules=page.querySelector('.review-rules').getBoundingClientRect(),options=page.querySelector('.review-options').getBoundingClientRect(),doc=page.querySelector('.review-document').getBoundingClientRect();
+ const style=getComputedStyle(page),available=page.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);
+ return {rulesTop:rules.top,optionsTop:options.top,settingsBottom:Math.max(rules.bottom,options.bottom),docTop:doc.top,docLeft:doc.left,docRight:doc.right,rulesLeft:rules.left,optionsRight:options.right,height:doc.height,available};
+});
+if(Math.abs(reviewLayout.rulesTop-reviewLayout.optionsTop)>1||reviewLayout.docTop<reviewLayout.settingsBottom||Math.abs(reviewLayout.docLeft-reviewLayout.rulesLeft)>1||Math.abs(reviewLayout.docRight-reviewLayout.optionsRight)>1||Math.abs(reviewLayout.height-reviewLayout.available)>2)throw new Error(`Review must occupy a full workspace screen below settings: ${JSON.stringify(reviewLayout)}`);
+await page.locator('.redaction-page').evaluate(el=>{const d=el.querySelector('.review-document');el.scrollTop+=d.getBoundingClientRect().top-el.getBoundingClientRect().top-parseFloat(getComputedStyle(el).paddingTop);});
+await page.screenshot({path:`${out}/redaction.png`,fullPage:false});
 await nav.getByRole('button',{name:'脱敏审核',exact:true}).waitFor();
 await page.getByRole('button',{name:'标记原文',exact:true}).click();if(await page.locator('mark').count()!==2)throw new Error('Expected both detected terms to be highlighted');
 await page.getByRole('button',{name:'左右对照',exact:true}).click();
