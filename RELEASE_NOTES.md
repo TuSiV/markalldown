@@ -1,68 +1,46 @@
-# MarkAllDown 3.0.0
+# MarkAllDown 3.0.1
 
 [中文首页](README.md) · [English](README.en.md) · [Documentation](docs/README.md)
 
-**Stable release · Windows x64 · macOS Apple Silicon / Intel**
+**Stable patch release · Windows x64 · macOS Apple Silicon / Intel**
 
-[Download](https://github.com/TuSiV/markalldown/releases/tag/v3.0.0) · [Checksums](https://github.com/TuSiV/markalldown/releases/download/v3.0.0/SHA256SUMS.txt) · [Acceptance run](https://github.com/TuSiV/markalldown/actions/runs/38850938759)
+[Download](https://github.com/TuSiV/markalldown/releases/tag/v3.0.1) · [Checksums](https://github.com/TuSiV/markalldown/releases/download/v3.0.1/SHA256SUMS.txt)
 
-## Highlights
+## 本次更新 / Changes
 
-| Area | Result |
-|---|---|
-| Desktop startup | Directory-based bundled Python runtime; conversion/OCR dependencies load on demand |
-| Startup workflow | Select files while starting; process queued files once ready; retry without losing selection |
-| Browser language | English/Chinese switching across workspaces and common status/errors, with remembered preference where storage permits |
-| Export options | Combined output disables irrelevant naming/folder controls and explains the fixed `combined.md` filename |
-| Diagnostics | Actual elapsed startup time and local phase logs, without an invented progress percentage |
+- 多文件转换时，“选择文件 / 选择文件夹”只占左侧队列宽度，右侧预览向上延伸，增加可阅读空间。
+  In batch conversion, import controls occupy only the queue column so the preview can use the full height beside them.
+- “重试失败项”改为与“清空全部”一致的紧凑图标加文字样式，保留原有重试和禁用逻辑。
+  Retry failed uses the same compact icon-and-text treatment as Clear all, with existing retry behavior retained.
+- 脱敏审核“左右对照”支持双向同步滚动；按滚动进度跟随，适应替换后文本高度的变化。
+  Redaction comparison supports bidirectional scrolling by relative position, including texts of different heights.
+- 新增默认开启的“同步滚动”勾选项；取消后两侧独立滚动，重新勾选后恢复同步。
+  A Sync scrolling checkbox is enabled by default. Turn it off for independent scrolling and on to resume synchronization.
 
-Switching UI language preserves tasks, document content, filenames, and recovery results.
+## Upgrade
 
-## Included workflows
-
-- Local document/folder conversion, Chinese OCR, and legacy Office text extraction.
-- Desktop adjustable concurrency, task pause/resume, failure retry, and session-scoped PDF page checkpoints.
-- Full-text redaction review, independent recovery, encrypted packs, and an optional desktop recovery library.
-- Browser-local conversion, optional offline resources, and desktop/browser recovery-pack interoperability.
-- Desktop workspaces with macOS light/dark and accessibility preference adaptation.
-
-## Upgrade from the old 3.0.0 prerelease
-
-The stable release was rebuilt from the unified main source and replaced the old prerelease assets and tag target. It includes the export-option fix.
-
-**Download and reinstall the stable package even if the installed prerelease already says 3.0.0.** Verify against the new checksum file, not a previously saved one.
+Install 3.0.1 over 3.0.0. This release uses a new version tag and newly built packages.
 
 ## Release contents
 
 | Asset | Purpose |
 |---|---|
-| `MarkAllDown_3.0.0_x64-setup.exe` | Windows x64 NSIS installer |
-| `MarkAllDown_3.0.0_x64_en-US.msi` | Windows x64 MSI installer |
-| `MarkAllDown_3.0.0_aarch64.dmg` | Apple Silicon Mac |
-| `MarkAllDown_3.0.0_x64.dmg` | Intel Mac |
-| `MarkAllDown_3.0.0_UI-screenshots.zip` | Synthetic UI acceptance screenshots |
-| `SHA256SUMS.txt` | Checksums for installers and screenshot archive |
+| `MarkAllDown_3.0.1_x64-setup.exe` | Windows x64 NSIS installer |
+| `MarkAllDown_3.0.1_x64_en-US.msi` | Windows x64 MSI installer |
+| `MarkAllDown_3.0.1_aarch64.dmg` | Apple Silicon Mac |
+| `MarkAllDown_3.0.1_x64.dmg` | Intel Mac |
+| `MarkAllDown_3.0.1_UI-screenshots.zip` | Synthetic UI acceptance screenshots |
+| `SHA256SUMS.txt` | SHA-256 checksums for installers and screenshots |
 
 ## Verification
 
-Release source: [bf0d481](https://github.com/TuSiV/markalldown/commit/bf0d48198f9afc30954f54850f7ccfac72ac04b9). The same commit passed all five required acceptance groups before publication.
-
-| Group | Scope |
-|---|---|
-| Windows x64 | Source checks, EXE/MSI build, bundled service, and installed NSIS app |
-| macOS arm64 | Source checks, DMG build, installed app/service, signing and system-policy records |
-| macOS x64 | Same native checks on Intel |
-| Desktop UI | Workspace rendering and interaction with synthetic fixtures |
-| Browser | Actual conversion, offline OCR, recovery, language, and responsive-layout checks |
-
-The run passed 94 backend and 64 frontend tests. Staged and final asset sets were checked before marking the release stable/latest. These are results for this release commit, not a count promised for future source revisions.
+Publication is gated on Windows x64, macOS arm64, macOS x64, desktop UI and browser acceptance for the exact release commit. Installers, screenshots and checksums are verified before the draft becomes the latest stable release. See [GitHub Actions](https://github.com/TuSiV/markalldown/actions/workflows/privacy-candidate.yml) for build and installation evidence.
 
 ## Operational boundaries
 
 - macOS packages are ad-hoc signed, without Developer ID signing or notarization.
-- Lazy loading can move some waiting time to the first conversion/OCR task.
 - PDF checkpoints last only for the current desktop session.
-- Check OCR, tables, formulas, and redaction against the source.
-- UI screenshots and simulated mobile widths do not establish physical-device or every native-control acceptance.
+- Check OCR, tables, formulas and redaction against the source.
+- UI screenshots use synthetic fixtures and mocked native interfaces; they supplement native installation tests.
 
-[Security and privacy](SECURITY.md) · [Startup measurement scope](docs/DESKTOP_STARTUP.md)
+[Security and privacy](SECURITY.md) · [Build guide](BUILDING.md)

@@ -66,3 +66,23 @@ class PrereleaseTests(unittest.TestCase):
             stable.assert_replacement_target(release,{'object':{'type':'commit','sha':'unexpected'}},'new-source')
         with self.assertRaises(AssertionError):
             stable.assert_replacement_target({**release,'prerelease':False},tag,'new-source')
+
+    def test_new_stable_never_replaces_another_source_or_prerelease(self):
+        from unittest.mock import patch
+        module_spec = importlib.util.spec_from_file_location('release', Path(__file__).resolve().parents[1]/'scripts/publish_release.py')
+        release_module = importlib.util.module_from_spec(module_spec)
+        with patch.dict('sys.modules', {'publish_prerelease': publish}):
+            module_spec.loader.exec_module(release_module)
+        source = 'a' * 40
+        release = {'target_commitish': source, 'prerelease': False}
+        tag = {'object': {'type': 'commit', 'sha': source}}
+        release_module.assert_target(None, None, source)
+        release_module.assert_target(release, tag, source)
+        with self.assertRaises(AssertionError):
+            release_module.assert_target({**release, 'target_commitish': 'b' * 40}, tag, source)
+        with self.assertRaises(AssertionError):
+            release_module.assert_target({**release, 'prerelease': True}, tag, source)
+        with self.assertRaises(AssertionError):
+            release_module.assert_target(release, {'object': {'type': 'commit', 'sha': 'b' * 40}}, source)
+        with self.assertRaises(AssertionError):
+            release_module.assert_target(release, {'object': {'type': 'tag', 'sha': source}}, source)

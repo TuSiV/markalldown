@@ -10,7 +10,7 @@
 
 **简体中文** · [English](README.en.md)
 
-**[立即网页试用](https://tusiv.github.io/markalldown/)**　|　**[下载 3.0.0 正式版](https://github.com/TuSiV/markalldown/releases/tag/v3.0.0)**　|　[快速开始](#快速开始)　|　[文档导航](docs/README.md)
+**[立即网页试用](https://tusiv.github.io/markalldown/)**　|　**[下载 3.0.1 正式版](https://github.com/TuSiV/markalldown/releases/tag/v3.0.1)**　|　[快速开始](#快速开始)　|　[文档导航](docs/README.md)
 
 Windows · macOS Apple Silicon / Intel · 浏览器 · 中文 / English
 
@@ -63,13 +63,13 @@ Windows · macOS Apple Silicon / Intel · 浏览器 · 中文 / English
 
 | 平台 | 安装包 |
 |---|---|
-| Windows x64 | [EXE 安装程序](https://github.com/TuSiV/markalldown/releases/download/v3.0.0/MarkAllDown_3.0.0_x64-setup.exe) · [MSI 安装程序](https://github.com/TuSiV/markalldown/releases/download/v3.0.0/MarkAllDown_3.0.0_x64_en-US.msi) |
-| macOS · Apple Silicon | [ARM64 DMG](https://github.com/TuSiV/markalldown/releases/download/v3.0.0/MarkAllDown_3.0.0_aarch64.dmg) |
-| macOS · Intel | [x64 DMG](https://github.com/TuSiV/markalldown/releases/download/v3.0.0/MarkAllDown_3.0.0_x64.dmg) |
+| Windows x64 | [EXE 安装程序](https://github.com/TuSiV/markalldown/releases/download/v3.0.1/MarkAllDown_3.0.1_x64-setup.exe) · [MSI 安装程序](https://github.com/TuSiV/markalldown/releases/download/v3.0.1/MarkAllDown_3.0.1_x64_en-US.msi) |
+| macOS · Apple Silicon | [ARM64 DMG](https://github.com/TuSiV/markalldown/releases/download/v3.0.1/MarkAllDown_3.0.1_aarch64.dmg) |
+| macOS · Intel | [x64 DMG](https://github.com/TuSiV/markalldown/releases/download/v3.0.1/MarkAllDown_3.0.1_x64.dmg) |
 
-[发布说明与全部附件](https://github.com/TuSiV/markalldown/releases/tag/v3.0.0) · [SHA256 校验文件](https://github.com/TuSiV/markalldown/releases/download/v3.0.0/SHA256SUMS.txt) · [历史版本](https://github.com/TuSiV/markalldown/releases)
+[发布说明与全部附件](https://github.com/TuSiV/markalldown/releases/tag/v3.0.1) · [SHA256 校验文件](https://github.com/TuSiV/markalldown/releases/download/v3.0.1/SHA256SUMS.txt) · [历史版本](https://github.com/TuSiV/markalldown/releases)
 
-**安装过 3.0.0 预发布包？** 正式版从统一后的主线重新构建，包含导出选项修复。请重新下载安装，并使用本次发布的新 SHA256 校验文件。
+**从 3.0.0 升级：** 下载安装 3.0.1，获得更大的多文件预览空间和可关闭的脱敏对照同步滚动。
 
 macOS 包使用临时签名，未作 Apple Developer ID 签名或公证；首次打开可能需要在“系统设置 → 隐私与安全性”中允许打开。
 

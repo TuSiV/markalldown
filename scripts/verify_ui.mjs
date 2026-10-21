@@ -8,7 +8,7 @@ const out=process.env.UI_SCREENSHOT_DIR || '/tmp/mad-ui-qa';mkdirSync(out,{recur
 const b=await chromium.launch({headless:true,...(process.env.CHROME_PATH ? {executablePath:process.env.CHROME_PATH} : {}),args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu']});
 const page=await b.newPage({viewport:{width:1440,height:1000},locale:'zh-CN'});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
-const source='# 采购合同审查意见\n\n## 一、审查范围\n本次审查涉及采购合同及相关附件。\n\n甲方：示例科技有限公司\n联系人：示例联系人\n联系电话：13800138000\n邮箱：sample@example.com\n\n## 二、主要风险\n1. 付款节点及验收标准需明确。\n2. 违约责任条款需进一步细化。\n\n## 三、审查结论\n请结合实际履约安排完善合同条款。';
+const source='# 采购合同审查意见\n\n## 一、审查范围\n本次审查涉及采购合同及相关附件。\n\n甲方：示例科技有限公司\n联系人：示例联系人\n联系电话：13800138000\n邮箱：sample@example.com\n\n## 二、主要风险\n1. 付款节点及验收标准需明确。\n2. 违约责任条款需进一步细化。\n\n## 三、审查结论\n请结合实际履约安排完善合同条款。' + '\n\n' + Array.from({length:60},(_,i)=>`第 ${i+1} 段：用于验证脱敏全文对照同步滚动的合成审查文字。`).join('\n\n');
 await page.addInitScript(text=>{localStorage.setItem('markitdown.locale','zh-CN');window.isTauri=true;window.__desktopAppearance={platform:'windows',reduceTransparency:true,increaseContrast:false,reduceMotion:false};window.__TAURI_INTERNALS__={invoke:async(cmd)=>{if(cmd==='get_desktop_appearance')return window.__desktopAppearance;if(cmd==='get_connection_info')return {port:18765,token:'synthetic-ui-test'};if(cmd==='plugin:dialog|open')return ['/fixtures/合同审查意见.md'];if(cmd==='plugin:path|basename')return '合同审查意见.md';if(cmd==='plugin:fs|read_file')return Array.from(new TextEncoder().encode(text));if(cmd==='plugin:dialog|confirm')return true;throw new Error('Unexpected native test command: '+cmd);}};},source);
 await page.route('http://127.0.0.1:18765/**',async route=>{
  const url=new URL(route.request().url());let body={};
@@ -48,7 +48,19 @@ await page.getByLabel('映射文件加密口令（至少8字符，不会保存�
 await page.getByRole('button',{name:'检查所选文件的脱敏内容',exact:true}).click();await page.getByRole('checkbox',{name:'我已检查所选文件的全文及替换结果',exact:true}).waitFor();await shot('redaction');
 await nav.getByRole('button',{name:'脱敏审核',exact:true}).waitFor();
 await page.getByRole('button',{name:'标记原文',exact:true}).click();if(await page.locator('mark').count()!==2)throw new Error('Expected both detected terms to be highlighted');
-await page.getByRole('button',{name:'左右对照',exact:true}).click();await page.getByRole('checkbox',{name:'我已检查所选文件的全文及替换结果',exact:true}).check();
+await page.getByRole('button',{name:'左右对照',exact:true}).click();
+const checkSync=async(index,fraction)=>{
+ await page.locator('.review-text-columns pre').nth(index).evaluate((el,f)=>{el.scrollTop=f*(el.scrollHeight-el.clientHeight);},fraction);
+ await page.waitForFunction(f=>{const panes=[...document.querySelectorAll('.review-text-columns pre')];return panes.length===2&&panes.every(el=>el.scrollHeight>el.clientHeight&&Math.abs(el.scrollTop/(el.scrollHeight-el.clientHeight)-f)<.01);},fraction);
+};
+await checkSync(0,.4);
+const syncToggle=page.getByRole('checkbox',{name:'同步滚动',exact:true});
+await syncToggle.uncheck();
+await page.locator('.review-text-columns pre').nth(0).evaluate(el=>{el.scrollTop=.2*(el.scrollHeight-el.clientHeight);});
+await page.waitForFunction(()=>{const p=[...document.querySelectorAll('.review-text-columns pre')];return Math.abs(p[0].scrollTop/(p[0].scrollHeight-p[0].clientHeight)-.2)<.01&&Math.abs(p[1].scrollTop/(p[1].scrollHeight-p[1].clientHeight)-.4)<.01;});
+await syncToggle.check();
+await checkSync(1,.7);await checkSync(0,1);await checkSync(1,0);
+await page.getByRole('checkbox',{name:'我已检查所选文件的全文及替换结果',exact:true}).check();
 await nav.getByRole('button',{name:'导出中心',exact:true}).click();await shot('export');
 await nav.getByRole('button',{name:'文件恢复',exact:true}).click();await shot('recovery');
 await nav.getByRole('button',{name:'设置',exact:true}).click();await shot('settings');await page.getByRole('tab',{name:'转换',exact:true}).click();await page.getByRole('combobox',{name:'同时转换数量（运行中的任务不会被中断）',exact:true}).selectOption('2');
